@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasVerifiedEmail() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidUser() {
+      return isAuthenticated() && hasVerifiedEmail();
+    }
+
+    function debug(msg) {
+      return msg;
+    }
+
+    match /refeicoes/{refeicaoId} {
+      allow read: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado: " + request.auth.token.email)
+        );
+      
+      allow write: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado para escrita: " + request.auth.token.email)
+        );
+    }
+    
+    match /alunos/{alunoId} {
+      allow read: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado: " + request.auth.token.email)
+        );
+      
+      allow write: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado para escrita: " + request.auth.token.email)
+        );
+    }
+    
+    match /restaurante/{docId} {
+      allow read: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado: " + request.auth.token.email)
+        );
+      
+      allow write: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado para escrita: " + request.auth.token.email)
+        );
+    }
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

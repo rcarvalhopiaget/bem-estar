@@ -1,0 +1,99 @@
+'use client';
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/contexts/AuthContext';
+
+const loginSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
+  const [error, setError] = useState('');
+  const { signIn } = useAuth();
+  const router = useRouter();
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      console.log('Iniciando processo de login...');
+      await signIn(data.email, data.password);
+      console.log('Login realizado com sucesso!');
+      console.log('Tentando redirecionar para /dashboard...');
+      await router.push('/dashboard');
+      console.log('Redirecionamento executado!');
+    } catch (error) {
+      console.error('Erro durante o login:', error);
+      setError('Email ou senha inválidos');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Entre na sua conta
+          </h2>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {error && (
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <Input
+              label="Email"
+              type="email"
+              {...register('email')}
+              error={errors.email?.message}
+            />
+            
+            <Input
+              label="Senha"
+              type="password"
+              {...register('password')}
+              error={errors.password?.message}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full"
+            isLoading={isSubmitting}
+          >
+            Entrar
+          </Button>
+          
+          <div className="text-sm text-center mt-4">
+            <Link
+              href="/register"
+              className="font-medium text-primary hover:text-primary/80"
+            >
+              Não tem uma conta? Cadastre-se
+            </Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+} 
