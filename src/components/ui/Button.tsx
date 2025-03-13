@@ -1,29 +1,40 @@
 import { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'success' | 'warning';
+  size?: 'default' | 'sm' | 'lg' | 'touch';
   isLoading?: boolean;
 }
 
 export function Button({
   children,
   variant = 'primary',
+  size = 'default',
   isLoading = false,
   className = '',
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'px-4 py-2 rounded-md font-medium transition-colors duration-200 flex items-center justify-center';
+  const baseStyles = 'rounded-md font-medium transition-colors duration-200 flex items-center justify-center';
   
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary/90 disabled:bg-primary/50',
     secondary: 'bg-secondary text-white hover:bg-secondary/90 disabled:bg-secondary/50',
-    outline: 'border-2 border-primary text-primary hover:bg-primary/10 disabled:border-primary/50 disabled:text-primary/50'
+    outline: 'border-2 border-primary text-primary hover:bg-primary/10 disabled:border-primary/50 disabled:text-primary/50',
+    success: 'bg-green-600 text-white hover:bg-green-700',
+    warning: 'bg-yellow-500 text-white hover:bg-yellow-600',
+  };
+
+  const sizes = {
+    default: 'px-4 py-2',
+    sm: 'px-3 py-1.5',
+    lg: 'px-8 py-3 text-lg', 
+    touch: 'px-6 py-4 text-xl touch-manipulation',
   };
 
   return (
     <button
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      className={`${baseStyles} ${sizes[size]} ${variants[variant]} ${className}`}
       disabled={disabled || isLoading}
       {...props}
     >

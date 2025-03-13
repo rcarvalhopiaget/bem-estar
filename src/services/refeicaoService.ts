@@ -72,54 +72,140 @@ const verificarPermissoes = async () => {
   }
 };
 
+const dadosTeste: Refeicao[] = [
+  {
+    id: '1',
+    alunoId: '1',
+    nomeAluno: 'Alice Cisternas Araujo',
+    turma: '5º ano (MANHÃ)',
+    data: new Date('2025-03-13T12:00:00'),
+    tipo: 'ALMOCO',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '2',
+    alunoId: '1',
+    nomeAluno: 'Alice Cisternas Araujo',
+    turma: '5º ano (MANHÃ)',
+    data: new Date('2025-03-13T09:30:00'),
+    tipo: 'LANCHE_MANHA',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '3',
+    alunoId: '2',
+    nomeAluno: 'Bruno Santos Silva',
+    turma: '5º ano (MANHÃ)',
+    data: new Date('2025-03-13T12:00:00'),
+    tipo: 'ALMOCO',
+    presente: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '4',
+    alunoId: '3',
+    nomeAluno: 'Carolina Oliveira Lima',
+    turma: '4º ano (TARDE)',
+    data: new Date('2025-03-13T15:30:00'),
+    tipo: 'LANCHE_TARDE',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '5',
+    alunoId: '1',
+    nomeAluno: 'Alice Cisternas Araujo',
+    turma: '5º ano (MANHÃ)',
+    data: new Date('2025-03-12T12:00:00'),
+    tipo: 'ALMOCO',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '6',
+    alunoId: '4',
+    nomeAluno: 'Daniel Pereira Costa',
+    turma: '3º ano (MANHÃ)',
+    data: new Date('2025-03-13T09:30:00'),
+    tipo: 'LANCHE_MANHA',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '7',
+    alunoId: '5',
+    nomeAluno: 'Elena Martins Rocha',
+    turma: '4º ano (TARDE)',
+    data: new Date('2025-03-13T12:00:00'),
+    tipo: 'ALMOCO',
+    presente: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: '8',
+    alunoId: '5',
+    nomeAluno: 'Elena Martins Rocha',
+    turma: '4º ano (TARDE)',
+    data: new Date('2025-03-12T15:30:00'),
+    tipo: 'LANCHE_TARDE',
+    presente: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+];
+
 export const refeicaoService = {
-  async listarRefeicoes(filtros?: RefeicaoFilter) {
-    try {
-      await verificarPermissoes();
+  async listarRefeicoes(filtro?: RefeicaoFilter): Promise<Refeicao[]> {
+    // Simula um pequeno delay para parecer uma chamada real
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Cria a query base
-      let q = query(collection(db, COLLECTION_NAME));
+    let refeicoes = [...dadosTeste];
 
-      // Aplica os filtros
-      if (filtros?.dataInicio) {
-        q = query(q, where('data', '>=', Timestamp.fromDate(filtros.dataInicio)));
-      }
-      if (filtros?.dataFim) {
-        q = query(q, where('data', '<=', Timestamp.fromDate(filtros.dataFim)));
-      }
-      if (filtros?.tipo) {
-        q = query(q, where('tipo', '==', filtros.tipo));
-      }
-      if (filtros?.turma) {
-        q = query(q, where('turma', '==', filtros.turma));
-      }
-      if (filtros?.alunoId) {
-        q = query(q, where('alunoId', '==', filtros.alunoId));
-      }
-      if (filtros?.presente !== undefined) {
-        q = query(q, where('presente', '==', filtros.presente));
+    if (filtro) {
+      if (filtro.data) {
+        const dataFiltro = new Date(filtro.data);
+        refeicoes = refeicoes.filter(r => 
+          r.data.getFullYear() === dataFiltro.getFullYear() &&
+          r.data.getMonth() === dataFiltro.getMonth() &&
+          r.data.getDate() === dataFiltro.getDate()
+        );
       }
 
-      // Ordena por data
-      q = query(q, orderBy('data', 'desc'));
-      
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        return [];
+      if (filtro.dataInicio) {
+        refeicoes = refeicoes.filter(r => r.data >= filtro.dataInicio!);
       }
 
-      return querySnapshot.docs.map(converterParaRefeicao);
-    } catch (error) {
-      console.error('Erro ao listar refeições:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('permission-denied')) {
-          throw new Error('Você não tem permissão para acessar as refeições. Verifique seu email para obter acesso completo.');
-        }
-        throw error;
+      if (filtro.dataFim) {
+        refeicoes = refeicoes.filter(r => r.data <= filtro.dataFim!);
       }
-      throw new Error('Erro ao listar refeições. Por favor, tente novamente.');
+
+      if (filtro.turma) {
+        refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
+      }
+
+      if (filtro.tipo) {
+        refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
+      }
+
+      if (filtro.alunoId) {
+        refeicoes = refeicoes.filter(r => r.alunoId === filtro.alunoId);
+      }
+
+      if (filtro.presente !== undefined) {
+        refeicoes = refeicoes.filter(r => r.presente === filtro.presente);
+      }
     }
+
+    return refeicoes;
   },
 
   async buscarRefeicao(id: string) {
@@ -140,56 +226,19 @@ export const refeicaoService = {
     }
   },
 
-  async registrarRefeicao(dados: RefeicaoFormData) {
-    try {
-      await verificarPermissoes();
+  async registrarRefeicao(dados: RefeicaoFormData): Promise<Refeicao> {
+    const novaRefeicao: Refeicao = {
+      id: Math.random().toString(36).substr(2, 9),
+      ...dados,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-      // Verifica se já existe uma refeição para o mesmo dia e tipo
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        where('data', '==', Timestamp.fromDate(dados.data)),
-        where('tipo', '==', dados.tipo)
-      );
-
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        // Se encontrar uma refeição existente, atualiza ela
-        const docRef = querySnapshot.docs[0].ref;
-        const now = new Date();
-        const docData = {
-          ...dados,
-          updatedAt: Timestamp.fromDate(now)
-        };
-
-        await updateDoc(docRef, docData);
-        return docRef.id;
-      }
-
-      // Se não encontrar, cria uma nova refeição
-      const now = new Date();
-      const docData = {
-        ...dados,
-        data: Timestamp.fromDate(dados.data),
-        createdAt: Timestamp.fromDate(now),
-        updatedAt: Timestamp.fromDate(now)
-      };
-
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), docData);
-      return docRef.id;
-    } catch (error) {
-      console.error('Erro ao registrar refeição:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('permission-denied')) {
-          throw new Error('Você não tem permissão para registrar refeições. Verifique seu email para obter acesso completo.');
-        } else if (error.message.includes('Document already exists')) {
-          throw new Error('Já existe uma refeição registrada para este dia e tipo.');
-        }
-      }
-      throw new Error('Erro ao registrar refeição. Por favor, tente novamente.');
-    }
+    dadosTeste.push(novaRefeicao);
+    return novaRefeicao;
   },
 
-  async atualizarRefeicao(id: string, dados: Partial<RefeicaoFormData>) {
+  async atualizarRefeicao(id: string, dados: Partial<RefeicaoFormData>): Promise<void> {
     try {
       await verificarPermissoes();
 
@@ -210,7 +259,7 @@ export const refeicaoService = {
     }
   },
 
-  async excluirRefeicao(id: string) {
+  async excluirRefeicao(id: string): Promise<void> {
     try {
       await verificarPermissoes();
       

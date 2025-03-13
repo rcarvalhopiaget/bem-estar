@@ -11,6 +11,8 @@ import {
   orderBy,
   Timestamp,
   DocumentData,
+  QueryConstraint,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Aluno, AlunoFormData, AlunoFilter } from '@/types/aluno';
@@ -33,67 +35,110 @@ const converterParaAluno = (doc: DocumentData): Aluno => {
 };
 
 export const alunoService = {
-  async listarAlunos(filtros?: AlunoFilter) {
+  async listarAlunos(filtro?: AlunoFilter): Promise<Aluno[]> {
     try {
-      console.log('Iniciando listagem de alunos com filtros:', filtros);
+      console.log('Buscando alunos com filtro:', filtro);
       
-      const alunoRef = collection(db, COLLECTION_NAME);
-      let q = query(alunoRef);
+      const colRef = collection(db, COLLECTION_NAME);
+      let q = query(colRef);
 
-      if (filtros?.ativo !== undefined) {
-        q = query(q, where('ativo', '==', filtros.ativo));
+      // Aplicar filtros básicos primeiro
+      if (filtro?.ativo !== undefined) {
+        q = query(q, where('ativo', '==', filtro.ativo));
       }
 
       const querySnapshot = await getDocs(q);
-      console.log(`Encontrados ${querySnapshot.size} alunos`);
-
-      const alunos = querySnapshot.docs.map(converterParaAluno);
+      let alunos = querySnapshot.docs.map(converterParaAluno);
       
+      // Aplicar filtros em memória para evitar necessidade de índices compostos
+      if (filtro) {
+        if (filtro.turma) {
+          alunos = alunos.filter(a => a.turma === filtro.turma);
+        }
+        if (filtro.tipo) {
+          alunos = alunos.filter(a => a.tipo === filtro.tipo);
+        }
+      }
+
+      // Ordenar em memória
       alunos.sort((a, b) => a.nome.localeCompare(b.nome));
       
-      console.log('Alunos processados com sucesso');
-
+      console.log(`Encontrados ${alunos.length} alunos`);
       return alunos;
     } catch (error) {
-      console.error('Erro detalhado ao listar alunos:', error);
-      throw new Error('Erro ao listar alunos. Por favor, tente novamente.');
+      console.error('Erro ao listar alunos:', error);
+      throw new Error('Erro ao listar alunos');
     }
   },
 
-  async buscarAluno(id: string) {
+  async buscarAlunoPorMatricula(matricula: string): Promise<Aluno | null> {
     try {
-      console.log('Buscando aluno com ID:', id);
+      console.log('Buscando aluno por matrícula:', matricula);
+      const q = query(collection(db, COLLECTION_NAME), where('matricula', '==', matricula));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        console.log('Aluno não encontrado');
+        return null;
+      }
+
+      return converterParaAluno(querySnapshot.docs[0]);
+    } catch (error) {
+      console.error('Erro ao buscar aluno por matrícula:', error);
+      throw new Error('Erro ao buscar aluno por matrícula');
+    }
+  },
+
+  async buscarAluno(id: string): Promise<Aluno | null> {
+    try {
+      console.log('Buscando aluno por ID:', id);
       const docRef = doc(db, COLLECTION_NAME, id);
       const docSnap = await getDoc(docRef);
-
+      
       if (!docSnap.exists()) {
         console.log('Aluno não encontrado');
         return null;
       }
 
-      const aluno = converterParaAluno(docSnap);
-      console.log('Aluno encontrado:', aluno.nome);
-      return aluno;
+      return converterParaAluno(docSnap);
     } catch (error) {
-      console.error('Erro detalhado ao buscar aluno:', error);
+      console.error('Erro ao buscar aluno:', error);
       throw new Error('Erro ao buscar aluno');
     }
   },
 
-  async criarAluno(dados: AlunoFormData) {
+  async criarOuAtualizarAluno(dados: AlunoFormData) {
     try {
-      console.log('Iniciando criação de aluno:', dados.nome);
+      console.log('Iniciando criação/atualização de aluno:', dados.nome);
+      
+      // Busca por matrícula existente
+      const alunoExistente = await this.buscarAlunoPorMatricula(dados.matricula);
       const now = Timestamp.now();
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-        ...dados,
-        createdAt: now,
-        updatedAt: now
-      });
-      console.log('Aluno criado com sucesso. ID:', docRef.id);
-      return docRef.id;
+
+      if (alunoExistente) {
+        // Atualiza aluno existente
+        console.log('Atualizando aluno existente:', alunoExistente.id);
+        const docRef = doc(db, COLLECTION_NAME, alunoExistente.id);
+        await updateDoc(docRef, {
+          ...dados,
+          updatedAt: now
+        });
+        console.log('Aluno atualizado com sucesso');
+        return alunoExistente.id;
+      } else {
+        // Cria novo aluno
+        console.log('Criando novo aluno');
+        const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+          ...dados,
+          createdAt: now,
+          updatedAt: now
+        });
+        console.log('Aluno criado com sucesso. ID:', docRef.id);
+        return docRef.id;
+      }
     } catch (error) {
-      console.error('Erro detalhado ao criar aluno:', error);
-      throw new Error('Erro ao criar aluno');
+      console.error('Erro detalhado ao criar/atualizar aluno:', error);
+      throw new Error('Erro ao criar/atualizar aluno');
     }
   },
 
@@ -123,4 +168,4 @@ export const alunoService = {
       throw new Error('Erro ao excluir aluno');
     }
   }
-}; 
+};

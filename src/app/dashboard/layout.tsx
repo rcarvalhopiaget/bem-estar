@@ -64,10 +64,10 @@ export default function DashboardLayout({
                 Alunos
               </Link>
               <Link
-                href="/dashboard/refeicoes"
+                href="/dashboard/refeicoes-rapidas"
                 className="block px-4 py-2 text-gray-700 hover:bg-primary hover:text-white rounded-md"
               >
-                Refeições
+                Refeições Rápidas
               </Link>
               <Link
                 href="/dashboard/relatorios"
@@ -86,4 +86,4 @@ export default function DashboardLayout({
       </div>
     </div>
   );
-} 
+}

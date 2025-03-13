@@ -2,6 +2,8 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -12,39 +14,58 @@ export default function DashboardPage() {
         Bem-vindo, {user?.email}!
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card de Alunos */}
-        <Link href="/dashboard/alunos">
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
-            <h2 className="text-lg font-semibold mb-2">Alunos</h2>
-            <p className="text-gray-600">Gerencie os alunos cadastrados no sistema.</p>
-            <div className="mt-4 text-primary hover:text-primary/80">
-              Ver alunos →
-            </div>
-          </div>
-        </Link>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Refeições Rápidas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/refeicoes-rapidas">
+              <Button className="w-full">Acessar</Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-        {/* Card de Refeições */}
-        <Link href="/dashboard/refeicoes">
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
-            <h2 className="text-lg font-semibold mb-2">Refeições</h2>
-            <p className="text-gray-600">Controle as refeições servidas diariamente.</p>
-            <div className="mt-4 text-primary hover:text-primary/80">
-              Gerenciar refeições →
-            </div>
-          </div>
-        </Link>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Importar Alunos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/alunos/importar">
+              <Button className="w-full">Acessar</Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-        {/* Card de Relatórios */}
-        <Link href="/dashboard/relatorios">
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
-            <h2 className="text-lg font-semibold mb-2">Relatórios</h2>
-            <p className="text-gray-600">Acesse relatórios e estatísticas do sistema.</p>
-            <div className="mt-4 text-primary hover:text-primary/80">
-              Ver relatórios →
-            </div>
-          </div>
-        </Link>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Alunos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/alunos">
+              <Button className="w-full">Acessar</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Relatórios
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/relatorios">
+              <Button className="w-full">Acessar</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Seção de Atividades Recentes */}
@@ -56,4 +77,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-} 
+}
