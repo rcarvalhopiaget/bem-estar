@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { RefeicaoRapida } from '@/components/refeicoes/RefeicaoRapida';
+import RefeicaoRapida from '@/components/refeicoes/RefeicaoRapida';
 import { EmailVerification } from '@/components/EmailVerification';
 import { alunoService } from '@/services/alunoService';
 import { Aluno } from '@/types/aluno';
@@ -74,6 +74,7 @@ export default function RefeicoesRapidasPage() {
         <h1 className="text-2xl font-bold mb-6">Refeições Rápidas</h1>
         <RefeicaoRapida 
           alunos={alunos} 
+          data={new Date()}
           onRefeicaoMarcada={handleRefeicaoMarcada} 
         />
       </div>
