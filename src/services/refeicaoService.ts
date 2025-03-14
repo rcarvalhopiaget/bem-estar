@@ -78,7 +78,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '1',
     nomeAluno: 'Alice Cisternas Araujo',
     turma: '5º ano (MANHÃ)',
-    data: new Date('2025-03-13T12:00:00'),
+    data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
     createdAt: new Date(),
@@ -89,7 +89,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '1',
     nomeAluno: 'Alice Cisternas Araujo',
     turma: '5º ano (MANHÃ)',
-    data: new Date('2025-03-13T09:30:00'),
+    data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
     createdAt: new Date(),
@@ -100,7 +100,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '2',
     nomeAluno: 'Bruno Santos Silva',
     turma: '5º ano (MANHÃ)',
-    data: new Date('2025-03-13T12:00:00'),
+    data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: false,
     createdAt: new Date(),
@@ -111,7 +111,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '3',
     nomeAluno: 'Carolina Oliveira Lima',
     turma: '4º ano (TARDE)',
-    data: new Date('2025-03-13T15:30:00'),
+    data: new Date('2025-03-14T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: true,
     createdAt: new Date(),
@@ -122,7 +122,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '1',
     nomeAluno: 'Alice Cisternas Araujo',
     turma: '5º ano (MANHÃ)',
-    data: new Date('2025-03-12T12:00:00'),
+    data: new Date('2025-03-13T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
     createdAt: new Date(),
@@ -133,7 +133,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '4',
     nomeAluno: 'Daniel Pereira Costa',
     turma: '3º ano (MANHÃ)',
-    data: new Date('2025-03-13T09:30:00'),
+    data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
     createdAt: new Date(),
@@ -144,7 +144,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '5',
     nomeAluno: 'Elena Martins Rocha',
     turma: '4º ano (TARDE)',
-    data: new Date('2025-03-13T12:00:00'),
+    data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
     createdAt: new Date(),
@@ -155,7 +155,7 @@ const dadosTeste: Refeicao[] = [
     alunoId: '5',
     nomeAluno: 'Elena Martins Rocha',
     turma: '4º ano (TARDE)',
-    data: new Date('2025-03-12T15:30:00'),
+    data: new Date('2025-03-13T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: false,
     createdAt: new Date(),
@@ -166,27 +166,53 @@ const dadosTeste: Refeicao[] = [
 export const refeicaoService = {
   async listarRefeicoes(filtro?: RefeicaoFilter): Promise<Refeicao[]> {
     try {
-      const refeicaoRef = collection(db, COLLECTION_NAME);
-      let q = query(refeicaoRef);
+      await verificarPermissoes();
 
-      if (filtro?.data) {
-        const inicio = new Date(filtro.data);
-        inicio.setHours(0, 0, 0, 0);
-        const fim = new Date(filtro.data);
-        fim.setHours(23, 59, 59, 999);
+      // Retorna dados de teste por enquanto
+      let refeicoes = [...dadosTeste];
 
-        q = query(
-          refeicaoRef,
-          where('data', '>=', inicio),
-          where('data', '<=', fim)
-        );
+      if (filtro) {
+        if (filtro.dataInicio || filtro.dataFim) {
+          const inicio = filtro.dataInicio ? new Date(filtro.dataInicio) : new Date(0);
+          const fim = filtro.dataFim ? new Date(filtro.dataFim) : new Date();
+          inicio.setHours(0, 0, 0, 0);
+          fim.setHours(23, 59, 59, 999);
+
+          console.log('Filtrando por data:', {
+            inicio: inicio.toISOString(),
+            fim: fim.toISOString()
+          });
+
+          refeicoes = refeicoes.filter(r => {
+            const data = new Date(r.data);
+            data.setHours(0, 0, 0, 0); // Normaliza a data para comparar apenas dia/mês/ano
+            const inicioComparacao = new Date(inicio);
+            inicioComparacao.setHours(0, 0, 0, 0);
+            const fimComparacao = new Date(fim);
+            fimComparacao.setHours(23, 59, 59, 999);
+            return data >= inicioComparacao && data <= fimComparacao;
+          });
+        }
+
+        if (filtro.alunoId) {
+          console.log('Filtrando por aluno:', filtro.alunoId);
+          refeicoes = refeicoes.filter(r => r.alunoId === filtro.alunoId);
+        }
+
+        if (filtro.turma) {
+          console.log('Filtrando por turma:', filtro.turma);
+          refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
+        }
+
+        if (filtro.tipo) {
+          console.log('Filtrando por tipo:', filtro.tipo);
+          refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
+        }
+
+        console.log('Total de refeições após filtros:', refeicoes.length);
       }
 
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Refeicao[];
+      return refeicoes.sort((a, b) => b.data.getTime() - a.data.getTime());
     } catch (error) {
       console.error('Erro ao listar refeições:', error);
       throw error;

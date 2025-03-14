@@ -167,5 +167,25 @@ export const alunoService = {
       console.error('Erro detalhado ao excluir aluno:', error);
       throw new Error('Erro ao excluir aluno');
     }
+  },
+
+  async listarTurmas(): Promise<string[]> {
+    try {
+      const alunosRef = collection(db, 'alunos');
+      const querySnapshot = await getDocs(alunosRef);
+      const turmas = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
+        const aluno = doc.data() as Aluno;
+        if (aluno.turma) {
+          turmas.add(aluno.turma);
+        }
+      });
+      
+      return Array.from(turmas).sort();
+    } catch (error) {
+      console.error('Erro ao listar turmas:', error);
+      throw error;
+    }
   }
 };

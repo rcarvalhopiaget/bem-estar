@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { refreshUserToken, setupTokenRefresh, clearSession } from '@/lib/auth';
@@ -15,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -61,9 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      // Atualiza o perfil do usuário com o nome
+      await updateProfile(result.user, { displayName: name });
       // Força a atualização do token após o registro
       await refreshUserToken(result.user);
     } catch (error) {

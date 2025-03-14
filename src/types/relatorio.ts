@@ -1,16 +1,24 @@
 import { Refeicao } from './refeicao';
 
+export type TipoRefeicao = Refeicao['tipo'];
+
 export interface RelatorioFiltro {
   dataInicio?: Date;
   dataFim?: Date;
   alunoId?: string;
   turma?: string;
-  tipo?: Refeicao['tipo'];
+  tipo?: TipoRefeicao;
 }
 
+export type TipoNotificacao = 'erro' | 'aviso';
+
 export interface NotificacaoConfig {
+  tipo: TipoNotificacao;
+  mensagem: string;
+}
+
+export interface ConfiguracaoRelatorio {
   email: string;
-  tipo: 'DIARIO' | 'SEMANAL' | 'MENSAL';
   horario: string; // HH:mm
   turmas?: string[];
   ativo: boolean;

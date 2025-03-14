@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
@@ -15,32 +14,26 @@ const loginSchema = z.object({
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const [error, setError] = useState('');
-  const { signIn } = useAuth();
   const router = useRouter();
-  
+  const { signIn } = useAuth();
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      console.log('Iniciando processo de login...');
       await signIn(data.email, data.password);
-      console.log('Login realizado com sucesso!');
-      console.log('Tentando redirecionar para /dashboard...');
-      await router.push('/dashboard');
-      console.log('Redirecionamento executado!');
+      router.push('/dashboard');
     } catch (error) {
-      console.error('Erro durante o login:', error);
-      setError('Email ou senha inválidos');
+      console.error('Erro ao fazer login:', error);
     }
   };
 
@@ -49,51 +42,51 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Entre na sua conta
+            Bem-vindo de volta!
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Faça login para acessar o sistema
+          </p>
         </div>
-        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {error && (
-            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
+          <div className="rounded-md shadow-sm space-y-4">
             <Input
               label="Email"
               type="email"
+              placeholder="Digite seu email"
               {...register('email')}
               error={errors.email?.message}
             />
-            
+
             <Input
               label="Senha"
               type="password"
+              placeholder="Digite sua senha"
               {...register('password')}
               error={errors.password?.message}
             />
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            isLoading={isSubmitting}
-          >
-            Entrar
-          </Button>
-          
-          <div className="text-sm text-center mt-4">
+          <div>
+            <Button
+              type="submit"
+              className="w-full py-3 text-lg"
+              isLoading={isSubmitting}
+            >
+              Entrar
+            </Button>
+          </div>
+
+          <div className="text-sm text-center">
             <Link
               href="/register"
               className="font-medium text-primary hover:text-primary/80"
             >
-              Não tem uma conta? Cadastre-se
+              Não tem uma conta? Registre-se
             </Link>
           </div>
         </form>
       </div>
     </div>
   );
-} 
+}
