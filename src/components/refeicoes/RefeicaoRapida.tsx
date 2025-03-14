@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, Typography, Box, TextField, Alert } from '@mui/material';
+import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemButton, ListItemText } from '@mui/material';
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
+import { TipoRefeicao } from '@/types/refeicao';
 import { toast } from 'react-hot-toast';
 
 interface Props {
@@ -19,10 +20,26 @@ const LIMITE_REFEICOES: Record<string, number> = {
   'MENSALISTA': 999 // Sem limite prático
 };
 
+// Tipos de refeição disponíveis
+const TIPOS_REFEICAO = [
+  { id: 'LANCHE_MANHA' as TipoRefeicao, nome: 'Lanche da Manhã', horario: '09:30' },
+  { id: 'ALMOCO' as TipoRefeicao, nome: 'Almoço', horario: '12:00' },
+  { id: 'LANCHE_TARDE' as TipoRefeicao, nome: 'Lanche da Tarde', horario: '15:30' }
+];
+
 export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Props) {
   const [busca, setBusca] = useState('');
   const [alunosComeram, setAlunosComeram] = useState<Record<string, boolean>>({});
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, number>>({});
+  const [dialogoAberto, setDialogoAberto] = useState(false);
+  const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
+
+  // Formata a data de forma simplificada
+  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(data);
 
   // Carregar refeições do dia atual e da semana
   useEffect(() => {
@@ -64,16 +81,23 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     );
   });
 
-  const handleClick = async (aluno: Aluno) => {
+  const handleCardClick = (aluno: Aluno) => {
     // Se já comeu hoje, não permite marcar novamente
     if (alunosComeram[aluno.id]) {
       toast.error('Aluno já marcou refeição hoje');
       return;
     }
 
+    setAlunoSelecionado(aluno);
+    setDialogoAberto(true);
+  };
+
+  const handleTipoRefeicaoClick = async (tipoRefeicao: TipoRefeicao) => {
+    if (!alunoSelecionado) return;
+
     try {
-      const refeicoesSemana = refeicoesSemanais[aluno.id] || 0;
-      const limiteRefeicoes = LIMITE_REFEICOES[aluno.tipo] || 0;
+      const refeicoesSemana = refeicoesSemanais[alunoSelecionado.id] || 0;
+      const limiteRefeicoes = LIMITE_REFEICOES[alunoSelecionado.tipo] || 0;
 
       // Verifica se excedeu a cota (apenas alerta, não bloqueia)
       if (refeicoesSemana >= limiteRefeicoes) {
@@ -84,18 +108,18 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       }
 
       await refeicaoService.registrarRefeicao({
-        alunoId: aluno.id,
-        nomeAluno: aluno.nome,
-        turma: aluno.turma,
+        alunoId: alunoSelecionado.id,
+        nomeAluno: alunoSelecionado.nome,
+        turma: alunoSelecionado.turma,
         data: new Date(data),
-        tipo: 'ALMOCO',
+        tipo: tipoRefeicao,
         presente: true
       });
 
       // Atualiza apenas o estado de quem comeu hoje
       setAlunosComeram(prev => ({
         ...prev,
-        [aluno.id]: true
+        [alunoSelecionado.id]: true
       }));
 
       onRefeicaoMarcada();
@@ -103,15 +127,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     } catch (error) {
       console.error('Erro ao marcar refeição:', error);
       toast.error('Erro ao registrar refeição');
+    } finally {
+      setDialogoAberto(false);
+      setAlunoSelecionado(null);
     }
   };
-
-  // Formata a data de forma simplificada
-  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  }).format(data);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -144,7 +164,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           return (
             <Card
               key={aluno.id}
-              onClick={() => !jaComeu && handleClick(aluno)}
+              onClick={() => !jaComeu && handleCardClick(aluno)}
               sx={{
                 p: 2,
                 cursor: jaComeu ? 'default' : 'pointer',
@@ -189,6 +209,48 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           );
         })}
       </Box>
+
+      <Dialog 
+        open={dialogoAberto} 
+        onClose={() => setDialogoAberto(false)}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: '400px',
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          Selecione o tipo de refeição
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <List sx={{ pt: 0 }}>
+            {TIPOS_REFEICAO.map((tipo) => (
+              <ListItem key={tipo.id} disablePadding>
+                <ListItemButton 
+                  onClick={() => handleTipoRefeicaoClick(tipo.id)}
+                  sx={{
+                    py: 2,
+                    '&:hover': {
+                      bgcolor: 'primary.light',
+                      color: 'white'
+                    }
+                  }}
+                >
+                  <ListItemText 
+                    primary={tipo.nome}
+                    secondary={`Horário: ${tipo.horario}`}
+                    primaryTypographyProps={{
+                      sx: { fontWeight: 'medium' }
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
