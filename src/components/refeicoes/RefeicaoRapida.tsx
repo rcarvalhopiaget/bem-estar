@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogContent, Grid, IconButton } from '@mui/material';
 import { Aluno } from '@/types/aluno';
@@ -170,8 +172,16 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   };
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ textTransform: 'capitalize' }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        sx={{ 
+          textTransform: 'capitalize',
+          fontSize: { xs: '1.5rem', sm: '2rem' }
+        }}
+      >
         {dataFormatada}
       </Typography>
 
@@ -181,13 +191,21 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         placeholder="Buscar por nome ou turma..."
         value={busca}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBusca(e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 2,
+          '& .MuiOutlinedInput-root': {
+            fontSize: { xs: '1rem', sm: '1.1rem' }
+          }
+        }}
       />
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: 2 
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: 'repeat(auto-fill, minmax(250px, 1fr))'
+        },
+        gap: { xs: 1, sm: 2 }
       }}>
         {alunosFiltrados.map((aluno) => {
           const refeicoesHoje = alunosComeram[aluno.id] || {};
@@ -203,14 +221,17 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
               key={aluno.id}
               onClick={() => !todasRefeicoesFeitas && handleCardClick(aluno)}
               sx={{
-                p: 2,
+                p: { xs: 1.5, sm: 2 },
                 cursor: todasRefeicoesFeitas ? 'default' : 'pointer',
                 transition: 'all 0.2s',
                 '&:hover': {
                   transform: todasRefeicoesFeitas ? 'none' : 'scale(1.02)',
                   boxShadow: todasRefeicoesFeitas ? 1 : 3
                 },
-                minHeight: '120px',
+                '&:active': {
+                  transform: todasRefeicoesFeitas ? 'none' : 'scale(0.98)'
+                },
+                minHeight: { xs: '100px', sm: '120px' },
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -221,10 +242,23 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
               }}
             >
               <Box>
-                <Typography variant="h6" component="div" sx={{ mb: 1 }}>
+                <Typography 
+                  variant="h6" 
+                  component="div" 
+                  sx={{ 
+                    mb: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}
+                >
                   {aluno.nome}
                 </Typography>
-                <Typography color="textSecondary" sx={{ mb: 1 }}>
+                <Typography 
+                  color="textSecondary" 
+                  sx={{ 
+                    mb: 1,
+                    fontSize: { xs: '0.875rem', sm: '1rem' }
+                  }}
+                >
                   {aluno.turma}
                 </Typography>
               </Box>
@@ -241,22 +275,46 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                         color: refeicoesHoje[tipo.id] ? tipo.color : 'grey.400',
                       }}
                     >
-                      <Icon fontSize="small" />
+                      <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
                     </Box>
                   );
                 })}
               </Box>
 
               {todasRefeicoesFeitas ? (
-                <Alert severity="success" sx={{ mt: 1 }}>
+                <Alert 
+                  severity="success" 
+                  sx={{ 
+                    mt: 1,
+                    py: { xs: 0.5, sm: 1 },
+                    '& .MuiAlert-message': {
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }
+                  }}
+                >
                   Todas refeições registradas
                 </Alert>
               ) : excedeuCota ? (
-                <Alert severity="warning" sx={{ mt: 1 }}>
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    mt: 1,
+                    py: { xs: 0.5, sm: 1 },
+                    '& .MuiAlert-message': {
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }
+                  }}
+                >
                   Cota semanal excedida
                 </Alert>
               ) : (
-                <Typography color="textSecondary" sx={{ mt: 1, fontSize: '0.875rem' }}>
+                <Typography 
+                  color="textSecondary" 
+                  sx={{ 
+                    mt: 1, 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }}
+                >
                   {refeicaoRestante} refeição(ões) restante(s)
                 </Typography>
               )}
@@ -271,9 +329,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         PaperProps={{
           sx: {
             width: '100%',
-            maxWidth: '400px',
+            maxWidth: { xs: '95%', sm: '400px' },
             borderRadius: 2,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            m: { xs: 1, sm: 2 }
           }
         }}
       >
@@ -281,11 +340,12 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           textAlign: 'center', 
           pb: 1, 
           bgcolor: 'primary.main',
-          color: 'white'
+          color: 'white',
+          fontSize: { xs: '1.25rem', sm: '1.5rem' }
         }}>
           Selecione o tipo de refeição
         </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2}>
             {TIPOS_REFEICAO.map((tipo) => {
               const refeicoesHoje = alunoSelecionado ? (alunosComeram[alunoSelecionado.id] || {}) : {};
@@ -297,7 +357,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                   <Box
                     onClick={() => !jaComeu && handleTipoRefeicaoClick(tipo.id)}
                     sx={{
-                      p: 2,
+                      p: { xs: 1.5, sm: 2 },
                       borderRadius: 2,
                       cursor: jaComeu ? 'default' : 'pointer',
                       bgcolor: jaComeu ? 'grey.100' : 'white',
@@ -307,6 +367,9 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                       '&:hover': {
                         transform: jaComeu ? 'none' : 'scale(1.02)',
                         bgcolor: jaComeu ? 'grey.100' : `${tipo.color}10`,
+                      },
+                      '&:active': {
+                        transform: jaComeu ? 'none' : 'scale(0.98)'
                       },
                       display: 'flex',
                       alignItems: 'center',
@@ -319,18 +382,20 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                         color: 'white',
                         '&:hover': {
                           bgcolor: jaComeu ? 'grey.300' : tipo.color,
-                        }
+                        },
+                        p: { xs: 1, sm: 1.5 }
                       }}
                       disabled={jaComeu}
                     >
-                      <Icon />
+                      <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
                     </IconButton>
                     <Box>
                       <Typography 
                         variant="subtitle1" 
                         sx={{ 
                           fontWeight: 'medium',
-                          color: jaComeu ? 'grey.500' : 'inherit'
+                          color: jaComeu ? 'grey.500' : 'inherit',
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
                         }}
                       >
                         {tipo.nome}
@@ -338,7 +403,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: jaComeu ? 'grey.500' : 'text.secondary'
+                          color: jaComeu ? 'grey.500' : 'text.secondary',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
                         }}
                       >
                         Horário: {tipo.horario}
@@ -349,7 +415,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                         variant="caption" 
                         sx={{ 
                           ml: 'auto',
-                          color: 'grey.500'
+                          color: 'grey.500',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
                         }}
                       >
                         Registrado
