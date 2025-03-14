@@ -26,10 +26,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   const [alunosComeram, setAlunosComeram] = useState<Record<string, boolean>>({});
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, number>>({});
 
-  // Carregar refeições do dia atual
+  // Carregar refeições do dia atual e da semana
   useEffect(() => {
     const carregarRefeicoes = async () => {
       try {
+        // Carrega refeições do dia
         const refeicoes = await refeicaoService.listarRefeicoes({ data });
         const comeram: Record<string, boolean> = {};
         refeicoes.forEach(refeicao => {
@@ -38,6 +39,16 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           }
         });
         setAlunosComeram(comeram);
+
+        // Carrega refeições da semana para cada aluno
+        const refeicoesSemanaisPorAluno: Record<string, number> = {};
+        await Promise.all(
+          alunos.map(async (aluno) => {
+            const refeicoesAluno = await refeicaoService.buscarRefeicoesSemana(aluno.id, data);
+            refeicoesSemanaisPorAluno[aluno.id] = refeicoesAluno.length;
+          })
+        );
+        setRefeicoesSemanais(refeicoesSemanaisPorAluno);
       } catch (error) {
         console.error('Erro ao carregar refeições:', error);
         toast.error('Erro ao carregar refeições do dia');
@@ -45,7 +56,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     };
 
     carregarRefeicoes();
-  }, [data]);
+  }, [data, alunos]);
 
   const alunosFiltrados = alunos.filter(aluno => {
     const termoBusca = busca.toLowerCase();
@@ -68,7 +79,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
       // Verifica se excedeu a cota (apenas alerta, não bloqueia)
       if (refeicoesSemana >= limiteRefeicoes) {
-        toast.error(`Alerta: ${aluno.nome} excedeu a cota semanal de refeições (${limiteRefeicoes})`);
+        toast('Alerta: Cota semanal excedida', { 
+          icon: '⚠️',
+          duration: 4000
+        });
       }
 
       await refeicaoService.registrarRefeicao({
@@ -80,14 +94,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         presente: true
       });
 
-      // Atualiza o estado local
+      // Atualiza apenas o estado de quem comeu hoje
       setAlunosComeram(prev => ({
         ...prev,
         [aluno.id]: true
-      }));
-      setRefeicoesSemanais(prev => ({
-        ...prev,
-        [aluno.id]: (prev[aluno.id] || 0) + 1
       }));
 
       onRefeicaoMarcada();

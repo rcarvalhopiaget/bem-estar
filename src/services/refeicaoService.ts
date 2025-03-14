@@ -253,5 +253,34 @@ export const refeicaoService = {
       console.error('Erro ao excluir refeição:', error);
       throw error;
     }
-  }
+  },
+
+  async buscarRefeicoesSemana(alunoId: string, data: Date = new Date()): Promise<Refeicao[]> {
+    try {
+      // Encontra o início da semana (domingo)
+      const inicioSemana = new Date(data);
+      inicioSemana.setDate(data.getDate() - data.getDay());
+      inicioSemana.setHours(0, 0, 0, 0);
+
+      // Encontra o fim da semana (sábado)
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(inicioSemana.getDate() + 6);
+      fimSemana.setHours(23, 59, 59, 999);
+
+      const refeicaoRef = collection(db, COLLECTION_NAME);
+      const q = query(
+        refeicaoRef,
+        where('alunoId', '==', alunoId),
+        where('data', '>=', inicioSemana),
+        where('data', '<=', fimSemana),
+        where('presente', '==', true)
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => converterParaRefeicao(doc));
+    } catch (error) {
+      console.error('Erro ao buscar refeições da semana:', error);
+      throw error;
+    }
+  },
 };
