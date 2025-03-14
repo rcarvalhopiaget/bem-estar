@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Card, Typography, Box, TextField, Alert } from '@mui/material';
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
@@ -108,8 +106,12 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     }
   };
 
-  // Formata a data usando date-fns v4.1.0 com locale ptBR
-  const dataFormatada = format(data, 'EEEE, d \'de\' MMMM', { locale: ptBR });
+  // Formata a data de forma simplificada
+  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(data);
 
   return (
     <Box sx={{ p: 2 }}>
