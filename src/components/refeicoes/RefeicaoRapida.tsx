@@ -1,24 +1,18 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Card, Typography, Box, TextField, Alert } from '@mui/material';
 import { Aluno } from '@/types/aluno';
-import { RefeicaoFormData, TIPOS_REFEICAO, TipoRefeicao } from '@/types/refeicao';
 import { refeicaoService } from '@/services/refeicaoService';
-import { Button } from '../ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { toast } from 'react-hot-toast';
 
 interface Props {
   alunos: Aluno[];
+  data: Date;
   onRefeicaoMarcada: () => void;
 }
 
-interface StatusCota {
-  excedeuCota: boolean;
-  ultimaRefeicao: boolean;
-  refeicaoRestante: number;
-}
-
+// Limites de refeições por tipo de aluno
 const LIMITE_REFEICOES: Record<string, number> = {
   'INTEGRAL_5X': 5,
   'INTEGRAL_4X': 4,
@@ -27,77 +21,31 @@ const LIMITE_REFEICOES: Record<string, number> = {
   'MENSALISTA': 999 // Sem limite prático
 };
 
-interface RefeicoesHoje {
-  ALMOCO?: boolean;
-  LANCHE_MANHA?: boolean;
-  LANCHE_TARDE?: boolean;
-}
-
-export function RefeicaoRapida({ alunos = [], onRefeicaoMarcada }: Props) {
-  const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
+export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Props) {
   const [busca, setBusca] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [refeicoesHoje, setRefeicoesHoje] = useState<Record<string, RefeicoesHoje>>({});
-  const [dataSelecionada] = useState(new Date());
+  const [alunosComeram, setAlunosComeram] = useState<Record<string, boolean>>({});
+  const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, number>>({});
 
+  // Carregar refeições do dia atual
   useEffect(() => {
-    carregarRefeicoesDoDia();
-  }, []);
+    const carregarRefeicoes = async () => {
+      try {
+        const refeicoes = await refeicaoService.listarRefeicoes({ data });
+        const comeram: Record<string, boolean> = {};
+        refeicoes.forEach(refeicao => {
+          if (refeicao.presente) {
+            comeram[refeicao.alunoId] = true;
+          }
+        });
+        setAlunosComeram(comeram);
+      } catch (error) {
+        console.error('Erro ao carregar refeições:', error);
+        toast.error('Erro ao carregar refeições do dia');
+      }
+    };
 
-  const carregarRefeicoesDoDia = async () => {
-    try {
-      const data = new Date(dataSelecionada);
-      data.setHours(0, 0, 0, 0);
-      const refeicoes = await refeicaoService.listarRefeicoes({ data });
-      
-      const refeicoesMap: Record<string, RefeicoesHoje> = {};
-      refeicoes.forEach(refeicao => {
-        if (refeicao.presente) {
-          refeicoesMap[refeicao.alunoId] = {
-            ...refeicoesMap[refeicao.alunoId],
-            [refeicao.tipo]: true
-          };
-        }
-      });
-      setRefeicoesHoje(refeicoesMap);
-    } catch (error) {
-      console.error('Erro ao carregar refeições:', error);
-      toast.error('Erro ao carregar refeições do dia');
-    }
-  };
-
-  const marcarRefeicao = async (tipo: TipoRefeicao) => {
-    if (!alunoSelecionado) return;
-
-    setLoading(true);
-    try {
-      const dados: RefeicaoFormData = {
-        alunoId: alunoSelecionado.id,
-        nomeAluno: alunoSelecionado.nome,
-        turma: alunoSelecionado.turma,
-        data: new Date(dataSelecionada),
-        tipo,
-        presente: true
-      };
-
-      await refeicaoService.registrarRefeicao(dados);
-      setRefeicoesHoje(prev => ({
-        ...prev,
-        [alunoSelecionado.id]: {
-          ...prev[alunoSelecionado.id],
-          [tipo]: true
-        }
-      }));
-      toast.success('Refeição registrada com sucesso!');
-      onRefeicaoMarcada();
-    } catch (error) {
-      console.error('Erro ao marcar refeição:', error);
-      toast.error('Erro ao registrar refeição');
-    } finally {
-      setLoading(false);
-      setAlunoSelecionado(null);
-    }
-  };
+    carregarRefeicoes();
+  }, [data]);
 
   const alunosFiltrados = alunos.filter(aluno => {
     const termoBusca = busca.toLowerCase();
@@ -107,181 +55,128 @@ export function RefeicaoRapida({ alunos = [], onRefeicaoMarcada }: Props) {
     );
   });
 
-  const verificarCotaSemanal = (aluno: Aluno): Record<TipoRefeicao, StatusCota> => {
-    const cotaMaxima = LIMITE_REFEICOES[aluno.tipo] || 0;
-    // TODO: Implementar contagem real da semana por tipo
-    const cotaAtual = {
-      ALMOCO: 0,
-      LANCHE_MANHA: 0,
-      LANCHE_TARDE: 0
-    };
+  const handleClick = async (aluno: Aluno) => {
+    // Se já comeu hoje, não permite marcar novamente
+    if (alunosComeram[aluno.id]) {
+      toast.error('Aluno já marcou refeição hoje');
+      return;
+    }
 
-    return {
-      ALMOCO: {
-        excedeuCota: cotaAtual.ALMOCO >= cotaMaxima,
-        ultimaRefeicao: cotaAtual.ALMOCO === cotaMaxima - 1,
-        refeicaoRestante: cotaMaxima - cotaAtual.ALMOCO
-      },
-      LANCHE_MANHA: {
-        excedeuCota: cotaAtual.LANCHE_MANHA >= cotaMaxima,
-        ultimaRefeicao: cotaAtual.LANCHE_MANHA === cotaMaxima - 1,
-        refeicaoRestante: cotaMaxima - cotaAtual.LANCHE_MANHA
-      },
-      LANCHE_TARDE: {
-        excedeuCota: cotaAtual.LANCHE_TARDE >= cotaMaxima,
-        ultimaRefeicao: cotaAtual.LANCHE_TARDE === cotaMaxima - 1,
-        refeicaoRestante: cotaMaxima - cotaAtual.LANCHE_TARDE
+    try {
+      const refeicoesSemana = refeicoesSemanais[aluno.id] || 0;
+      const limiteRefeicoes = LIMITE_REFEICOES[aluno.tipo] || 0;
+
+      // Verifica se excedeu a cota (apenas alerta, não bloqueia)
+      if (refeicoesSemana >= limiteRefeicoes) {
+        toast.error(`Alerta: ${aluno.nome} excedeu a cota semanal de refeições (${limiteRefeicoes})`);
       }
-    };
+
+      await refeicaoService.registrarRefeicao({
+        alunoId: aluno.id,
+        nomeAluno: aluno.nome,
+        turma: aluno.turma,
+        data: new Date(data),
+        tipo: 'ALMOCO',
+        presente: true
+      });
+
+      // Atualiza o estado local
+      setAlunosComeram(prev => ({
+        ...prev,
+        [aluno.id]: true
+      }));
+      setRefeicoesSemanais(prev => ({
+        ...prev,
+        [aluno.id]: (prev[aluno.id] || 0) + 1
+      }));
+
+      onRefeicaoMarcada();
+      toast.success('Refeição registrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao marcar refeição:', error);
+      toast.error('Erro ao registrar refeição');
+    }
   };
 
+  // Formata a data usando date-fns v4.1.0 com locale ptBR
+  const dataFormatada = format(data, 'EEEE, d \'de\' MMMM', { locale: ptBR });
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-2xl text-gray-600">
-          {format(dataSelecionada, "EEEE, d 'de' MMMM", { locale: ptBR })} • {format(dataSelecionada, 'yyyy')}
-        </p>
-      </div>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ textTransform: 'capitalize' }}>
+        {dataFormatada}
+      </Typography>
 
-      <div className="flex items-center gap-4">
-        <input
-          type="text"
-          placeholder="Buscar por nome ou turma..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full p-4 text-xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Buscar por nome ou turma..."
+        value={busca}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBusca(e.target.value)}
+        sx={{ mb: 2 }}
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+        gap: 2 
+      }}>
         {alunosFiltrados.map((aluno) => {
-          const cotasPorTipo = verificarCotaSemanal(aluno);
-          const refeicoesDoAluno = refeicoesHoje[aluno.id] || {};
-          
-          // Verifica se algum tipo está com a cota excedida
-          const temCotaExcedida = Object.values(cotasPorTipo).some(cota => cota.excedeuCota);
-          // Verifica se algum tipo está na última refeição
-          const temUltimaRefeicao = Object.values(cotasPorTipo).some(cota => cota.ultimaRefeicao);
-
-          const cardClass = temCotaExcedida
-            ? 'border-yellow-500 bg-yellow-50'
-            : temUltimaRefeicao
-              ? 'border-orange-500 bg-orange-50'
-              : 'border-gray-200 hover:border-primary';
+          const jaComeu = alunosComeram[aluno.id];
+          const refeicoesSemana = refeicoesSemanais[aluno.id] || 0;
+          const limiteRefeicoes = LIMITE_REFEICOES[aluno.tipo] || 0;
+          const refeicaoRestante = limiteRefeicoes - refeicoesSemana;
+          const excedeuCota = refeicoesSemana >= limiteRefeicoes;
+          const ultimaRefeicao = refeicoesSemana === limiteRefeicoes - 1;
 
           return (
-            <div
+            <Card
               key={aluno.id}
-              onClick={() => setAlunoSelecionado(aluno)}
-              className={`p-6 rounded-lg border-2 ${cardClass} cursor-pointer transition-colors`}
+              onClick={() => !jaComeu && handleClick(aluno)}
+              sx={{
+                p: 2,
+                cursor: jaComeu ? 'default' : 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: jaComeu ? 'none' : 'scale(1.02)',
+                  boxShadow: jaComeu ? 1 : 3
+                },
+                minHeight: '120px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                bgcolor: jaComeu ? '#e8f5e9' : excedeuCota ? '#fff3e0' : ultimaRefeicao ? '#fff8e1' : 'white',
+                borderColor: jaComeu ? 'success.main' : excedeuCota ? 'warning.main' : ultimaRefeicao ? 'warning.light' : 'grey.300',
+                borderWidth: 1,
+                borderStyle: 'solid'
+              }}
             >
-              <h3 className="text-xl font-semibold mb-1">{aluno.nome}</h3>
-              <p className="text-lg text-gray-600">{aluno.turma}</p>
-              
-              {/* Status das refeições de hoje */}
-              {refeicoesDoAluno.ALMOCO && (
-                <p className="bg-green-100 text-green-600 text-sm mt-2 font-medium p-2 rounded">
-                  ✓ Almoçou hoje
-                </p>
-              )}
-              {refeicoesDoAluno.LANCHE_MANHA && (
-                <p className="bg-green-100 text-green-600 text-sm mt-2 font-medium p-2 rounded">
-                  ✓ Lanche da manhã hoje
-                </p>
-              )}
-              {refeicoesDoAluno.LANCHE_TARDE && (
-                <p className="bg-green-100 text-green-600 text-sm mt-2 font-medium p-2 rounded">
-                  ✓ Lanche da tarde hoje
-                </p>
-              )}
+              <Box>
+                <Typography variant="h6" component="div" sx={{ mb: 1 }}>
+                  {aluno.nome}
+                </Typography>
+                <Typography color="textSecondary" sx={{ mb: 1 }}>
+                  {aluno.turma}
+                </Typography>
+              </Box>
 
-              {/* Status das cotas por tipo */}
-              {!refeicoesDoAluno.ALMOCO && cotasPorTipo.ALMOCO.excedeuCota && (
-                <p className="bg-yellow-100 text-yellow-600 text-sm mt-2 font-medium p-2 rounded">
-                  Cota de almoços excedida
-                </p>
+              {jaComeu ? (
+                <Alert severity="success" sx={{ mt: 1 }}>
+                  Refeição registrada
+                </Alert>
+              ) : excedeuCota ? (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  Cota semanal excedida
+                </Alert>
+              ) : (
+                <Typography color="textSecondary" sx={{ mt: 1, fontSize: '0.875rem' }}>
+                  {refeicaoRestante} refeição(ões) restante(s)
+                </Typography>
               )}
-              {!refeicoesDoAluno.LANCHE_MANHA && cotasPorTipo.LANCHE_MANHA.excedeuCota && (
-                <p className="bg-yellow-100 text-yellow-600 text-sm mt-2 font-medium p-2 rounded">
-                  Cota de lanches da manhã excedida
-                </p>
-              )}
-              {!refeicoesDoAluno.LANCHE_TARDE && cotasPorTipo.LANCHE_TARDE.excedeuCota && (
-                <p className="bg-yellow-100 text-yellow-600 text-sm mt-2 font-medium p-2 rounded">
-                  Cota de lanches da tarde excedida
-                </p>
-              )}
-
-              {/* Refeições restantes por tipo */}
-              {!refeicoesDoAluno.ALMOCO && !cotasPorTipo.ALMOCO.excedeuCota && (
-                <p className="bg-gray-100 text-gray-600 text-sm mt-2 p-2 rounded">
-                  {cotasPorTipo.ALMOCO.refeicaoRestante} almoços restantes
-                </p>
-              )}
-              {!refeicoesDoAluno.LANCHE_MANHA && !cotasPorTipo.LANCHE_MANHA.excedeuCota && (
-                <p className="bg-gray-100 text-gray-600 text-sm mt-2 p-2 rounded">
-                  {cotasPorTipo.LANCHE_MANHA.refeicaoRestante} lanches da manhã restantes
-                </p>
-              )}
-              {!refeicoesDoAluno.LANCHE_TARDE && !cotasPorTipo.LANCHE_TARDE.excedeuCota && (
-                <p className="bg-gray-100 text-gray-600 text-sm mt-2 p-2 rounded">
-                  {cotasPorTipo.LANCHE_TARDE.refeicaoRestante} lanches da tarde restantes
-                </p>
-              )}
-
-              {/* Alertas especiais */}
-              {temCotaExcedida && (
-                <p className="text-yellow-600 text-sm mt-2 font-medium">
-                  ⚠️ Cota semanal excedida
-                </p>
-              )}
-              {temUltimaRefeicao && (
-                <p className="text-orange-600 text-sm mt-2 font-medium">
-                  ⚠️ Última refeição disponível
-                </p>
-              )}
-            </div>
+            </Card>
           );
         })}
-      </div>
-
-      {/* Modal de confirmação */}
-      <Dialog open={!!alunoSelecionado} onOpenChange={() => setAlunoSelecionado(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Marcar Refeição</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {alunoSelecionado && (
-              <>
-                <p className="text-lg">
-                  Aluno: <strong>{alunoSelecionado.nome}</strong>
-                </p>
-                <p className="text-lg">
-                  Turma: <strong>{alunoSelecionado.turma}</strong>
-                </p>
-                <div className="grid grid-cols-1 gap-3">
-                  {Object.entries(TIPOS_REFEICAO).map(([tipo, nome]) => {
-                    const refeicoesDoAluno = alunoSelecionado ? refeicoesHoje[alunoSelecionado.id] || {} : {};
-                    const jaComeuHoje = refeicoesDoAluno[tipo as TipoRefeicao];
-
-                    return (
-                      <Button
-                        key={tipo}
-                        onClick={() => marcarRefeicao(tipo as TipoRefeicao)}
-                        disabled={loading || jaComeuHoje}
-                        className={`h-16 text-xl font-medium ${jaComeuHoje ? 'bg-green-500 hover:bg-green-500 cursor-not-allowed' : ''}`}
-                      >
-                        {nome} {jaComeuHoje ? '✓' : ''}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      </Box>
+    </Box>
   );
 }

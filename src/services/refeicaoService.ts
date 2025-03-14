@@ -165,53 +165,36 @@ const dadosTeste: Refeicao[] = [
 
 export const refeicaoService = {
   async listarRefeicoes(filtro?: RefeicaoFilter): Promise<Refeicao[]> {
-    // Simula um pequeno delay para parecer uma chamada real
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const refeicaoRef = collection(db, COLLECTION_NAME);
+      let q = query(refeicaoRef);
 
-    let refeicoes = [...dadosTeste];
+      if (filtro?.data) {
+        const inicio = new Date(filtro.data);
+        inicio.setHours(0, 0, 0, 0);
+        const fim = new Date(filtro.data);
+        fim.setHours(23, 59, 59, 999);
 
-    if (filtro) {
-      if (filtro.data) {
-        const dataFiltro = new Date(filtro.data);
-        refeicoes = refeicoes.filter(r => 
-          r.data.getFullYear() === dataFiltro.getFullYear() &&
-          r.data.getMonth() === dataFiltro.getMonth() &&
-          r.data.getDate() === dataFiltro.getDate()
+        q = query(
+          refeicaoRef,
+          where('data', '>=', inicio),
+          where('data', '<=', fim)
         );
       }
 
-      if (filtro.dataInicio) {
-        refeicoes = refeicoes.filter(r => r.data >= filtro.dataInicio!);
-      }
-
-      if (filtro.dataFim) {
-        refeicoes = refeicoes.filter(r => r.data <= filtro.dataFim!);
-      }
-
-      if (filtro.turma) {
-        refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
-      }
-
-      if (filtro.tipo) {
-        refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
-      }
-
-      if (filtro.alunoId) {
-        refeicoes = refeicoes.filter(r => r.alunoId === filtro.alunoId);
-      }
-
-      if (filtro.presente !== undefined) {
-        refeicoes = refeicoes.filter(r => r.presente === filtro.presente);
-      }
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Refeicao[];
+    } catch (error) {
+      console.error('Erro ao listar refeições:', error);
+      throw error;
     }
-
-    return refeicoes;
   },
 
   async buscarRefeicao(id: string) {
     try {
-      await verificarPermissoes();
-      
       const docRef = doc(db, COLLECTION_NAME, id);
       const docSnap = await getDoc(docRef);
 
@@ -219,47 +202,48 @@ export const refeicaoService = {
         throw new Error('Refeição não encontrada');
       }
 
-      return converterParaRefeicao(docSnap);
+      return {
+        id: docSnap.id,
+        ...docSnap.data()
+      } as Refeicao;
     } catch (error) {
       console.error('Erro ao buscar refeição:', error);
       throw error;
     }
   },
 
-  async registrarRefeicao(dados: RefeicaoFormData): Promise<Refeicao> {
-    const novaRefeicao: Refeicao = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...dados,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    dadosTeste.push(novaRefeicao);
-    return novaRefeicao;
-  },
-
-  async atualizarRefeicao(id: string, dados: Partial<RefeicaoFormData>): Promise<void> {
+  async registrarRefeicao(dados: RefeicaoFormData) {
     try {
-      await verificarPermissoes();
-
-      const docRef = doc(db, COLLECTION_NAME, id);
-      const docData = {
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
         ...dados,
-        data: dados.data ? Timestamp.fromDate(dados.data) : undefined,
-        updatedAt: Timestamp.fromDate(new Date())
-      };
+        data: Timestamp.fromDate(dados.data),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
 
-      await updateDoc(docRef, docData);
+      return docRef.id;
     } catch (error) {
-      console.error('Erro ao atualizar refeição:', error);
-      if (error instanceof Error && error.message.includes('permission-denied')) {
-        throw new Error('Você não tem permissão para atualizar refeições. Verifique seu email para obter acesso completo.');
-      }
+      console.error('Erro ao registrar refeição:', error);
       throw error;
     }
   },
 
-  async excluirRefeicao(id: string): Promise<void> {
+  async atualizarRefeicao(id: string, dados: Partial<RefeicaoFormData>) {
+    try {
+      await verificarPermissoes();
+
+      const docRef = doc(db, COLLECTION_NAME, id);
+      await updateDoc(docRef, {
+        ...dados,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar refeição:', error);
+      throw error;
+    }
+  },
+
+  async excluirRefeicao(id: string) {
     try {
       await verificarPermissoes();
       
@@ -267,9 +251,6 @@ export const refeicaoService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error('Erro ao excluir refeição:', error);
-      if (error instanceof Error && error.message.includes('permission-denied')) {
-        throw new Error('Você não tem permissão para excluir refeições. Verifique seu email para obter acesso completo.');
-      }
       throw error;
     }
   }
