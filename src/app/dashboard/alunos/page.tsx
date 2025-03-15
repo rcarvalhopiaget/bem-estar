@@ -5,7 +5,7 @@ import { Aluno, AlunoFormData } from '@/types/aluno';
 import { alunoService } from '@/services/alunoService';
 import { AlunoForm } from '@/components/alunos/AlunoForm';
 import { ImportarAlunos } from '@/components/alunos/ImportarAlunos';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 export default function AlunosPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -43,7 +43,7 @@ export default function AlunosPage() {
   // Criar novo aluno
   const handleCriarAluno = async (dados: AlunoFormData) => {
     try {
-      await alunoService.criarAluno(dados);
+      await alunoService.criarOuAtualizarAluno(dados);
       setMostrarFormulario(false);
       carregarAlunos();
     } catch (error) {

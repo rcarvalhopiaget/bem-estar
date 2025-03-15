@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/firebase';
 
 export function EmailVerification() {

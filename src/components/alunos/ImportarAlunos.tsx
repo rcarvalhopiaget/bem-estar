@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { parseCsvToAlunos } from '@/utils/csvParser';
 import { alunoService } from '@/services/alunoService';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 interface ImportarAlunosProps {
   onSuccess: () => void;
@@ -45,7 +45,7 @@ export function ImportarAlunos({ onSuccess, onCancel }: ImportarAlunosProps) {
           for (let i = 0; i < alunos.length; i++) {
             const aluno = alunos[i];
             setStatus(`Importando ${aluno.nome}...`);
-            await alunoService.criarAluno(aluno);
+            await alunoService.criarOuAtualizarAluno(aluno);
             setProgress({ atual: i + 1, total: alunos.length });
           }
 

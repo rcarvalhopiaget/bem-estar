@@ -167,9 +167,10 @@ export const refeicaoService = {
   async listarRefeicoes(filtro?: RefeicaoFilter): Promise<Refeicao[]> {
     try {
       await verificarPermissoes();
+      console.log('Iniciando listagem de refeições com filtro:', filtro);
 
-      // Retorna dados de teste por enquanto
-      let refeicoes = [...dadosTeste];
+      const refeicoesRef = collection(db, COLLECTION_NAME);
+      let constraints: any[] = [];
 
       if (filtro) {
         if (filtro.dataInicio || filtro.dataFim) {
@@ -178,41 +179,39 @@ export const refeicaoService = {
           inicio.setHours(0, 0, 0, 0);
           fim.setHours(23, 59, 59, 999);
 
-          console.log('Filtrando por data:', {
-            inicio: inicio.toISOString(),
-            fim: fim.toISOString()
-          });
-
-          refeicoes = refeicoes.filter(r => {
-            const data = new Date(r.data);
-            data.setHours(0, 0, 0, 0); // Normaliza a data para comparar apenas dia/mês/ano
-            const inicioComparacao = new Date(inicio);
-            inicioComparacao.setHours(0, 0, 0, 0);
-            const fimComparacao = new Date(fim);
-            fimComparacao.setHours(23, 59, 59, 999);
-            return data >= inicioComparacao && data <= fimComparacao;
-          });
+          constraints.push(where('data', '>=', Timestamp.fromDate(inicio)));
+          constraints.push(where('data', '<=', Timestamp.fromDate(fim)));
         }
 
         if (filtro.alunoId) {
-          console.log('Filtrando por aluno:', filtro.alunoId);
-          refeicoes = refeicoes.filter(r => r.alunoId === filtro.alunoId);
+          constraints.push(where('alunoId', '==', filtro.alunoId));
         }
 
-        if (filtro.turma) {
-          console.log('Filtrando por turma:', filtro.turma);
-          refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
+        if (filtro.presente !== undefined) {
+          constraints.push(where('presente', '==', filtro.presente));
         }
-
-        if (filtro.tipo) {
-          console.log('Filtrando por tipo:', filtro.tipo);
-          refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
-        }
-
-        console.log('Total de refeições após filtros:', refeicoes.length);
       }
 
-      return refeicoes.sort((a, b) => b.data.getTime() - a.data.getTime());
+      // Adiciona ordenação por data
+      constraints.push(orderBy('data', 'desc'));
+
+      const q = query(refeicoesRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+      
+      let refeicoes = querySnapshot.docs.map(converterParaRefeicao);
+
+      // Aplicar filtros que não podem ser feitos no Firestore
+      if (filtro) {
+        if (filtro.turma) {
+          refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
+        }
+        if (filtro.tipo) {
+          refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
+        }
+      }
+
+      console.log(`Encontradas ${refeicoes.length} refeições`);
+      return refeicoes;
     } catch (error) {
       console.error('Erro ao listar refeições:', error);
       throw error;

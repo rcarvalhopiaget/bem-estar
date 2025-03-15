@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -57,7 +57,7 @@ const CORES_REFEICAO: Record<TipoRefeicao, string> = {
 
 const formatarData = {
   diaSemana: (data: Date) => format(data, 'EEEE', { locale: ptBR }),
-  diaEMes: (data: Date) => format(data, "d 'de' MMMM", { locale: ptBR }),
+  diaEMes: (data: Date) => format(data, 'd\'\' \'\'de\'\'\' MMMM', { locale: ptBR }),
   dataCompleta: (data: Date) => format(data, "dd/MM/yyyy HH:mm:ss"),
   dataSimples: (data: Date) => format(data, "dd/MM/yyyy"),
   dataArquivo: (data: Date) => format(data, "dd-MM-yyyy"),

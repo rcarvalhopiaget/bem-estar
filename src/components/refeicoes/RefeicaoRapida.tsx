@@ -16,44 +16,71 @@ interface Props {
   onRefeicaoMarcada: () => void;
 }
 
-// Limites de refeições por tipo de aluno
-const LIMITE_REFEICOES: Record<string, number> = {
-  'INTEGRAL_5X': 5,
-  'INTEGRAL_4X': 4,
-  'INTEGRAL_3X': 3,
-  'INTEGRAL_2X': 2,
-  'MENSALISTA': 999 // Sem limite prático
+// Limites de refeições por tipo de aluno e tipo de refeição
+const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; LANCHE_TARDE: number }> = {
+  'INTEGRAL_5X': {
+    LANCHE_MANHA: 5,
+    ALMOCO: 5,
+    LANCHE_TARDE: 5
+  },
+  'INTEGRAL_4X': {
+    LANCHE_MANHA: 4,
+    ALMOCO: 4,
+    LANCHE_TARDE: 4
+  },
+  'INTEGRAL_3X': {
+    LANCHE_MANHA: 3,
+    ALMOCO: 3,
+    LANCHE_TARDE: 3
+  },
+  'INTEGRAL_2X': {
+    LANCHE_MANHA: 2,
+    ALMOCO: 2,
+    LANCHE_TARDE: 2
+  },
+  'MENSALISTA': {
+    LANCHE_MANHA: 999,
+    ALMOCO: 999,
+    LANCHE_TARDE: 999
+  }
 };
 
 // Tipos de refeição disponíveis
+// Cores para cada tipo de refeição
+const CORES_REFEICAO = {
+  LANCHE_MANHA: '#2196f3', // Azul
+  ALMOCO: '#4caf50',      // Verde
+  LANCHE_TARDE: '#ff9800'  // Laranja
+};
+
 const TIPOS_REFEICAO = [
   { 
     id: 'LANCHE_MANHA' as TipoRefeicao, 
     nome: 'Lanche da Manhã', 
     horario: '09:30',
     icon: CoffeeIcon,
-    color: '#ff9800'
+    color: CORES_REFEICAO.LANCHE_MANHA
   },
   { 
     id: 'ALMOCO' as TipoRefeicao, 
     nome: 'Almoço', 
     horario: '12:00',
     icon: RestaurantIcon,
-    color: '#4caf50'
+    color: CORES_REFEICAO.ALMOCO
   },
   { 
     id: 'LANCHE_TARDE' as TipoRefeicao, 
     nome: 'Lanche da Tarde', 
     horario: '15:30',
     icon: CakeIcon,
-    color: '#2196f3'
+    color: CORES_REFEICAO.LANCHE_TARDE
   }
 ];
 
 export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Props) {
   const [busca, setBusca] = useState('');
   const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
-  const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, number>>({});
+  const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
 
@@ -83,11 +110,24 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         setAlunosComeram(comeram);
 
         // Carrega refeições da semana para cada aluno
-        const refeicoesSemanaisPorAluno: Record<string, number> = {};
+        const refeicoesSemanaisPorAluno: Record<string, Record<TipoRefeicao, number>> = {};
         await Promise.all(
           alunos.map(async (aluno) => {
             const refeicoesAluno = await refeicaoService.buscarRefeicoesSemana(aluno.id, data);
-            refeicoesSemanaisPorAluno[aluno.id] = refeicoesAluno.length;
+            
+            // Inicializa contadores para cada tipo de refeição
+            const contadores: Record<TipoRefeicao, number> = {
+              LANCHE_MANHA: 0,
+              ALMOCO: 0,
+              LANCHE_TARDE: 0
+            };
+
+            // Conta refeições por tipo
+            refeicoesAluno.forEach(refeicao => {
+              contadores[refeicao.tipo]++;
+            });
+
+            refeicoesSemanaisPorAluno[aluno.id] = contadores;
           })
         );
         setRefeicoesSemanais(refeicoesSemanaisPorAluno);
@@ -113,7 +153,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
 
     if (todasRefeicoesFeitas) {
-      toast.error('Aluno já marcou todas as refeições hoje');
+      toast.error('O aluno já realizou todas as refeições de hoje');
       return;
     }
 
@@ -126,21 +166,38 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
     const refeicoesHoje = alunosComeram[alunoSelecionado.id] || {};
     if (refeicoesHoje[tipoRefeicao]) {
-      toast.error('Esta refeição já foi marcada hoje');
+      toast.error('Esta refeição já foi registrada hoje');
       return;
     }
 
     try {
-      const refeicoesSemana = refeicoesSemanais[alunoSelecionado.id] || 0;
-      const limiteRefeicoes = LIMITE_REFEICOES[alunoSelecionado.tipo] || 0;
+      const refeicoesPorTipo = refeicoesSemanais[alunoSelecionado.id] || {
+        LANCHE_MANHA: 0,
+        ALMOCO: 0,
+        LANCHE_TARDE: 0
+      };
+      const limitesPorTipo = LIMITE_REFEICOES[alunoSelecionado.tipo] || {
+        LANCHE_MANHA: 0,
+        ALMOCO: 0,
+        LANCHE_TARDE: 0
+      };
 
-      // Verifica se excedeu a cota (apenas alerta, não bloqueia)
-      if (refeicoesSemana >= limiteRefeicoes) {
-        toast('Alerta: Cota semanal excedida', { 
+      // Verifica se excedeu a cota para este tipo específico de refeição
+      if (refeicoesPorTipo[tipoRefeicao] >= limitesPorTipo[tipoRefeicao]) {
+        toast(`Atenção: Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida`, { 
           icon: '⚠️',
           duration: 4000
         });
       }
+
+      // Atualiza o estado das refeições do aluno primeiro
+      setAlunosComeram(prev => ({
+        ...prev,
+        [alunoSelecionado.id]: {
+          ...prev[alunoSelecionado.id],
+          [tipoRefeicao]: true
+        }
+      }));
 
       await refeicaoService.registrarRefeicao({
         alunoId: alunoSelecionado.id,
@@ -151,20 +208,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         presente: true
       });
 
-      // Atualiza o estado das refeições do aluno
-      setAlunosComeram(prev => ({
-        ...prev,
-        [alunoSelecionado.id]: {
-          ...prev[alunoSelecionado.id],
-          [tipoRefeicao]: true
-        }
-      }));
-
       onRefeicaoMarcada();
       toast.success('Refeição registrada com sucesso!');
     } catch (error) {
-      console.error('Erro ao marcar refeição:', error);
-      toast.error('Erro ao registrar refeição');
+      console.error('Erro ao registrar refeição:', error);
+      toast.error('Não foi possível registrar a refeição');
     } finally {
       setDialogoAberto(false);
       setAlunoSelecionado(null);
@@ -188,7 +236,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       <TextField
         fullWidth
         variant="outlined"
-        placeholder="Buscar por nome ou turma..."
+        placeholder="Buscar por nome ou turma do aluno..."
         value={busca}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBusca(e.target.value)}
         sx={{ 
@@ -209,11 +257,31 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       }}>
         {alunosFiltrados.map((aluno) => {
           const refeicoesHoje = alunosComeram[aluno.id] || {};
-          const refeicoesSemana = refeicoesSemanais[aluno.id] || 0;
-          const limiteRefeicoes = LIMITE_REFEICOES[aluno.tipo] || 0;
-          const refeicaoRestante = limiteRefeicoes - refeicoesSemana;
-          const excedeuCota = refeicoesSemana >= limiteRefeicoes;
-          const ultimaRefeicao = refeicoesSemana === limiteRefeicoes - 1;
+          const refeicoesPorTipo = refeicoesSemanais[aluno.id] || {
+            LANCHE_MANHA: 0,
+            ALMOCO: 0,
+            LANCHE_TARDE: 0
+          };
+          const limitesPorTipo = LIMITE_REFEICOES[aluno.tipo] || {
+            LANCHE_MANHA: 0,
+            ALMOCO: 0,
+            LANCHE_TARDE: 0
+          };
+          
+          // Calcula o total de refeições restantes somando todos os tipos
+          const refeicaoRestante = Object.entries(limitesPorTipo).reduce((total, [tipo, limite]) => {
+            return total + (limite - (refeicoesPorTipo[tipo as TipoRefeicao] || 0));
+          }, 0);
+          
+          // Verifica se excedeu a cota em qualquer tipo de refeição
+          const excedeuCota = Object.entries(limitesPorTipo).some(([tipo, limite]) => 
+            (refeicoesPorTipo[tipo as TipoRefeicao] || 0) >= limite
+          );
+          
+          // Verifica se está na última refeição em qualquer tipo
+          const ultimaRefeicao = Object.entries(limitesPorTipo).some(([tipo, limite]) => 
+            (refeicoesPorTipo[tipo as TipoRefeicao] || 0) === limite - 1
+          );
           const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
 
           return (
@@ -235,7 +303,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                bgcolor: todasRefeicoesFeitas ? '#e8f5e9' : excedeuCota ? '#fff3e0' : ultimaRefeicao ? '#fff8e1' : 'white',
+                bgcolor: refeicoesHoje['ALMOCO'] ? '#e8f5e9' : (refeicoesHoje['LANCHE_MANHA'] || refeicoesHoje['LANCHE_TARDE']) ? '#e3f2fd' : excedeuCota ? '#fff3e0' : ultimaRefeicao ? '#fff8e1' : 'white',
                 borderColor: todasRefeicoesFeitas ? 'success.main' : excedeuCota ? 'warning.main' : ultimaRefeicao ? 'warning.light' : 'grey.300',
                 borderWidth: 1,
                 borderStyle: 'solid'
@@ -272,7 +340,13 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        color: refeicoesHoje[tipo.id] ? tipo.color : 'grey.400',
+                        justifyContent: 'center',
+                        borderRadius: '50%',
+                        width: window.innerWidth < 600 ? 32 : 40,
+                        height: window.innerWidth < 600 ? 32 : 40,
+                        backgroundColor: refeicoesHoje[tipo.id] ? `${CORES_REFEICAO[tipo.id]}15` : 'transparent',
+                        color: refeicoesHoje[tipo.id] ? CORES_REFEICAO[tipo.id] : 'grey.400',
+                        transition: 'all 0.2s ease-in-out'
                       }}
                     >
                       <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
@@ -292,7 +366,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                     }
                   }}
                 >
-                  Todas refeições registradas
+                  Todas as refeições foram registradas
                 </Alert>
               ) : excedeuCota ? (
                 <Alert 
@@ -305,7 +379,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                     }
                   }}
                 >
-                  Cota semanal excedida
+                  Cota semanal de refeições excedida
                 </Alert>
               ) : (
                 <Typography 
@@ -315,7 +389,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                     fontSize: { xs: '0.75rem', sm: '0.875rem' }
                   }}
                 >
-                  {refeicaoRestante} refeição(ões) restante(s)
+                  {refeicaoRestante} {refeicaoRestante === 1 ? 'refeição restante' : 'refeições restantes'}
                 </Typography>
               )}
             </Card>
@@ -343,7 +417,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           color: 'white',
           fontSize: { xs: '1.25rem', sm: '1.5rem' }
         }}>
-          Selecione o tipo de refeição
+          Selecione a refeição
         </DialogTitle>
         <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2}>
@@ -362,11 +436,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                       cursor: jaComeu ? 'default' : 'pointer',
                       bgcolor: jaComeu ? 'grey.100' : 'white',
                       border: 1,
-                      borderColor: jaComeu ? 'grey.300' : tipo.color,
+                      borderColor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
                       transition: 'all 0.2s',
                       '&:hover': {
                         transform: jaComeu ? 'none' : 'scale(1.02)',
-                        bgcolor: jaComeu ? 'grey.100' : `${tipo.color}10`,
+                        bgcolor: jaComeu ? 'grey.100' : `${CORES_REFEICAO[tipo.id]}10`,
                       },
                       '&:active': {
                         transform: jaComeu ? 'none' : 'scale(0.98)'
@@ -378,10 +452,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                   >
                     <IconButton 
                       sx={{ 
-                        bgcolor: jaComeu ? 'grey.300' : tipo.color,
+                        bgcolor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
                         color: 'white',
                         '&:hover': {
-                          bgcolor: jaComeu ? 'grey.300' : tipo.color,
+                          bgcolor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
                         },
                         p: { xs: 1, sm: 1.5 }
                       }}

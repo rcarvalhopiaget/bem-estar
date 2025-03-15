@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { RefeicaoForm } from '@/components/refeicoes/RefeicaoForm';
 import { refeicaoService } from '@/services/refeicaoService';
 import { alunoService } from '@/services/alunoService';
@@ -218,7 +218,7 @@ export function RefeicaoManager() {
         ) : (
           <ul className="divide-y divide-gray-200">
             {refeicoes.map((refeicao) => (
-              <li key={refeicao.id} className="px-4 py-4">
+              <li key={refeicao.id} className={`px-4 py-4 transition-colors duration-200 ${refeicao.presente ? 'bg-primary/10' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">
