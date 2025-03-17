@@ -14,22 +14,65 @@ export default function AdminPage() {
     }
 
     setLoading(true);
+    setResultado([]);
+    
     try {
+      console.log('Iniciando processo de limpeza...');
       const response = await fetch('/api/admin/limpar-duplicados', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+        console.log('Resposta recebida:', data);
+      } catch (e) {
+        console.error('Erro ao parsear resposta:', e);
+        throw new Error('Erro ao processar resposta do servidor. Verifique o console para detalhes.');
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar a limpeza');
+        throw new Error(data?.error || 'Erro ao processar a limpeza');
+      }
+      
+      // Se não houver resultados, cria um array vazio
+      if (!data || !data.resultados) {
+        console.warn('Resposta sem dados de resultado:', data);
+        data = { resultados: ['Operação concluída, mas sem resultados detalhados.'], totalProcessados: 0 };
+      }
+      
+      // Garante que resultados é um array
+      if (!Array.isArray(data.resultados)) {
+        console.error('Formato inválido de resultados:', data);
+        data.resultados = [String(data.resultados || 'Formato inválido de resposta do servidor')];
       }
 
-      setResultado(data.resultados || []);
-      toast.success(`Limpeza concluída! ${data.totalProcessados} registros processados.`);
+      setResultado(data.resultados);
+      
+      const mensagem = data.totalProcessados > 0
+        ? `Limpeza concluída! ${data.totalProcessados} registros processados.`
+        : 'Nenhum registro duplicado encontrado.';
+      
+      toast.success(mensagem);
     } catch (error) {
-      console.error('Erro:', error);
-      toast.error(error instanceof Error ? error.message : 'Erro ao executar a limpeza de duplicados');
+      console.error('Erro durante limpeza:', error);
+      const mensagemErro = error instanceof Error ? error.message : 'Erro desconhecido ao executar a limpeza';
+      toast.error(mensagemErro);
+      setResultado(['Erro: ' + mensagemErro]);
+      
+      // Registra informações adicionais para depuração
+      try {
+        const navigatorInfo = {
+          online: navigator.onLine,
+          userAgent: navigator.userAgent
+        };
+        console.log('Informações adicionais para depuração:', navigatorInfo);
+      } catch (e) {
+        console.error('Erro ao coletar informações adicionais:', e);
+      }
     } finally {
       setLoading(false);
     }
