@@ -66,7 +66,7 @@ export const alunoService = {
       console.log(`Encontrados ${alunos.length} alunos`);
       return alunos;
     } catch (error) {
-      console.error('Erro ao listar alunos:', error);
+      console.error('Erro ao listar alunos:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao listar alunos');
     }
   },
@@ -84,7 +84,7 @@ export const alunoService = {
 
       return converterParaAluno(querySnapshot.docs[0]);
     } catch (error) {
-      console.error('Erro ao buscar aluno por matrícula:', error);
+      console.error('Erro ao buscar aluno por matrícula:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao buscar aluno por matrícula');
     }
   },
@@ -102,7 +102,7 @@ export const alunoService = {
 
       return converterParaAluno(docSnap);
     } catch (error) {
-      console.error('Erro ao buscar aluno:', error);
+      console.error('Erro ao buscar aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao buscar aluno');
     }
   },
@@ -137,8 +137,8 @@ export const alunoService = {
         return docRef.id;
       }
     } catch (error) {
-      console.error('Erro detalhado ao criar/atualizar aluno:', error);
-      throw new Error('Erro ao criar/atualizar aluno');
+      console.error('Erro ao criar/atualizar aluno:', error instanceof Error ? error.message : JSON.stringify(error));
+      throw new Error('Erro ao salvar aluno');
     }
   },
 
@@ -152,7 +152,7 @@ export const alunoService = {
       });
       console.log('Aluno atualizado com sucesso');
     } catch (error) {
-      console.error('Erro detalhado ao atualizar aluno:', error);
+      console.error('Erro ao atualizar aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao atualizar aluno');
     }
   },
@@ -164,7 +164,7 @@ export const alunoService = {
       await deleteDoc(docRef);
       console.log('Aluno excluído com sucesso');
     } catch (error) {
-      console.error('Erro detalhado ao excluir aluno:', error);
+      console.error('Erro ao excluir aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao excluir aluno');
     }
   },
@@ -184,8 +184,8 @@ export const alunoService = {
       
       return Array.from(turmas).sort();
     } catch (error) {
-      console.error('Erro ao listar turmas:', error);
-      throw error;
+      console.error('Erro ao listar turmas:', error instanceof Error ? error.message : JSON.stringify(error));
+      throw new Error('Erro ao listar turmas');
     }
   }
 };

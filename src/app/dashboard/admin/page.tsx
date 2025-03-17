@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { toast } from 'react-hot-toast';
 
 export default function AdminPage() {
@@ -27,14 +27,29 @@ export default function AdminPage() {
 
       let data;
       try {
-        data = await response.json();
-        console.log('Resposta recebida:', data);
+        // Verificar se a resposta tem conteúdo antes de tentar parsear
+        const text = await response.text();
+        console.log('Resposta bruta recebida:', text);
+        
+        if (text && text.trim() !== '') {
+          data = JSON.parse(text);
+          console.log('Resposta parseada:', data);
+        } else {
+          console.warn('Resposta vazia recebida do servidor');
+          data = { resultados: ['Resposta vazia recebida do servidor'], totalProcessados: 0 };
+        }
       } catch (e) {
-        console.error('Erro ao parsear resposta:', e);
+        console.error('Erro ao parsear resposta:', e instanceof Error ? e.message : JSON.stringify(e));
         throw new Error('Erro ao processar resposta do servidor. Verifique o console para detalhes.');
       }
       
       if (!response.ok) {
+        if (data?.error && data.error.includes('Configuração do Firebase Admin SDK incompleta')) {
+          // Erro específico de configuração do Firebase
+          toast.error('Erro de configuração do sistema. Contate o administrador.');
+          setResultado([data.error]);
+          return;
+        }
         throw new Error(data?.error || 'Erro ao processar a limpeza');
       }
       
@@ -58,7 +73,7 @@ export default function AdminPage() {
       
       toast.success(mensagem);
     } catch (error) {
-      console.error('Erro durante limpeza:', error);
+      console.error('Erro durante limpeza:', error instanceof Error ? error.message : JSON.stringify(error));
       const mensagemErro = error instanceof Error ? error.message : 'Erro desconhecido ao executar a limpeza';
       toast.error(mensagemErro);
       setResultado(['Erro: ' + mensagemErro]);

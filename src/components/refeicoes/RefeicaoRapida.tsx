@@ -132,7 +132,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         );
         setRefeicoesSemanais(refeicoesSemanaisPorAluno);
       } catch (error) {
-        console.error('Erro ao carregar refeições:', error);
+        console.error('Erro ao carregar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
         toast.error('Erro ao carregar refeições do dia');
       }
     };
@@ -211,7 +211,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       onRefeicaoMarcada();
       toast.success('Refeição registrada com sucesso!');
     } catch (error) {
-      console.error('Erro ao registrar refeição:', error);
+      console.error('Erro ao registrar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
       toast.error('Não foi possível registrar a refeição');
     } finally {
       setDialogoAberto(false);

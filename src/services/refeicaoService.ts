@@ -67,7 +67,7 @@ const verificarPermissoes = async () => {
 
     return userAtualizado;
   } catch (error) {
-    console.error('Erro ao verificar permissões:', error);
+    console.error('Erro ao verificar permissões:', error instanceof Error ? error.message : JSON.stringify(error));
     throw new Error('Erro ao verificar permissões. Por favor, faça login novamente.');
   }
 };
@@ -213,7 +213,7 @@ export const refeicaoService = {
       console.log(`Encontradas ${refeicoes.length} refeições`);
       return refeicoes;
     } catch (error) {
-      console.error('Erro ao listar refeições:', error);
+      console.error('Erro ao listar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },
@@ -232,7 +232,7 @@ export const refeicaoService = {
         ...docSnap.data()
       } as Refeicao;
     } catch (error) {
-      console.error('Erro ao buscar refeição:', error);
+      console.error('Erro ao buscar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },
@@ -248,7 +248,7 @@ export const refeicaoService = {
 
       return docRef.id;
     } catch (error) {
-      console.error('Erro ao registrar refeição:', error);
+      console.error('Erro ao registrar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },
@@ -263,7 +263,7 @@ export const refeicaoService = {
         updatedAt: Timestamp.now()
       });
     } catch (error) {
-      console.error('Erro ao atualizar refeição:', error);
+      console.error('Erro ao atualizar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },
@@ -275,7 +275,7 @@ export const refeicaoService = {
       const docRef = doc(db, COLLECTION_NAME, id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.error('Erro ao excluir refeição:', error);
+      console.error('Erro ao excluir refeição:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },
@@ -304,7 +304,7 @@ export const refeicaoService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => converterParaRefeicao(doc));
     } catch (error) {
-      console.error('Erro ao buscar refeições da semana:', error);
+      console.error('Erro ao buscar refeições da semana:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;
     }
   },

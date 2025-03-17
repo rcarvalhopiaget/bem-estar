@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { RefeicaoForm } from '@/components/refeicoes/RefeicaoForm';
 import { refeicaoService } from '@/services/refeicaoService';
 import { alunoService } from '@/services/alunoService';

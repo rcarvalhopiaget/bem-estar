@@ -5,7 +5,7 @@ import { Aluno, AlunoFormData } from '@/types/aluno';
 import { alunoService } from '@/services/alunoService';
 import { AlunoForm } from '@/components/alunos/AlunoForm';
 import { ImportarAlunos } from '@/components/alunos/ImportarAlunos';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 export default function AlunosPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -14,14 +14,15 @@ export default function AlunosPage() {
   const [mostrarImportacao, setMostrarImportacao] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtroAtivo, setFiltroAtivo] = useState<boolean | undefined>(true); // Inicialmente mostra apenas ativos
 
   // Carregar lista de alunos
   const carregarAlunos = async () => {
     try {
       setLoading(true);
       setError(null); // Limpa erros anteriores
-      console.log('Iniciando carregamento de alunos...');
-      const data = await alunoService.listarAlunos();
+      console.log('Iniciando carregamento de alunos com filtro:', { ativo: filtroAtivo });
+      const data = await alunoService.listarAlunos({ ativo: filtroAtivo });
       console.log('Alunos carregados:', data);
       setAlunos(data);
     } catch (error) {
@@ -38,7 +39,7 @@ export default function AlunosPage() {
 
   useEffect(() => {
     carregarAlunos();
-  }, []);
+  }, [filtroAtivo]);
 
   // Criar novo aluno
   const handleCriarAluno = async (dados: AlunoFormData) => {
@@ -88,10 +89,10 @@ export default function AlunosPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Alunos</h1>
         <div className="space-x-4">
-          <Button onClick={() => setMostrarImportacao(true)}>
+          <Button variant="primary" onClick={() => setMostrarImportacao(true)}>
             Importar Alunos
           </Button>
-          <Button onClick={() => setMostrarFormulario(true)}>
+          <Button variant="primary" onClick={() => setMostrarFormulario(true)}>
             Novo Aluno
           </Button>
         </div>
@@ -102,6 +103,40 @@ export default function AlunosPage() {
           {error}
         </div>
       )}
+
+      {/* Filtro de status */}
+      <div className="mb-6 flex items-center">
+        <span className="mr-3 font-medium">Filtrar por status:</span>
+        <div className="flex space-x-2">
+          <Button 
+            variant={filtroAtivo === true ? "primary" : "outline"}
+            onClick={() => setFiltroAtivo(true)}
+            className="px-4 py-2"
+          >
+            Ativos
+          </Button>
+          <Button 
+            variant={filtroAtivo === false ? "primary" : "outline"}
+            onClick={() => setFiltroAtivo(false)}
+            className="px-4 py-2"
+          >
+            Inativos
+          </Button>
+          <Button 
+            variant={filtroAtivo === undefined ? "primary" : "outline"}
+            onClick={() => setFiltroAtivo(undefined)}
+            className="px-4 py-2"
+          >
+            Todos
+          </Button>
+        </div>
+        <div className="ml-4 text-sm text-gray-500">
+          {filtroAtivo === true && 'Mostrando apenas alunos ativos'}
+          {filtroAtivo === false && 'Mostrando apenas alunos inativos'}
+          {filtroAtivo === undefined && 'Mostrando todos os alunos'}
+          {alunos.length > 0 && ` (${alunos.length} encontrados)`}
+        </div>
+      </div>
 
       {mostrarImportacao && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

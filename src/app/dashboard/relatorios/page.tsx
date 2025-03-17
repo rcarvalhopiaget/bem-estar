@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import { Label } from '@/components/ui/Label';
+import { Input } from '@/components/ui/Input';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
@@ -56,8 +56,8 @@ const CORES_REFEICAO: Record<TipoRefeicao, string> = {
 };
 
 const formatarData = {
-  diaSemana: (data: Date) => format(data, 'EEEE', { locale: ptBR }),
-  diaEMes: (data: Date) => format(data, 'd\'\' \'\'de\'\'\' MMMM', { locale: ptBR }),
+  diaSemana: (data: Date) => format(data, 'EEEE'),
+  diaEMes: (data: Date) => format(data, "d 'de' MMMM"),
   dataCompleta: (data: Date) => format(data, "dd/MM/yyyy HH:mm:ss"),
   dataSimples: (data: Date) => format(data, "dd/MM/yyyy"),
   dataArquivo: (data: Date) => format(data, "dd-MM-yyyy"),
