@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { parseCsvToAlunos } from '@/utils/csvParser';
 import { alunoService } from '@/services/alunoService';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 interface ImportarAlunosProps {
   onSuccess: () => void;

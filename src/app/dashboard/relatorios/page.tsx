@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';

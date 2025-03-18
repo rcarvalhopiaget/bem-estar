@@ -87,3 +87,21 @@ export async function clearSession() {
     throw error;
   }
 }
+
+// Verifica se o usuário está autenticado, lançando um erro caso não esteja
+export async function checkUserAuthenticated(): Promise<User> {
+  const currentUser = auth.currentUser;
+  
+  if (!currentUser) {
+    throw new Error('Usuário não autenticado');
+  }
+  
+  try {
+    // Verifica se o token do usuário é válido
+    await currentUser.getIdToken(true);
+    return currentUser;
+  } catch (error) {
+    console.error('Erro ao verificar autenticação do usuário:', error);
+    throw new Error('Sessão expirada ou inválida');
+  }
+}

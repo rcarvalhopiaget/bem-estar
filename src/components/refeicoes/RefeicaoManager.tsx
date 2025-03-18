@@ -9,7 +9,7 @@ import { alunoService } from '@/services/alunoService';
 import { Refeicao, TIPOS_REFEICAO } from '@/types/refeicao';
 import { Aluno } from '@/types/aluno';
 import { usePermissions } from '@/hooks/usePermissions';
-import { PermissionAlert } from '@/components/ui/PermissionAlert';
+import { PermissionAlert } from '@/components/ui/permissionAlert';
 import { isFirebasePermissionError } from '@/lib/errors';
 
 export function RefeicaoManager() {

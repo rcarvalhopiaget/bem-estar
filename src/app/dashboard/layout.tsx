@@ -4,14 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu as MenuIcon, Home, People, Restaurant, Assessment, Close } from "@mui/icons-material";
+import { Menu as MenuIcon, Home, People, Restaurant, Assessment, Close, Person, AccountCircle } from "@mui/icons-material";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -33,12 +33,25 @@ export default function DashboardLayout({
     setMenuOpen(false);
   };
 
+  // Verifica se o usuário é admin para mostrar a opção de usuários
+  const isAdmin = user?.email && [
+    'admin@bemestar.com', 
+    'teste@teste.com', 
+    'rodrigo.carvalho@jpiaget.com.br'
+  ].includes(user.email);
+
   const menuItems = [
     { href: "/dashboard", label: "Início", icon: <Home /> },
     { href: "/dashboard/alunos", label: "Alunos", icon: <People /> },
     { href: "/dashboard/refeicoes-rapidas", label: "Refeições Rápidas", icon: <Restaurant /> },
     { href: "/dashboard/relatorios", label: "Relatórios", icon: <Assessment /> },
+    { href: "/dashboard/perfil", label: "Meu Perfil", icon: <AccountCircle /> },
   ];
+
+  // Adiciona a opção de usuários apenas para administradores
+  if (isAdmin) {
+    menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <Person /> });
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -59,6 +72,10 @@ export default function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center">
+              <Link href="/dashboard/perfil" className="flex items-center px-3 py-2 text-sm text-gray-700 hover:text-primary">
+                <AccountCircle className="mr-1" />
+                {user?.displayName || user?.email}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm text-red-600 hover:text-red-800"
