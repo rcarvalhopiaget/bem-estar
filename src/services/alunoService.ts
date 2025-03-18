@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Aluno, AlunoFormData, AlunoFilter } from '@/types/aluno';
+import { atividadeService } from '@/services/atividadeService';
 
 const COLLECTION_NAME = 'alunos';
 
@@ -107,62 +108,125 @@ export const alunoService = {
     }
   },
 
-  async criarOuAtualizarAluno(dados: AlunoFormData) {
+  async criarOuAtualizarAluno(dados: AlunoFormData): Promise<string> {
     try {
-      console.log('Iniciando criação/atualização de aluno:', dados.nome);
+      console.log('Criando ou atualizando aluno:', dados);
       
-      // Busca por matrícula existente
+      // Verificar se já existe um aluno com a mesma matrícula
       const alunoExistente = await this.buscarAlunoPorMatricula(dados.matricula);
-      const now = Timestamp.now();
-
+      
       if (alunoExistente) {
-        // Atualiza aluno existente
-        console.log('Atualizando aluno existente:', alunoExistente.id);
-        const docRef = doc(db, COLLECTION_NAME, alunoExistente.id);
-        await updateDoc(docRef, {
-          ...dados,
-          updatedAt: now
-        });
-        console.log('Aluno atualizado com sucesso');
+        console.log('Aluno já existe, atualizando:', alunoExistente.id);
+        await this.atualizarAluno(alunoExistente.id, dados);
+        
+        // Registrar atividade de atualização
+        try {
+          await atividadeService.registrarAtividade({
+            tipo: 'ALUNO',
+            descricao: `Aluno ${dados.nome} (${dados.matricula}) foi atualizado`,
+            usuarioId: '',
+            usuarioEmail: '',
+            entidadeId: alunoExistente.id,
+            entidadeTipo: 'aluno'
+          });
+        } catch (error) {
+          console.warn('Erro ao registrar atividade de atualização de aluno, continuando fluxo:', error);
+        }
+        
         return alunoExistente.id;
-      } else {
-        // Cria novo aluno
-        console.log('Criando novo aluno');
-        const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-          ...dados,
-          createdAt: now,
-          updatedAt: now
-        });
-        console.log('Aluno criado com sucesso. ID:', docRef.id);
-        return docRef.id;
       }
+      
+      // Criar novo aluno
+      const novoAluno = {
+        ...dados,
+        ativo: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), novoAluno);
+      console.log('Novo aluno criado com ID:', docRef.id);
+      
+      // Registrar atividade de criação
+      try {
+        await atividadeService.registrarAtividade({
+          tipo: 'ALUNO',
+          descricao: `Novo aluno ${dados.nome} (${dados.matricula}) foi cadastrado`,
+          usuarioId: '',
+          usuarioEmail: '',
+          entidadeId: docRef.id,
+          entidadeTipo: 'aluno'
+        });
+      } catch (error) {
+        console.warn('Erro ao registrar atividade de criação de aluno, continuando fluxo:', error);
+      }
+      
+      return docRef.id;
     } catch (error) {
       console.error('Erro ao criar/atualizar aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao salvar aluno');
     }
   },
 
-  async atualizarAluno(id: string, dados: Partial<AlunoFormData>) {
+  async atualizarAluno(id: string, dados: Partial<AlunoFormData>): Promise<void> {
     try {
-      console.log('Iniciando atualização do aluno:', id);
-      const docRef = doc(db, COLLECTION_NAME, id);
-      await updateDoc(docRef, {
+      const alunoRef = doc(db, COLLECTION_NAME, id);
+      const alunoAtual = await getDoc(alunoRef);
+      
+      if (!alunoAtual.exists()) {
+        throw new Error(`Aluno com ID ${id} não encontrado`);
+      }
+      
+      await updateDoc(alunoRef, {
         ...dados,
-        updatedAt: Timestamp.now()
+        updatedAt: new Date()
       });
-      console.log('Aluno atualizado com sucesso');
+      
+      // Registrar atividade de atualização
+      try {
+        await atividadeService.registrarAtividade({
+          tipo: 'ALUNO',
+          descricao: `Aluno ${dados.nome || alunoAtual.data().nome} foi atualizado`,
+          usuarioId: '',
+          usuarioEmail: '',
+          entidadeId: id,
+          entidadeTipo: 'aluno'
+        });
+      } catch (error) {
+        console.warn('Erro ao registrar atividade de atualização de aluno, continuando fluxo:', error);
+      }
     } catch (error) {
       console.error('Erro ao atualizar aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao atualizar aluno');
     }
   },
 
-  async excluirAluno(id: string) {
+  async excluirAluno(id: string): Promise<void> {
     try {
-      console.log('Iniciando exclusão do aluno:', id);
-      const docRef = doc(db, COLLECTION_NAME, id);
-      await deleteDoc(docRef);
-      console.log('Aluno excluído com sucesso');
+      const alunoRef = doc(db, COLLECTION_NAME, id);
+      const alunoDoc = await getDoc(alunoRef);
+      
+      if (!alunoDoc.exists()) {
+        throw new Error(`Aluno com ID ${id} não encontrado`);
+      }
+      
+      const alunoData = alunoDoc.data();
+      
+      await deleteDoc(alunoRef);
+      
+      // Registrar atividade de exclusão
+      try {
+        await atividadeService.registrarAtividade({
+          tipo: 'ALUNO',
+          descricao: `Aluno ${alunoData.nome} (${alunoData.matricula}) foi excluído`,
+          usuarioId: '',
+          usuarioEmail: '',
+          entidadeId: id,
+          entidadeTipo: 'aluno'
+        });
+      } catch (error) {
+        console.warn('Erro ao registrar atividade de exclusão de aluno, continuando fluxo:', error);
+      }
     } catch (error) {
       console.error('Erro ao excluir aluno:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao excluir aluno');

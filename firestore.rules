@@ -60,6 +60,20 @@ service cloud.firestore {
         );
     }
     
+    match /atividades/{atividadeId} {
+      allow read: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado: " + request.auth.token.email)
+        );
+      
+      allow write: if
+        isAuthenticated() && (
+          hasVerifiedEmail() ||
+          debug("Email não verificado para escrita: " + request.auth.token.email)
+        );
+    }
+    
     match /{document=**} {
       allow read, write: if false;
     }

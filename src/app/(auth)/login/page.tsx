@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert } from '@mui/material';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -19,6 +21,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,
@@ -30,10 +33,27 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      setLoginError(null);
       await signIn(data.email, data.password);
       router.push('/dashboard');
     } catch (error) {
       console.error('Erro ao fazer login:', error);
+      
+      // Tratamento de erros específicos do Firebase
+      if (error instanceof Error) {
+        const errorCode = (error as any).code;
+        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+          setLoginError('Email ou senha incorretos');
+        } else if (errorCode === 'auth/too-many-requests') {
+          setLoginError('Muitas tentativas de login. Tente novamente mais tarde');
+        } else if (errorCode === 'auth/network-request-failed') {
+          setLoginError('Erro de conexão. Verifique sua internet');
+        } else {
+          setLoginError('Erro ao fazer login. Tente novamente');
+        }
+      } else {
+        setLoginError('Ocorreu um erro inesperado. Tente novamente');
+      }
     }
   };
 
@@ -48,6 +68,13 @@ export default function LoginPage() {
             Faça login para acessar o sistema
           </p>
         </div>
+        
+        {loginError && (
+          <Alert severity="error" className="mt-4">
+            {loginError}
+          </Alert>
+        )}
+        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm space-y-4">
             <Input

@@ -214,6 +214,18 @@ export default function RelatoriosPage() {
 
   const RelatorioPorTurma = () => {
     const refeicoesAgrupadas = agruparRefeicoesPorTurma();
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+      setIsMobile(window.innerWidth < 640);
+      
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 640);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
       <div className="space-y-6">
@@ -262,13 +274,13 @@ export default function RelatoriosPage() {
                           <td className="px-3 sm:px-4 py-2 sm:py-3">
                             <div className="flex items-center gap-2">
                               <IconButton 
-                                size={window.innerWidth < 640 ? "small" : "medium"}
+                                size={isMobile ? "small" : "medium"}
                                 sx={{ 
                                   color: corRefeicao,
                                   backgroundColor: 'transparent'
                                 }}
                               >
-                                <Icon fontSize={window.innerWidth < 640 ? "small" : "medium"} />
+                                <Icon fontSize={isMobile ? "small" : "medium"} />
                               </IconButton>
                               <span className="text-base sm:text-lg">{tipoNome}</span>
                             </div>

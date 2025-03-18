@@ -1,4 +1,4 @@
-export type TipoRefeicao = 'ALMOCO' | 'LANCHE_MANHA' | 'LANCHE_TARDE';
+export type TipoRefeicao = 'ALMOCO' | 'LANCHE_MANHA' | 'LANCHE_TARDE' | 'SOPA';
 
 export interface Refeicao {
   id: string;
@@ -36,5 +36,6 @@ export interface RefeicaoFilter {
 export const TIPOS_REFEICAO: Record<TipoRefeicao, string> = {
   'ALMOCO': 'Almoço',
   'LANCHE_MANHA': 'Lanche da Manhã',
-  'LANCHE_TARDE': 'Lanche da Tarde'
+  'LANCHE_TARDE': 'Lanche da Tarde',
+  'SOPA': 'Sopa'
 };

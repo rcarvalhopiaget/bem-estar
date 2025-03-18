@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { AtividadesRecentes } from '@/components/atividades/AtividadesRecentes';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -70,10 +71,7 @@ export default function DashboardPage() {
 
       {/* Seção de Atividades Recentes */}
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Atividades Recentes</h2>
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <p className="text-gray-600">Nenhuma atividade recente para exibir.</p>
-        </div>
+        <AtividadesRecentes limite={10} mostrarTitulo={true} />
       </div>
     </div>
   );

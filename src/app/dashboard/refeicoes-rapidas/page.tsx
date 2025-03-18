@@ -15,6 +15,7 @@ export default function RefeicoesRapidasPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataAtual, setDataAtual] = useState(new Date());
 
   useEffect(() => {
     if (!user) {
@@ -26,6 +27,15 @@ export default function RefeicoesRapidasPage() {
   if (!user) {
     return null;
   }
+
+  // Atualiza a data atual a cada minuto para garantir que estamos sempre com a data correta
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setDataAtual(new Date());
+    }, 60000); // 60000 ms = 1 minuto
+
+    return () => clearInterval(intervalo);
+  }, []);
 
   const carregarAlunos = async () => {
     try {
@@ -74,7 +84,7 @@ export default function RefeicoesRapidasPage() {
         <h1 className="text-2xl font-bold mb-6">Refeições Rápidas</h1>
         <RefeicaoRapida 
           alunos={alunos} 
-          data={new Date()}
+          data={dataAtual}
           onRefeicaoMarcada={handleRefeicaoMarcada} 
         />
       </div>

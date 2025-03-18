@@ -15,8 +15,8 @@ import { refreshUserToken, setupTokenRefresh, clearSession } from '@/lib/auth';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User | null>;
+  signUp: (email: string, password: string, name: string) => Promise<User | null>;
   logout: () => Promise<void>;
 }
 
@@ -31,12 +31,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (user) {
           // Configura a atualização automática do token
-          const cleanup = await setupTokenRefresh(user);
-          setUser(user);
-          return cleanup;
+          try {
+            const cleanup = await setupTokenRefresh(user);
+            setUser(user);
+            return cleanup;
+          } catch (tokenError) {
+            console.error('Erro ao configurar atualização de token:', tokenError);
+            // Mesmo com erro no token, mantemos o usuário autenticado
+            setUser(user);
+          }
         } else {
           // Limpa a sessão quando o usuário faz logout
-          await clearSession();
+          try {
+            await clearSession();
+          } catch (sessionError) {
+            console.error('Erro ao limpar sessão:', sessionError);
+          }
           setUser(null);
         }
       } catch (error) {
@@ -53,35 +63,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const result = await signInWithEmailAndPassword(auth, email, password);
       // Força a atualização do token após o login
-      await refreshUserToken(result.user);
+      try {
+        await refreshUserToken(result.user);
+      } catch (tokenError) {
+        console.error('Erro ao atualizar token após login:', tokenError);
+        // Continuamos mesmo se houver erro no token
+      }
+      return result.user;
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
+      setLoading(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
       // Atualiza o perfil do usuário com o nome
       await updateProfile(result.user, { displayName: name });
       // Força a atualização do token após o registro
-      await refreshUserToken(result.user);
+      try {
+        await refreshUserToken(result.user);
+      } catch (tokenError) {
+        console.error('Erro ao atualizar token após registro:', tokenError);
+        // Continuamos mesmo se houver erro no token
+      }
+      return result.user;
     } catch (error) {
       console.error('Erro ao criar conta:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
+      setLoading(true);
       await signOut(auth);
-      await clearSession();
+      try {
+        await clearSession();
+      } catch (sessionError) {
+        console.error('Erro ao limpar sessão durante logout:', sessionError);
+      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

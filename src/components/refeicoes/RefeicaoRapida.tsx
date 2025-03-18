@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
+import SoupKitchenIcon from '@mui/icons-material/SoupKitchen';
 
 interface Props {
   alunos: Aluno[];
@@ -17,63 +18,74 @@ interface Props {
 }
 
 // Limites de refeições por tipo de aluno e tipo de refeição
-const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; LANCHE_TARDE: number }> = {
+const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; LANCHE_TARDE: number; SOPA: number }> = {
   'INTEGRAL_5X': {
     LANCHE_MANHA: 5,
     ALMOCO: 5,
-    LANCHE_TARDE: 5
+    LANCHE_TARDE: 5,
+    SOPA: 5
   },
   'INTEGRAL_4X': {
     LANCHE_MANHA: 4,
     ALMOCO: 4,
-    LANCHE_TARDE: 4
+    LANCHE_TARDE: 4,
+    SOPA: 4
   },
   'INTEGRAL_3X': {
     LANCHE_MANHA: 3,
     ALMOCO: 3,
-    LANCHE_TARDE: 3
+    LANCHE_TARDE: 3,
+    SOPA: 3
   },
   'INTEGRAL_2X': {
     LANCHE_MANHA: 2,
     ALMOCO: 2,
-    LANCHE_TARDE: 2
+    LANCHE_TARDE: 2,
+    SOPA: 2
   },
   'MENSALISTA': {
     LANCHE_MANHA: 999,
     ALMOCO: 999,
-    LANCHE_TARDE: 999
+    LANCHE_TARDE: 999,
+    SOPA: 999
+  },
+  'AVULSO': {
+    LANCHE_MANHA: 999,
+    ALMOCO: 999,
+    LANCHE_TARDE: 999,
+    SOPA: 999
   }
 };
 
 // Tipos de refeição disponíveis
-// Cores para cada tipo de refeição
-const CORES_REFEICAO = {
-  LANCHE_MANHA: '#2196f3', // Azul
-  ALMOCO: '#4caf50',      // Verde
-  LANCHE_TARDE: '#ff9800'  // Laranja
-};
-
 const TIPOS_REFEICAO = [
   { 
     id: 'LANCHE_MANHA' as TipoRefeicao, 
     nome: 'Lanche da Manhã', 
     horario: '09:30',
     icon: CoffeeIcon,
-    color: CORES_REFEICAO.LANCHE_MANHA
+    color: '#1976d2' // Azul
   },
   { 
     id: 'ALMOCO' as TipoRefeicao, 
     nome: 'Almoço', 
     horario: '12:00',
     icon: RestaurantIcon,
-    color: CORES_REFEICAO.ALMOCO
+    color: '#2e7d32' // Verde
   },
   { 
     id: 'LANCHE_TARDE' as TipoRefeicao, 
     nome: 'Lanche da Tarde', 
     horario: '15:30',
     icon: CakeIcon,
-    color: CORES_REFEICAO.LANCHE_TARDE
+    color: '#ed6c02' // Laranja
+  },
+  { 
+    id: 'SOPA' as TipoRefeicao, 
+    nome: 'Sopa', 
+    horario: '18:00',
+    icon: SoupKitchenIcon,
+    color: '#d32f2f' // Vermelho
   }
 ];
 
@@ -91,22 +103,38 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     month: 'long'
   }).format(data);
 
+  // Função para verificar se duas datas são o mesmo dia
+  const isMesmoDia = (data1: Date, data2: Date): boolean => {
+    return (
+      data1.getDate() === data2.getDate() &&
+      data1.getMonth() === data2.getMonth() &&
+      data1.getFullYear() === data2.getFullYear()
+    );
+  };
+
   // Carregar refeições do dia atual e da semana
   useEffect(() => {
     const carregarRefeicoes = async () => {
       try {
-        // Carrega refeições do dia
+        // Limpa o estado anterior quando a data muda
+        setAlunosComeram({});
+        
+        // Carrega refeições do dia selecionado
         const refeicoes = await refeicaoService.listarRefeicoes({ data });
         const comeram: Record<string, Partial<Record<TipoRefeicao, boolean>>> = {};
         
-        refeicoes.forEach(refeicao => {
-          if (refeicao.presente) {
-            if (!comeram[refeicao.alunoId]) {
-              comeram[refeicao.alunoId] = {};
+        // Apenas processa refeições se a data selecionada for a data atual
+        const hoje = new Date();
+        if (isMesmoDia(data, hoje)) {
+          refeicoes.forEach(refeicao => {
+            if (refeicao.presente) {
+              if (!comeram[refeicao.alunoId]) {
+                comeram[refeicao.alunoId] = {};
+              }
+              comeram[refeicao.alunoId][refeicao.tipo] = true;
             }
-            comeram[refeicao.alunoId][refeicao.tipo] = true;
-          }
-        });
+          });
+        }
         setAlunosComeram(comeram);
 
         // Carrega refeições da semana para cada aluno
@@ -119,7 +147,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
             const contadores: Record<TipoRefeicao, number> = {
               LANCHE_MANHA: 0,
               ALMOCO: 0,
-              LANCHE_TARDE: 0
+              LANCHE_TARDE: 0,
+              SOPA: 0
             };
 
             // Conta refeições por tipo
@@ -149,6 +178,13 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   });
 
   const handleCardClick = (aluno: Aluno) => {
+    // Verifica se a data selecionada é a data atual
+    const hoje = new Date();
+    if (!isMesmoDia(data, hoje)) {
+      toast.error('Só é possível registrar refeições para o dia atual');
+      return;
+    }
+
     const refeicoesHoje = alunosComeram[aluno.id] || {};
     const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
 
@@ -174,12 +210,14 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       const refeicoesPorTipo = refeicoesSemanais[alunoSelecionado.id] || {
         LANCHE_MANHA: 0,
         ALMOCO: 0,
-        LANCHE_TARDE: 0
+        LANCHE_TARDE: 0,
+        SOPA: 0
       };
       const limitesPorTipo = LIMITE_REFEICOES[alunoSelecionado.tipo] || {
         LANCHE_MANHA: 0,
         ALMOCO: 0,
-        LANCHE_TARDE: 0
+        LANCHE_TARDE: 0,
+        SOPA: 0
       };
 
       // Verifica se excedeu a cota para este tipo específico de refeição
@@ -231,6 +269,14 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         }}
       >
         {dataFormatada}
+        {!isMesmoDia(data, new Date()) && (
+          <Alert 
+            severity="info" 
+            sx={{ mt: 2, mb: 1 }}
+          >
+            Visualizando dados históricos. Apenas o dia atual permite registrar refeições.
+          </Alert>
+        )}
       </Typography>
 
       <TextField
@@ -260,12 +306,14 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           const refeicoesPorTipo = refeicoesSemanais[aluno.id] || {
             LANCHE_MANHA: 0,
             ALMOCO: 0,
-            LANCHE_TARDE: 0
+            LANCHE_TARDE: 0,
+            SOPA: 0
           };
           const limitesPorTipo = LIMITE_REFEICOES[aluno.tipo] || {
             LANCHE_MANHA: 0,
             ALMOCO: 0,
-            LANCHE_TARDE: 0
+            LANCHE_TARDE: 0,
+            SOPA: 0
           };
           
           // Calcula o total de refeições restantes somando todos os tipos
@@ -303,7 +351,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                bgcolor: refeicoesHoje['ALMOCO'] ? '#e8f5e9' : (refeicoesHoje['LANCHE_MANHA'] || refeicoesHoje['LANCHE_TARDE']) ? '#e3f2fd' : excedeuCota ? '#fff3e0' : ultimaRefeicao ? '#fff8e1' : 'white',
+                bgcolor: Object.values(refeicoesHoje).some(Boolean) ? '#e8f5e9' : 'white',
                 borderColor: todasRefeicoesFeitas ? 'success.main' : excedeuCota ? 'warning.main' : ultimaRefeicao ? 'warning.light' : 'grey.300',
                 borderWidth: 1,
                 borderStyle: 'solid'
@@ -334,6 +382,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
               <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                 {TIPOS_REFEICAO.map((tipo) => {
                   const Icon = tipo.icon;
+                  const refeicaoMarcada = refeicoesHoje[tipo.id];
                   return (
                     <Box
                       key={tipo.id}
@@ -344,9 +393,9 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                         borderRadius: '50%',
                         width: window.innerWidth < 600 ? 32 : 40,
                         height: window.innerWidth < 600 ? 32 : 40,
-                        backgroundColor: refeicoesHoje[tipo.id] ? `${CORES_REFEICAO[tipo.id]}15` : 'transparent',
-                        color: refeicoesHoje[tipo.id] ? CORES_REFEICAO[tipo.id] : 'grey.400',
-                        transition: 'all 0.2s ease-in-out'
+                        backgroundColor: refeicaoMarcada ? tipo.color : 'transparent',
+                        color: refeicaoMarcada ? 'white' : 'grey.400',
+                        transition: 'all 0.2s'
                       }}
                     >
                       <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
@@ -436,11 +485,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                       cursor: jaComeu ? 'default' : 'pointer',
                       bgcolor: jaComeu ? 'grey.100' : 'white',
                       border: 1,
-                      borderColor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
+                      borderColor: jaComeu ? 'grey.300' : 'primary.main',
                       transition: 'all 0.2s',
                       '&:hover': {
                         transform: jaComeu ? 'none' : 'scale(1.02)',
-                        bgcolor: jaComeu ? 'grey.100' : `${CORES_REFEICAO[tipo.id]}10`,
+                        bgcolor: jaComeu ? 'grey.100' : 'primary.50',
                       },
                       '&:active': {
                         transform: jaComeu ? 'none' : 'scale(0.98)'
@@ -452,10 +501,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                   >
                     <IconButton 
                       sx={{ 
-                        bgcolor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
+                        bgcolor: jaComeu ? 'grey.300' : 'primary.main',
                         color: 'white',
                         '&:hover': {
-                          bgcolor: jaComeu ? 'grey.300' : CORES_REFEICAO[tipo.id],
+                          bgcolor: jaComeu ? 'grey.300' : 'primary.dark',
                         },
                         p: { xs: 1, sm: 1.5 }
                       }}
