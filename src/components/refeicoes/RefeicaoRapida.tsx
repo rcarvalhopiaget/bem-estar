@@ -119,20 +119,32 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         // Limpa o estado anterior quando a data muda
         setAlunosComeram({});
         
-        // Carrega refeições do dia selecionado
-        const refeicoes = await refeicaoService.listarRefeicoes({ data });
+        // Calcula o início e fim do dia selecionado
+        const dataInicio = new Date(data);
+        dataInicio.setHours(0, 0, 0, 0);
+        const dataFim = new Date(data);
+        dataFim.setHours(23, 59, 59, 999);
+        
+        // Carrega refeições do dia selecionado apenas com filtro de data
+        // Evita usar múltiplos filtros que exigiriam índices compostos
+        const refeicoes = await refeicaoService.listarRefeicoes({ 
+          dataInicio, 
+          dataFim
+        });
+        
+        // Filtra as refeições com presente=true no lado do cliente
+        const refeicoesPresentes = refeicoes.filter(refeicao => refeicao.presente === true);
+        
         const comeram: Record<string, Partial<Record<TipoRefeicao, boolean>>> = {};
         
         // Apenas processa refeições se a data selecionada for a data atual
         const hoje = new Date();
         if (isMesmoDia(data, hoje)) {
-          refeicoes.forEach(refeicao => {
-            if (refeicao.presente) {
-              if (!comeram[refeicao.alunoId]) {
-                comeram[refeicao.alunoId] = {};
-              }
-              comeram[refeicao.alunoId][refeicao.tipo] = true;
+          refeicoesPresentes.forEach(refeicao => {
+            if (!comeram[refeicao.alunoId]) {
+              comeram[refeicao.alunoId] = {};
             }
+            comeram[refeicao.alunoId][refeicao.tipo] = true;
           });
         }
         setAlunosComeram(comeram);

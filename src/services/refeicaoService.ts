@@ -35,7 +35,7 @@ const converterParaRefeicao = (doc: DocumentData): Refeicao => {
     turma: data.turma,
     data: data.data?.toDate() || new Date(),
     tipo: data.tipo,
-    presente: data.presente ?? true,
+    presente: data.presente ?? false,
     observacao: data.observacao,
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date()
@@ -167,36 +167,53 @@ export const refeicaoService = {
       const refeicoesRef = collection(db, COLLECTION_NAME);
       let constraints: any[] = [];
 
+      // Aplicamos apenas um filtro essencial no Firestore para evitar necessidade de índices compostos
       if (filtro) {
-        if (filtro.dataInicio || filtro.dataFim) {
+        // Priorizamos o filtro por alunoId se disponível
+        if (filtro.alunoId) {
+          constraints.push(where('alunoId', '==', filtro.alunoId));
+        }
+        // Se não tiver alunoId, podemos usar filtro de data, mas sem ordenação
+        else if (filtro.dataInicio || filtro.dataFim) {
           const inicio = filtro.dataInicio ? new Date(filtro.dataInicio) : new Date(0);
           const fim = filtro.dataFim ? new Date(filtro.dataFim) : new Date();
           inicio.setHours(0, 0, 0, 0);
           fim.setHours(23, 59, 59, 999);
 
+          // Usamos apenas um filtro de data para evitar índices compostos
           constraints.push(where('data', '>=', Timestamp.fromDate(inicio)));
-          constraints.push(where('data', '<=', Timestamp.fromDate(fim)));
-        }
-
-        if (filtro.alunoId) {
-          constraints.push(where('alunoId', '==', filtro.alunoId));
-        }
-
-        if (filtro.presente !== undefined) {
-          constraints.push(where('presente', '==', filtro.presente));
         }
       }
 
-      // Adiciona ordenação por data
-      constraints.push(orderBy('data', 'desc'));
+      // Removemos a ordenação por data para evitar índices compostos
+      // Ordenaremos no cliente depois
 
       const q = query(refeicoesRef, ...constraints);
       const querySnapshot = await getDocs(q);
       
       let refeicoes = querySnapshot.docs.map(converterParaRefeicao);
 
-      // Aplicar filtros que não podem ser feitos no Firestore
+      // Aplicar todos os filtros no lado do cliente
       if (filtro) {
+        // Filtro de data
+        if (filtro.dataInicio || filtro.dataFim) {
+          const inicio = filtro.dataInicio ? new Date(filtro.dataInicio) : new Date(0);
+          const fim = filtro.dataFim ? new Date(filtro.dataFim) : new Date();
+          inicio.setHours(0, 0, 0, 0);
+          fim.setHours(23, 59, 59, 999);
+
+          refeicoes = refeicoes.filter(r => {
+            const dataRefeicao = r.data;
+            return dataRefeicao >= inicio && dataRefeicao <= fim;
+          });
+        }
+
+        // Filtro de presente
+        if (filtro.presente !== undefined) {
+          refeicoes = refeicoes.filter(r => r.presente === filtro.presente);
+        }
+        
+        // Outros filtros
         if (filtro.turma) {
           refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
         }
@@ -204,6 +221,9 @@ export const refeicaoService = {
           refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
         }
       }
+
+      // Ordenação por data no cliente
+      refeicoes.sort((a, b) => b.data.getTime() - a.data.getTime());
 
       console.log(`Encontradas ${refeicoes.length} refeições`);
       return refeicoes;
@@ -238,6 +258,7 @@ export const refeicaoService = {
       
       const novaRefeicao = {
         ...dados,
+        presente: dados.presente ?? false, // Define como false por padrão
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       };
@@ -376,17 +397,23 @@ export const refeicaoService = {
       fimSemana.setDate(inicioSemana.getDate() + 6);
       fimSemana.setHours(23, 59, 59, 999);
 
+      // Abordagem 1: Buscar apenas pelo ID do aluno e filtrar o resto no cliente
       const refeicaoRef = collection(db, COLLECTION_NAME);
       const q = query(
         refeicaoRef,
-        where('alunoId', '==', alunoId),
-        where('data', '>=', inicioSemana),
-        where('data', '<=', fimSemana),
-        where('presente', '==', true)
+        where('alunoId', '==', alunoId)
       );
 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => converterParaRefeicao(doc));
+      const todasRefeicoes = querySnapshot.docs.map(doc => converterParaRefeicao(doc));
+      
+      // Filtramos por data e presente=true no lado do cliente
+      return todasRefeicoes.filter(refeicao => {
+        const dataRefeicao = refeicao.data;
+        return refeicao.presente === true && 
+               dataRefeicao >= inicioSemana && 
+               dataRefeicao <= fimSemana;
+      });
     } catch (error) {
       console.error('Erro ao buscar refeições da semana:', error instanceof Error ? error.message : JSON.stringify(error));
       throw error;

@@ -5,7 +5,7 @@ import { Aluno, AlunoFormData } from '@/types/aluno';
 import { alunoService } from '@/services/alunoService';
 import { AlunoForm } from '@/components/alunos/AlunoForm';
 import { ImportarAlunos } from '@/components/alunos/ImportarAlunos';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 export default function AlunosPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);

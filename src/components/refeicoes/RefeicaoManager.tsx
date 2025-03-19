@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { RefeicaoForm } from '@/components/refeicoes/RefeicaoForm';
 import { refeicaoService } from '@/services/refeicaoService';
 import { alunoService } from '@/services/alunoService';
@@ -21,7 +21,7 @@ export function RefeicaoManager() {
   const [error, setError] = useState<string | null>(null);
 
   // Filtros
-  const [dataFiltro, setDataFiltro] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dataFiltro, setDataFiltro] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<Refeicao['tipo'] | ''>('');
   const [turmaFiltro, setTurmaFiltro] = useState('');
 
@@ -30,17 +30,18 @@ export function RefeicaoManager() {
   }, []);
 
   useEffect(() => {
-    carregarRefeicoes();
+    if (dataFiltro) {
+      carregarRefeicoes();
+    }
   }, [dataFiltro, tipoFiltro, turmaFiltro]);
 
   const carregarDados = async () => {
     try {
       setLoading(true);
       await carregarAlunos();
-      await carregarRefeicoes();
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -162,12 +163,21 @@ export function RefeicaoManager() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Data
           </label>
-          <input
-            type="date"
-            value={dataFiltro}
-            onChange={(e) => setDataFiltro(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-          />
+          <div className="flex space-x-2">
+            <input
+              type="date"
+              value={dataFiltro}
+              onChange={(e) => setDataFiltro(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+            />
+            <Button 
+              onClick={() => setDataFiltro(format(new Date(), 'yyyy-MM-dd'))}
+              variant="outline"
+              className="mt-1 whitespace-nowrap"
+            >
+              Hoje
+            </Button>
+          </div>
         </div>
 
         <div>
@@ -211,6 +221,11 @@ export function RefeicaoManager() {
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         {loading ? (
           <div className="p-4 text-center">Carregando...</div>
+        ) : !dataFiltro ? (
+          <div className="p-8 text-center text-gray-500">
+            <p className="text-lg mb-2">Selecione uma data para visualizar as refeições</p>
+            <p className="text-sm">Os cards aparecerão desmarcados para o registro de hoje</p>
+          </div>
         ) : refeicoes.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
             Nenhuma refeição encontrada

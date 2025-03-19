@@ -40,7 +40,7 @@ export function RefeicaoForm({ alunos, onSubmit, onCancel, defaultValues }: Refe
     resolver: zodResolver(refeicaoSchema),
     defaultValues: {
       data: format(new Date(), 'yyyy-MM-dd'),
-      presente: true,
+      presente: false,
       ...defaultValues
     }
   });
