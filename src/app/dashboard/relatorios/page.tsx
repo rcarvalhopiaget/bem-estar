@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@radix-ui/react-switch';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
+import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarRelatorioEmail } from '@/services/emailService';
 import { Aluno } from '@/types/aluno';
 import { Refeicao, TipoRefeicao } from '@/types/refeicao';
 import { IconButton } from '@mui/material';
@@ -40,19 +42,22 @@ interface RelatorioFiltro {
 const TIPOS_REFEICAO: Record<TipoRefeicao, string> = {
   'LANCHE_MANHA': 'Lanche da Manhã',
   'ALMOCO': 'Almoço',
-  'LANCHE_TARDE': 'Lanche da Tarde'
+  'LANCHE_TARDE': 'Lanche da Tarde',
+  'SOPA': 'Sopa'
 };
 
 const ICONES_REFEICAO: Record<TipoRefeicao, any> = {
   'LANCHE_MANHA': CoffeeIcon,
   'ALMOCO': RestaurantIcon,
-  'LANCHE_TARDE': CakeIcon
+  'LANCHE_TARDE': CakeIcon,
+  'SOPA': RestaurantIcon // Usando o mesmo ícone do almoço para a sopa
 };
 
 const CORES_REFEICAO: Record<TipoRefeicao, string> = {
   'LANCHE_MANHA': '#ff9800',
   'ALMOCO': '#4caf50',
-  'LANCHE_TARDE': '#2196f3'
+  'LANCHE_TARDE': '#9c27b0',
+  'SOPA': '#2196f3'
 };
 
 const formatarData = {
@@ -65,37 +70,44 @@ const formatarData = {
 };
 
 export default function RelatoriosPage() {
-  const { canWrite } = usePermissions();
-  const [alunoSelecionado, setAlunoSelecionado] = useState<string>('');
-  const [nomeBusca, setNomeBusca] = useState<string>('');
+  const { hasPermission } = usePermissions();
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
+  const [turmas, setTurmas] = useState<string[]>([]);
+  const [dataInicio, setDataInicio] = useState<Date>(startOfMonth(new Date()));
+  const [dataFim, setDataFim] = useState<Date>(endOfMonth(new Date()));
   const [turma, setTurma] = useState<string>('');
   const [tipoRefeicao, setTipoRefeicao] = useState<TipoRefeicao | ''>('');
-  const [dataInicio, setDataInicio] = useState<Date>(() => startOfMonth(new Date()));
-  const [dataFim, setDataFim] = useState<Date>(() => endOfMonth(new Date()));
-  const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [nomeBusca, setNomeBusca] = useState<string>('');
+  const [alunoSelecionado, setAlunoSelecionado] = useState<string>('');
   const [alunosFiltrados, setAlunosFiltrados] = useState<Aluno[]>([]);
-  const [turmas, setTurmas] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [relatorioDiario, setRelatorioDiario] = useState(true);
+  const [mostrarListaAlunos, setMostrarListaAlunos] = useState<boolean>(false);
   const [notificacoes, setNotificacoes] = useState<NotificacaoConfig[]>([]);
-  const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
-  const [mostrarListaAlunos, setMostrarListaAlunos] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [relatorioDiario, setRelatorioDiario] = useState<boolean>(true);
+  const [mostrarNotificacoes, setMostrarNotificacoes] = useState<boolean>(false);
   const [configuracaoRelatorio, setConfiguracaoRelatorio] = useState<ConfiguracaoRelatorio>({
     email: '',
     horario: '18:00',
-    ativo: true
+    ativo: false
   });
+  const [enviandoEmail, setEnviandoEmail] = useState<boolean>(false);
 
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const [alunosData, turmasData] = await Promise.all([
-          alunoService.listarAlunos(),
-          alunoService.listarTurmas()
-        ]);
+        const alunosData = await alunoService.listarAlunos();
         setAlunos(alunosData);
-        setTurmas(turmasData);
+
+        // Extrair turmas únicas
+        const turmasUnicas = Array.from(new Set(alunosData.map(aluno => aluno.turma)))
+          .filter(Boolean)
+          .sort();
+        setTurmas(turmasUnicas);
+
+        // Carregar configuração de relatório
+        const config = await obterConfiguracaoEnvioRelatorio();
+        setConfiguracaoRelatorio(config);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         adicionarNotificacao({
@@ -318,12 +330,55 @@ export default function RelatoriosPage() {
 
   const salvarConfiguracaoRelatorio = async () => {
     try {
-      // TODO: Implementar salvamento das configurações
+      setEnviandoEmail(true);
+      await salvarConfiguracaoEnvioRelatorio(
+        configuracaoRelatorio.email,
+        configuracaoRelatorio.horario,
+        configuracaoRelatorio.ativo
+      );
       setMostrarNotificacoes(false);
-      toast.success('Configurações de notificação salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast.error('Erro ao salvar configurações');
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
+
+  const enviarRelatorioPorEmail = async () => {
+    try {
+      setEnviandoEmail(true);
+      
+      // Gerar CSV para anexo
+      const linhas = ['Data,Nome,Turma,Tipo,Presente'];
+      refeicoes.forEach(refeicao => {
+        linhas.push(`${formatarData.dataSimples(refeicao.data)},${refeicao.nomeAluno},${refeicao.turma},${TIPOS_REFEICAO[refeicao.tipo]},${refeicao.presente ? 'Sim' : 'Não'}`);
+      });
+      const csv = linhas.join('\n');
+      
+      // Gerar conteúdo HTML
+      const htmlContent = `
+        <h1>Relatório de Refeições</h1>
+        <p>Período: ${formatarData.dataSimples(dataInicio)} a ${formatarData.dataSimples(dataFim)}</p>
+        ${turma ? `<p>Turma: ${turma}</p>` : ''}
+        ${tipoRefeicao ? `<p>Tipo de Refeição: ${TIPOS_REFEICAO[tipoRefeicao as TipoRefeicao]}</p>` : ''}
+        <p>Total de registros: ${refeicoes.length}</p>
+        <p>Este relatório foi gerado automaticamente pelo sistema Bem-Estar.</p>
+      `;
+      
+      // Enviar email
+      await enviarRelatorioEmail(
+        configuracaoRelatorio.email,
+        `Relatório de Refeições - ${formatarData.dataSimples(dataInicio)} a ${formatarData.dataSimples(dataFim)}`,
+        htmlContent,
+        csv
+      );
+      
+    } catch (error) {
+      console.error('Erro ao enviar relatório por email:', error);
+      toast.error('Erro ao enviar relatório por email');
+    } finally {
+      setEnviandoEmail(false);
     }
   };
 
@@ -429,6 +484,13 @@ export default function RelatoriosPage() {
           {loading ? 'Buscando...' : 'Buscar'}
         </Button>
 
+        <Button
+          onClick={() => setMostrarNotificacoes(true)}
+          className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+        >
+          Configurar Notificações
+        </Button>
+
         {refeicoes.length > 0 && (
           <>
             <Button
@@ -437,26 +499,49 @@ export default function RelatoriosPage() {
             >
               Exportar CSV
             </Button>
-
-            <Button
-              onClick={() => setMostrarNotificacoes(true)}
-              className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
-            >
-              Configurar Notificações
-            </Button>
+            
+            {configuracaoRelatorio.email && (
+              <Button
+                onClick={enviarRelatorioPorEmail}
+                disabled={enviandoEmail}
+                className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+              >
+                {enviandoEmail ? 'Enviando...' : 'Enviar por Email'}
+              </Button>
+            )}
           </>
         )}
-
-        <Button
-          onClick={() => {
-            setRelatorioDiario(!relatorioDiario);
-            setRefeicoes([]);
-          }}
-          className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
-        >
-          {relatorioDiario ? 'Ver Relatório Mensal' : 'Ver Relatório Diário'}
-        </Button>
       </div>
+
+      {/* Feedback das configurações de notificações */}
+      {configuracaoRelatorio.email ? (
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <span className="font-medium">Email:</span> {configuracaoRelatorio.email}
+            </div>
+            <div>
+              <span className="font-medium">Horário de envio:</span> {configuracaoRelatorio.horario}
+            </div>
+            <div>
+              <span className="font-medium">Status:</span>{' '}
+              {configuracaoRelatorio.ativo ? (
+                <span className="text-green-600 font-medium">Ativo</span>
+              ) : (
+                <span className="text-red-600 font-medium">Inativo</span>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
+          <p className="text-gray-700">
+            Nenhuma configuração de email definida. Clique em "Configurar Notificações" para definir um email para receber relatórios.
+          </p>
+        </div>
+      )}
 
       {notificacoes.length > 0 && (
         <div className="mb-4 sm:mb-6">
@@ -524,6 +609,19 @@ export default function RelatoriosPage() {
                 className="mt-1 text-base sm:text-lg"
               />
             </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Switch
+                id="ativo"
+                checked={configuracaoRelatorio.ativo}
+                onCheckedChange={(checked: boolean) => setConfiguracaoRelatorio(prev => ({
+                  ...prev,
+                  ativo: checked
+                }))}
+              />
+              <Label htmlFor="ativo" className="text-base sm:text-lg font-medium">
+                Enviar relatório diariamente
+              </Label>
+            </div>
             <div className="flex justify-end gap-2 sm:gap-4 mt-4">
               <Button
                 onClick={() => setMostrarNotificacoes(false)}
@@ -533,9 +631,10 @@ export default function RelatoriosPage() {
               </Button>
               <Button
                 onClick={salvarConfiguracaoRelatorio}
+                disabled={enviandoEmail}
                 className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Salvar
+                {enviandoEmail ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </div>

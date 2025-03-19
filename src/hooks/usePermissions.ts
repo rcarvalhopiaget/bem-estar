@@ -17,6 +17,7 @@ export function usePermissions() {
   return {
     canWrite,
     isAuthenticated: !!user,
-    isEmailVerified: isVerified
+    isEmailVerified: isVerified,
+    hasPermission: canWrite
   };
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster as RadixToaster } from '@/components/ui/Toaster';
+import { Toaster as HotToaster } from 'react-hot-toast';
 import { Providers } from '@/components/Providers';
 
 export default function ClientLayout({
@@ -13,7 +14,8 @@ export default function ClientLayout({
     <Providers>
       <AuthProvider>
         {children}
-        <Toaster />
+        <RadixToaster />
+        <HotToaster position="top-right" />
       </AuthProvider>
     </Providers>
   );
