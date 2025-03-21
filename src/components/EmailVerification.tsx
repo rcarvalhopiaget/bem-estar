@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/firebase';
 
 export function EmailVerification() {
@@ -97,12 +97,12 @@ export function EmailVerification() {
             )}
 
             {emailSent ? (
-              <div className="space-y-2">
-                <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                  ✅ Email de verificação enviado para {userEmail}
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-green-600">
+                  Email de verificação enviado para {userEmail}
                 </p>
                 {countdown > 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Aguarde {countdown} segundos para reenviar...
                   </p>
                 ) : (
@@ -120,7 +120,7 @@ export function EmailVerification() {
                 onClick={handleSendVerification}
                 className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 w-full justify-center py-2"
               >
-                Enviar email de verificação
+                Verificar meu email
               </Button>
             )}
 

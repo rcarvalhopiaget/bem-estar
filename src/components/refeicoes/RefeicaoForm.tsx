@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { TIPOS_REFEICAO } from '@/types/refeicao';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

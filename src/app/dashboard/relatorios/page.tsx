@@ -11,7 +11,12 @@ import { Switch } from '@radix-ui/react-switch';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
-import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarRelatorioEmail } from '@/services/emailService';
+import { 
+  obterConfiguracaoEnvioRelatorio, 
+  salvarConfiguracaoEnvioRelatorio,
+  enviarRelatorioEmail,
+  enviarEmailTeste
+} from '@/services/emailService';
 import { Aluno } from '@/types/aluno';
 import { Refeicao, TipoRefeicao } from '@/types/refeicao';
 import { IconButton } from '@mui/material';
@@ -71,11 +76,13 @@ const formatarData = {
 
 export default function RelatoriosPage() {
   const { hasPermission } = usePermissions();
+  const [filtro, setFiltro] = useState<RelatorioFiltro>({
+    dataInicio: startOfMonth(new Date()),
+    dataFim: endOfMonth(new Date()),
+  });
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
   const [turmas, setTurmas] = useState<string[]>([]);
-  const [dataInicio, setDataInicio] = useState<Date>(startOfMonth(new Date()));
-  const [dataFim, setDataFim] = useState<Date>(endOfMonth(new Date()));
   const [turma, setTurma] = useState<string>('');
   const [tipoRefeicao, setTipoRefeicao] = useState<TipoRefeicao | ''>('');
   const [nomeBusca, setNomeBusca] = useState<string>('');
@@ -83,15 +90,15 @@ export default function RelatoriosPage() {
   const [alunosFiltrados, setAlunosFiltrados] = useState<Aluno[]>([]);
   const [mostrarListaAlunos, setMostrarListaAlunos] = useState<boolean>(false);
   const [notificacoes, setNotificacoes] = useState<NotificacaoConfig[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [relatorioDiario, setRelatorioDiario] = useState<boolean>(true);
-  const [mostrarNotificacoes, setMostrarNotificacoes] = useState<boolean>(false);
+  const [carregando, setCarregando] = useState(false);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [enviandoEmailTeste, setEnviandoEmailTeste] = useState(false);
+  const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [configuracaoRelatorio, setConfiguracaoRelatorio] = useState<ConfiguracaoRelatorio>({
     email: '',
     horario: '18:00',
     ativo: false
   });
-  const [enviandoEmail, setEnviandoEmail] = useState<boolean>(false);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -142,24 +149,24 @@ export default function RelatoriosPage() {
 
   const buscarRefeicoes = async () => {
     try {
-      setLoading(true);
+      setCarregando(true);
       setNotificacoes([]);
 
-      const filtro: RelatorioFiltro = {
-        dataInicio: startOfDay(dataInicio),
-        dataFim: endOfDay(dataFim),
+      const filtroConsulta: RelatorioFiltro = {
+        dataInicio: startOfDay(filtro.dataInicio),
+        dataFim: endOfDay(filtro.dataFim),
         alunoId: alunoSelecionado || undefined,
         turma: turma || undefined,
         tipo: tipoRefeicao || undefined
       };
       
       console.log('Buscando refeições com filtro:', {
-        ...filtro,
-        dataInicio: formatarData.dataCompleta(filtro.dataInicio!),
-        dataFim: formatarData.dataCompleta(filtro.dataFim!)
+        ...filtroConsulta,
+        dataInicio: formatarData.dataCompleta(filtroConsulta.dataInicio!),
+        dataFim: formatarData.dataCompleta(filtroConsulta.dataFim!)
       });
       
-      const refeicoesData = await refeicaoService.listarRefeicoes(filtro);
+      const refeicoesData = await refeicaoService.listarRefeicoes(filtroConsulta);
       
       // Remove duplicatas baseado no ID do aluno, data e tipo de refeição
       const refeicoesUnicas = Array.from(
@@ -189,7 +196,7 @@ export default function RelatoriosPage() {
         mensagem: 'Erro ao buscar refeições. Tente novamente.'
       });
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   };
 
@@ -346,6 +353,16 @@ export default function RelatoriosPage() {
   };
 
   const enviarRelatorioPorEmail = async () => {
+    if (!configuracaoRelatorio.email) {
+      toast.error('Configure um email para receber notificações primeiro');
+      return;
+    }
+
+    if (refeicoes.length === 0) {
+      toast.error('Não há dados para enviar no relatório');
+      return;
+    }
+
     try {
       setEnviandoEmail(true);
       
@@ -359,7 +376,7 @@ export default function RelatoriosPage() {
       // Gerar conteúdo HTML
       const htmlContent = `
         <h1>Relatório de Refeições</h1>
-        <p>Período: ${formatarData.dataSimples(dataInicio)} a ${formatarData.dataSimples(dataFim)}</p>
+        <p>Período: ${formatarData.dataSimples(filtro.dataInicio)} a ${formatarData.dataSimples(filtro.dataFim)}</p>
         ${turma ? `<p>Turma: ${turma}</p>` : ''}
         ${tipoRefeicao ? `<p>Tipo de Refeição: ${TIPOS_REFEICAO[tipoRefeicao as TipoRefeicao]}</p>` : ''}
         <p>Total de registros: ${refeicoes.length}</p>
@@ -369,7 +386,7 @@ export default function RelatoriosPage() {
       // Enviar email
       await enviarRelatorioEmail(
         configuracaoRelatorio.email,
-        `Relatório de Refeições - ${formatarData.dataSimples(dataInicio)} a ${formatarData.dataSimples(dataFim)}`,
+        `Relatório de Refeições - ${formatarData.dataSimples(filtro.dataInicio)} a ${formatarData.dataSimples(filtro.dataFim)}`,
         htmlContent,
         csv
       );
@@ -382,6 +399,32 @@ export default function RelatoriosPage() {
     }
   };
 
+  // Função para enviar email de teste
+  const enviarTesteEmail = async () => {
+    try {
+      setEnviandoEmailTeste(true);
+      
+      if (!configuracaoRelatorio.email) {
+        toast.error('Configure um email para receber notificações primeiro');
+        return;
+      }
+      
+      // Enviar email de teste em 1 minuto
+      const resultado = await enviarEmailTeste(1);
+      
+      if (resultado.success) {
+        toast.success(`Email de teste agendado para ${resultado.horarioEnvio}. Verifique sua caixa de entrada em breve.`);
+      } else {
+        toast.error(resultado.message);
+      }
+    } catch (error) {
+      console.error('Erro ao enviar email de teste:', error);
+      toast.error('Erro ao enviar email de teste');
+    } finally {
+      setEnviandoEmailTeste(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Relatório de Refeições</h2>
@@ -391,9 +434,9 @@ export default function RelatoriosPage() {
           <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Inicial</label>
           <input
             type="date"
-            value={formatarData.dataISO(dataInicio)}
+            value={formatarData.dataISO(filtro.dataInicio)}
             onChange={(e) => {
-              setDataInicio(new Date(e.target.value));
+              setFiltro(prev => ({ ...prev, dataInicio: new Date(e.target.value) }));
               setRefeicoes([]);
             }}
             className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -404,9 +447,9 @@ export default function RelatoriosPage() {
           <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Final</label>
           <input
             type="date"
-            value={formatarData.dataISO(dataFim)}
+            value={formatarData.dataISO(filtro.dataFim)}
             onChange={(e) => {
-              setDataFim(new Date(e.target.value));
+              setFiltro(prev => ({ ...prev, dataFim: new Date(e.target.value) }));
               setRefeicoes([]);
             }}
             className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -478,10 +521,10 @@ export default function RelatoriosPage() {
       <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
         <Button
           onClick={buscarRefeicoes}
-          disabled={loading}
+          disabled={carregando}
           className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
         >
-          {loading ? 'Buscando...' : 'Buscar'}
+          {carregando ? 'Buscando...' : 'Buscar'}
         </Button>
 
         <Button
@@ -635,6 +678,13 @@ export default function RelatoriosPage() {
                 className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {enviandoEmail ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button
+                onClick={enviarTesteEmail}
+                disabled={enviandoEmailTeste}
+                className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {enviandoEmailTeste ? 'Enviando...' : 'Enviar Email de Teste'}
               </Button>
             </div>
           </div>

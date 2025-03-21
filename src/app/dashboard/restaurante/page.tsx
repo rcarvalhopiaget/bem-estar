@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { restauranteService } from '@/services/restauranteService';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 
 interface RestauranteConfig {
@@ -83,16 +83,15 @@ export default function RestaurantePage() {
             </div>
           )}
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
+            <div className="space-y-2">
+              <label htmlFor="nome" className="block text-sm font-medium text-gray-700">
                 Nome do Restaurante
               </label>
               <Input
                 id="nome"
-                type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Nome do restaurante"
+                placeholder="Digite o nome do restaurante"
                 className="mt-1"
               />
             </div>
@@ -108,4 +107,4 @@ export default function RestaurantePage() {
       </Card>
     </div>
   );
-} 
+}
