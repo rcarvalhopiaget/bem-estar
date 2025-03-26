@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert } from '@mui/material';
-import { FirebaseError } from 'firebase/app';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -21,7 +22,6 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
@@ -37,41 +37,34 @@ export default function LoginPage() {
       console.log('Iniciando login com email:', data.email);
       setLoginError(null);
       
-      const user = await signIn(data.email, data.password);
-      if (user) {
-        console.log('Login bem-sucedido, redirecionando...');
-        router.push('/dashboard');
-      }
-    } catch (error) {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      console.log('Login bem-sucedido:', userCredential.user.email);
+      router.push('/dashboard');
+    } catch (error: any) {
       console.error('Erro detalhado ao fazer login:', error);
       
-      if (error instanceof FirebaseError) {
-        const errorCode = error.code;
-        console.log('Código do erro Firebase:', errorCode);
-        
-        switch (errorCode) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            setLoginError('Email ou senha incorretos');
-            break;
-          case 'auth/too-many-requests':
-            setLoginError('Muitas tentativas de login. Tente novamente mais tarde');
-            break;
-          case 'auth/network-request-failed':
-            setLoginError('Erro de conexão. Verifique sua internet');
-            break;
-          case 'auth/invalid-email':
-            setLoginError('Email inválido');
-            break;
-          case 'auth/user-disabled':
-            setLoginError('Esta conta foi desativada');
-            break;
-          default:
-            setLoginError('Erro ao fazer login. Tente novamente');
-        }
-      } else {
-        console.error('Erro não relacionado ao Firebase:', error);
-        setLoginError('Ocorreu um erro inesperado. Tente novamente');
+      const errorCode = error?.code;
+      console.log('Código do erro:', errorCode);
+      
+      switch (errorCode) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          setLoginError('Email ou senha incorretos');
+          break;
+        case 'auth/too-many-requests':
+          setLoginError('Muitas tentativas de login. Tente novamente mais tarde');
+          break;
+        case 'auth/network-request-failed':
+          setLoginError('Erro de conexão. Verifique sua internet');
+          break;
+        case 'auth/invalid-email':
+          setLoginError('Email inválido');
+          break;
+        case 'auth/user-disabled':
+          setLoginError('Esta conta foi desativada');
+          break;
+        default:
+          setLoginError('Erro ao fazer login. Tente novamente');
       }
     }
   };
