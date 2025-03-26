@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { Alert } from '@mui/material';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -23,30 +22,30 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      console.log('Iniciando login com email:', data.email);
+      setIsLoading(true);
       setLoginError(null);
       
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      console.log('Login bem-sucedido:', userCredential.user.email);
+      console.log('Tentando fazer login...');
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      console.log('Login bem-sucedido!');
+      
       router.push('/dashboard');
     } catch (error: any) {
-      console.error('Erro detalhado ao fazer login:', error);
+      console.error('Erro ao fazer login:', error);
       
-      const errorCode = error?.code;
-      console.log('Código do erro:', errorCode);
-      
-      switch (errorCode) {
+      switch (error?.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
           setLoginError('Email ou senha incorretos');
@@ -66,6 +65,8 @@ export default function LoginPage() {
         default:
           setLoginError('Erro ao fazer login. Tente novamente');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -95,6 +96,7 @@ export default function LoginPage() {
               placeholder="Digite seu email"
               {...register('email')}
               error={errors.email?.message}
+              disabled={isLoading}
             />
 
             <Input
@@ -103,6 +105,7 @@ export default function LoginPage() {
               placeholder="Digite sua senha"
               {...register('password')}
               error={errors.password?.message}
+              disabled={isLoading}
             />
           </div>
 
@@ -110,9 +113,10 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              isLoading={isSubmitting}
+              disabled={isLoading}
+              isLoading={isLoading}
             >
-              Entrar
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
 
