@@ -137,7 +137,7 @@ export default function LogsPage() {
   };
 
   const formatDate = (date: Date) => {
-    return format(date, "dd/MM/yyyy HH:mm:ss", { locale: pt });
+    return format(date, "dd/MM/yyyy HH:mm:ss");
   };
 
   // Filtrar logs pelo termo de busca

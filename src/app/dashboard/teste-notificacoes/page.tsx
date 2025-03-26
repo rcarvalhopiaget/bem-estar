@@ -112,7 +112,7 @@ export default function TesteNotificacoesPage() {
             <Button onClick={() => mostrarHotToast('success')} className="w-full">
               Sucesso
             </Button>
-            <Button onClick={() => mostrarHotToast('error')} className="w-full" variant="warning">
+            <Button onClick={() => mostrarHotToast('error')} className="w-full" variant="destructive">
               Erro
             </Button>
             <Button onClick={() => mostrarHotToast('loading')} className="w-full" variant="outline">
@@ -138,7 +138,7 @@ export default function TesteNotificacoesPage() {
             <Button onClick={() => mostrarRadixToast('success')} className="w-full">
               Sucesso
             </Button>
-            <Button onClick={() => mostrarRadixToast('destructive')} className="w-full" variant="warning">
+            <Button onClick={() => mostrarRadixToast('destructive')} className="w-full" variant="destructive">
               Destrutivo
             </Button>
             <Button onClick={() => mostrarRadixToast('action')} className="w-full" variant="outline">

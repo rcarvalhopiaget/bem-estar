@@ -211,7 +211,7 @@ export default function AdminPage() {
           <Button 
             onClick={handleCriarUsuarioAdmin}
             disabled={loadingAdmin}
-            variant="primary"
+            variant="default"
             color="primary"
           >
             {loadingAdmin ? <CircularProgress size={24} /> : 'Criar/Atualizar Usuário Admin'}
@@ -245,7 +245,7 @@ export default function AdminPage() {
           <Button 
             onClick={handleLimparDuplicados}
             disabled={loading}
-            variant="primary"
+            variant="default"
             color="error"
           >
             {loading ? <CircularProgress size={24} /> : 'Limpar Duplicados'}
