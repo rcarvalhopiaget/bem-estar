@@ -39,3 +39,5 @@ firestore-debug.log
 ui-debug.log
 .firebase/
 serviceAccountKey.json
+
+.vercel
