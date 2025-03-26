@@ -201,10 +201,10 @@ export default function RelatoriosPage() {
   };
 
   const exportarCSV = () => {
-    const linhas = ['Data,Nome,Turma,Tipo,Presente'];
+    const linhas = ['Data e Hora,Nome,Turma,Tipo,Presente'];
     
     refeicoes.forEach(refeicao => {
-      linhas.push(`${formatarData.dataSimples(refeicao.data)},${refeicao.nomeAluno},${refeicao.turma},${TIPOS_REFEICAO[refeicao.tipo]},${refeicao.presente ? 'Sim' : 'Não'}`);
+      linhas.push(`${formatarData.dataCompleta(refeicao.data)},${refeicao.nomeAluno},${refeicao.turma},${TIPOS_REFEICAO[refeicao.tipo]},${refeicao.presente ? 'Sim' : 'Não'}`);
     });
 
     const csv = linhas.join('\n');
@@ -367,9 +367,9 @@ export default function RelatoriosPage() {
       setEnviandoEmail(true);
       
       // Gerar CSV para anexo
-      const linhas = ['Data,Nome,Turma,Tipo,Presente'];
+      const linhas = ['Data e Hora,Nome,Turma,Tipo,Presente'];
       refeicoes.forEach(refeicao => {
-        linhas.push(`${formatarData.dataSimples(refeicao.data)},${refeicao.nomeAluno},${refeicao.turma},${TIPOS_REFEICAO[refeicao.tipo]},${refeicao.presente ? 'Sim' : 'Não'}`);
+        linhas.push(`${formatarData.dataCompleta(refeicao.data)},${refeicao.nomeAluno},${refeicao.turma},${TIPOS_REFEICAO[refeicao.tipo]},${refeicao.presente ? 'Sim' : 'Não'}`);
       });
       const csv = linhas.join('\n');
       
