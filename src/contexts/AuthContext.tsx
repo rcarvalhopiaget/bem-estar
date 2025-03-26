@@ -10,7 +10,6 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { refreshUserToken, setupTokenRefresh, clearSession } from '@/lib/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 // Interface para os dados do usuário no Firestore
@@ -28,8 +27,8 @@ interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<User | null>;
-  signUp: (email: string, password: string, name: string) => Promise<User | null>;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, name: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -60,63 +59,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          // Configura a atualização automática do token
-          try {
-            const cleanup = await setupTokenRefresh(user);
-            setUser(user);
-            
-            // Buscar dados adicionais do usuário no Firestore
-            await fetchUserData(user.uid);
-            
-            return cleanup;
-          } catch (tokenError) {
-            console.error('Erro ao configurar atualização de token:', tokenError);
-            // Mesmo com erro no token, mantemos o usuário autenticado
-            setUser(user);
-            
-            // Buscar dados adicionais do usuário no Firestore
-            await fetchUserData(user.uid);
-          }
-        } else {
-          // Limpa a sessão quando o usuário faz logout
-          try {
-            await clearSession();
-          } catch (sessionError) {
-            console.error('Erro ao limpar sessão:', sessionError);
-          }
-          setUser(null);
-          setUserData(null);
-        }
-      } catch (error) {
-        console.error('Erro ao gerenciar estado de autenticação:', error);
-        // Em caso de erro, limpa o estado do usuário
-        setUser(null);
+      setUser(user);
+      if (user) {
+        await fetchUserData(user.uid);
+      } else {
         setUserData(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<User> => {
     try {
       setLoading(true);
       const result = await signInWithEmailAndPassword(auth, email, password);
-      // Força a atualização do token após o login
-      try {
-        await refreshUserToken(result.user);
-      } catch (tokenError) {
-        console.error('Erro ao atualizar token após login:', tokenError);
-        // Continuamos mesmo se houver erro no token
-      }
-      
-      // Buscar dados adicionais do usuário no Firestore
       await fetchUserData(result.user.uid);
-      
       return result.user;
     } catch (error) {
       console.error('Erro ao fazer login:', error);
@@ -126,23 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string): Promise<User> => {
     try {
       setLoading(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      // Atualiza o perfil do usuário com o nome
       await updateProfile(result.user, { displayName: name });
-      // Força a atualização do token após o registro
-      try {
-        await refreshUserToken(result.user);
-      } catch (tokenError) {
-        console.error('Erro ao atualizar token após registro:', tokenError);
-        // Continuamos mesmo se houver erro no token
-      }
-      
-      // Buscar dados adicionais do usuário no Firestore
       await fetchUserData(result.user.uid);
-      
       return result.user;
     } catch (error) {
       console.error('Erro ao criar conta:', error);
@@ -156,11 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       await signOut(auth);
-      try {
-        await clearSession();
-      } catch (sessionError) {
-        console.error('Erro ao limpar sessão durante logout:', sessionError);
-      }
       setUserData(null);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
@@ -177,4 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};

@@ -12,8 +12,23 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Log para debug
+console.log('Firebase Config:', {
+  apiKey: firebaseConfig.apiKey ? 'Definido' : 'Não definido',
+  authDomain: firebaseConfig.authDomain ? 'Definido' : 'Não definido',
+  projectId: firebaseConfig.projectId ? 'Definido' : 'Não definido',
+  storageBucket: firebaseConfig.storageBucket ? 'Definido' : 'Não definido',
+  messagingSenderId: firebaseConfig.messagingSenderId ? 'Definido' : 'Não definido',
+  appId: firebaseConfig.appId ? 'Definido' : 'Não definido',
+});
+
 // Verifica se a configuração do Firebase está completa
 if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  console.error('Configuração do Firebase incompleta:', {
+    apiKey: !!firebaseConfig.apiKey,
+    authDomain: !!firebaseConfig.authDomain,
+    projectId: !!firebaseConfig.projectId,
+  });
   throw new Error('Firebase configuration is incomplete.');
 }
 
