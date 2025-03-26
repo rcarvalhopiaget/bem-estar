@@ -1,5 +1,5 @@
 rules_version = '2';
-
+// Comentário de teste
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAuthenticated() {
@@ -30,7 +30,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       
       // Permitir escrita para admins ou para o próprio usuário (apenas para atualizar seu próprio perfil)
-      allow write: if isAdmin() || 
+      // Também permite a criação de novos usuários por usuários autenticados
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || 
                     (resource != null && 
                      isCurrentUser(resource.data.email) && 
                      request.resource.data.email == resource.data.email && 
@@ -80,17 +82,15 @@ service cloud.firestore {
     }
     
     match /atividades/{atividadeId} {
-      allow read: if
-        isAuthenticated() && (
-          hasVerifiedEmail() ||
-          debug()
-        );
-      
-      allow write: if
-        isAuthenticated() && (
-          hasVerifiedEmail() ||
-          debug()
-        );
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    match /system_logs/{logId} {
+      // Temporariamente permitindo que qualquer usuário autenticado acesse os logs
+      // NOTA: Esta é uma configuração temporária para fins de desenvolvimento
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
     match /{document=**} {

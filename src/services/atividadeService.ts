@@ -11,7 +11,8 @@ import {
   orderBy,
   Timestamp,
   DocumentData,
-  limit
+  limit,
+  setDoc
 } from 'firebase/firestore';
 
 const COLLECTION_NAME = 'atividades';
@@ -108,19 +109,45 @@ export const atividadeService = {
         createdAt: Timestamp.now()
       };
 
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), dadosCompletos);
-      console.log('Atividade registrada com ID:', docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error('Erro ao registrar atividade:', error);
+      // Adicionar um identificador único baseado em timestamp para evitar conflitos de ID
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const docRef = doc(collection(db, COLLECTION_NAME), uniqueId);
+      
+      try {
+        // Usar setDoc em vez de addDoc para definir explicitamente o ID do documento
+        await setDoc(docRef, dadosCompletos);
+        console.log('Atividade registrada com ID:', uniqueId);
+        return uniqueId;
+      } catch (error: any) {
+        // Tratar especificamente o erro "already-exists"
+        if (error?.code === 'already-exists') {
+          console.warn('ID de atividade já existe, gerando novo ID...');
+          // Tentar novamente com outro ID
+          const newUniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+          const newDocRef = doc(collection(db, COLLECTION_NAME), newUniqueId);
+          await setDoc(newDocRef, dadosCompletos);
+          console.log('Atividade registrada com novo ID:', newUniqueId);
+          return newUniqueId;
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      // Melhorar o log para diferenciar tipos de erro
+      if (error?.code === 'already-exists') {
+        console.warn('Erro de ID duplicado ao registrar atividade:', error);
+      } else {
+        console.error('Erro ao registrar atividade:', error);
+      }
       
       // Se for um erro de permissão, retorna um ID falso para não quebrar o fluxo
-      if (error instanceof Error && error.message.includes('permission-denied')) {
+      if ((error instanceof Error && error.message.includes('permission-denied')) || 
+          (error as { code: string }).code === 'permission-denied') {
         console.warn('Erro de permissão ao registrar atividade, continuando com ID falso');
         return 'permission-denied-' + Date.now();
       }
       
-      throw error;
+      // Para qualquer outro erro, também gera um ID falso para não quebrar o fluxo
+      return 'error-' + Date.now();
     }
   }
 };

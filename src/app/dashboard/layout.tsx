@@ -40,17 +40,29 @@ export default function DashboardLayout({
     'rodrigo.carvalho@jpiaget.com.br'
   ].includes(user.email);
 
-  const menuItems = [
+  // Verifica se o usuário é operador (restaurante)
+  const isOperador = user?.email && user.email.includes('restaurante');
+
+  // Define os itens do menu com base no perfil do usuário
+  let menuItems = [
     { href: "/dashboard", label: "Início", icon: <Home /> },
-    { href: "/dashboard/alunos", label: "Alunos", icon: <People /> },
     { href: "/dashboard/refeicoes-rapidas", label: "Refeições Rápidas", icon: <Restaurant /> },
-    { href: "/dashboard/relatorios", label: "Relatórios", icon: <Assessment /> },
-    { href: "/dashboard/perfil", label: "Meu Perfil", icon: <AccountCircle /> },
   ];
+
+  // Adiciona itens adicionais para usuários que não são operadores
+  if (!isOperador) {
+    menuItems = [
+      ...menuItems,
+      { href: "/dashboard/alunos", label: "Alunos", icon: <People /> },
+      { href: "/dashboard/relatorios", label: "Relatórios", icon: <Assessment /> },
+      { href: "/dashboard/perfil", label: "Meu Perfil", icon: <AccountCircle /> },
+    ];
+  }
 
   // Adiciona a opção de usuários apenas para administradores
   if (isAdmin) {
     menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <Person /> });
+    menuItems.push({ href: "/dashboard/logs", label: "Logs do Sistema", icon: <Assessment /> });
   }
 
   return (

@@ -24,6 +24,7 @@ import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
 import { toast } from 'react-hot-toast';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface NotificacaoConfig {
   tipo: 'erro' | 'aviso';
@@ -426,270 +427,272 @@ export default function RelatoriosPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Relatório de Refeições</h2>
+    <ProtectedRoute allowedProfiles={['ADMIN', 'COORDENADOR', 'PROFESSOR']}>
+      <div className="p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Relatório de Refeições</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="flex flex-col">
-          <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Inicial</label>
-          <input
-            type="date"
-            value={formatarData.dataISO(filtro.dataInicio)}
-            onChange={(e) => {
-              setFiltro(prev => ({ ...prev, dataInicio: new Date(e.target.value) }));
-              setRefeicoes([]);
-            }}
-            className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="flex flex-col">
+            <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Inicial</label>
+            <input
+              type="date"
+              value={formatarData.dataISO(filtro.dataInicio)}
+              onChange={(e) => {
+                setFiltro(prev => ({ ...prev, dataInicio: new Date(e.target.value) }));
+                setRefeicoes([]);
+              }}
+              className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex flex-col">
-          <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Final</label>
-          <input
-            type="date"
-            value={formatarData.dataISO(filtro.dataFim)}
-            onChange={(e) => {
-              setFiltro(prev => ({ ...prev, dataFim: new Date(e.target.value) }));
-              setRefeicoes([]);
-            }}
-            className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+          <div className="flex flex-col">
+            <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Data Final</label>
+            <input
+              type="date"
+              value={formatarData.dataISO(filtro.dataFim)}
+              onChange={(e) => {
+                setFiltro(prev => ({ ...prev, dataFim: new Date(e.target.value) }));
+                setRefeicoes([]);
+              }}
+              className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex flex-col relative">
-          <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Buscar Aluno</label>
-          <input
-            type="text"
-            value={nomeBusca}
-            onChange={(e) => setNomeBusca(e.target.value)}
-            placeholder="Digite o nome do aluno"
-            className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-          {mostrarListaAlunos && alunosFiltrados.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 sm:max-h-60 overflow-y-auto top-full">
-              {alunosFiltrados.map((aluno) => (
-                <button
-                  key={aluno.id}
-                  onClick={() => selecionarAluno(aluno)}
-                  className="w-full px-3 sm:px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                >
-                  <div className="text-base sm:text-lg">{aluno.nome}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">{aluno.turma}</div>
-                </button>
+          <div className="flex flex-col relative">
+            <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Buscar Aluno</label>
+            <input
+              type="text"
+              value={nomeBusca}
+              onChange={(e) => setNomeBusca(e.target.value)}
+              placeholder="Digite o nome do aluno"
+              className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            {mostrarListaAlunos && alunosFiltrados.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 sm:max-h-60 overflow-y-auto top-full">
+                {alunosFiltrados.map((aluno) => (
+                  <button
+                    key={aluno.id}
+                    onClick={() => selecionarAluno(aluno)}
+                    className="w-full px-3 sm:px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                  >
+                    <div className="text-base sm:text-lg">{aluno.nome}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">{aluno.turma}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Turma</label>
+            <select
+              value={turma}
+              onChange={(e) => {
+                setTurma(e.target.value);
+                setAlunoSelecionado('');
+                setNomeBusca('');
+                setRefeicoes([]);
+              }}
+              className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todas as turmas</option>
+              {turmas.map((t) => (
+                <option key={t} value={t}>{t}</option>
               ))}
-            </div>
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Tipo de Refeição</label>
+            <select
+              value={tipoRefeicao}
+              onChange={(e) => {
+                setTipoRefeicao(e.target.value as TipoRefeicao);
+                setRefeicoes([]);
+              }}
+              className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todos os tipos</option>
+              {Object.entries(TIPOS_REFEICAO).map(([tipo, nome]) => (
+                <option key={tipo} value={tipo}>{nome}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <Button
+            onClick={buscarRefeicoes}
+            disabled={carregando}
+            className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            {carregando ? 'Buscando...' : 'Buscar'}
+          </Button>
+
+          <Button
+            onClick={() => setMostrarNotificacoes(true)}
+            className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+          >
+            Configurar Notificações
+          </Button>
+
+          {refeicoes.length > 0 && (
+            <>
+              <Button
+                onClick={exportarCSV}
+                className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-green-600 hover:bg-green-700 text-white rounded-lg"
+              >
+                Exportar CSV
+              </Button>
+              
+              {configuracaoRelatorio.email && (
+                <Button
+                  onClick={enviarRelatorioPorEmail}
+                  disabled={enviandoEmail}
+                  className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                >
+                  {enviandoEmail ? 'Enviando...' : 'Enviar por Email'}
+                </Button>
+              )}
+            </>
           )}
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Turma</label>
-          <select
-            value={turma}
-            onChange={(e) => {
-              setTurma(e.target.value);
-              setAlunoSelecionado('');
-              setNomeBusca('');
-              setRefeicoes([]);
-            }}
-            className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todas as turmas</option>
-            {turmas.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Tipo de Refeição</label>
-          <select
-            value={tipoRefeicao}
-            onChange={(e) => {
-              setTipoRefeicao(e.target.value as TipoRefeicao);
-              setRefeicoes([]);
-            }}
-            className="px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos os tipos</option>
-            {Object.entries(TIPOS_REFEICAO).map(([tipo, nome]) => (
-              <option key={tipo} value={tipo}>{nome}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <Button
-          onClick={buscarRefeicoes}
-          disabled={carregando}
-          className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          {carregando ? 'Buscando...' : 'Buscar'}
-        </Button>
-
-        <Button
-          onClick={() => setMostrarNotificacoes(true)}
-          className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
-        >
-          Configurar Notificações
-        </Button>
-
-        {refeicoes.length > 0 && (
-          <>
-            <Button
-              onClick={exportarCSV}
-              className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-green-600 hover:bg-green-700 text-white rounded-lg"
-            >
-              Exportar CSV
-            </Button>
-            
-            {configuracaoRelatorio.email && (
-              <Button
-                onClick={enviarRelatorioPorEmail}
-                disabled={enviandoEmail}
-                className="px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
-              >
-                {enviandoEmail ? 'Enviando...' : 'Enviar por Email'}
-              </Button>
-            )}
-          </>
+        {/* Feedback das configurações de notificações */}
+        {configuracaoRelatorio.email ? (
+          <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <span className="font-medium">Email:</span> {configuracaoRelatorio.email}
+              </div>
+              <div>
+                <span className="font-medium">Horário de envio:</span> {configuracaoRelatorio.horario}
+              </div>
+              <div>
+                <span className="font-medium">Status:</span>{' '}
+                {configuracaoRelatorio.ativo ? (
+                  <span className="text-green-600 font-medium">Ativo</span>
+                ) : (
+                  <span className="text-red-600 font-medium">Inativo</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
+            <p className="text-gray-700">
+              Nenhuma configuração de email definida. Clique em "Configurar Notificações" para definir um email para receber relatórios.
+            </p>
+          </div>
         )}
+
+        {notificacoes.length > 0 && (
+          <div className="mb-4 sm:mb-6">
+            {notificacoes.map((notificacao, index) => (
+              <div
+                key={index}
+                className={`p-3 sm:p-4 mb-2 rounded-lg text-base sm:text-lg font-medium
+                  ${notificacao.tipo === 'erro'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                  }`}
+              >
+                {notificacao.mensagem}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {refeicoes.length > 0 ? (
+          <RelatorioPorTurma />
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-base sm:text-lg text-gray-600">
+              Selecione os filtros e clique em Buscar para ver o relatório
+            </p>
+          </div>
+        )}
+
+        <Dialog
+          open={mostrarNotificacoes}
+          onOpenChange={setMostrarNotificacoes}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Configurar Notificações</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="email" className="text-base sm:text-lg font-medium">
+                  Email para receber relatório
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={configuracaoRelatorio.email}
+                  onChange={(e) => setConfiguracaoRelatorio(prev => ({
+                    ...prev,
+                    email: e.target.value
+                  }))}
+                  className="mt-1 text-base sm:text-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="horario" className="text-base sm:text-lg font-medium">
+                  Horário do envio
+                </Label>
+                <Input
+                  id="horario"
+                  type="time"
+                  value={configuracaoRelatorio.horario}
+                  onChange={(e) => setConfiguracaoRelatorio(prev => ({
+                    ...prev,
+                    horario: e.target.value
+                  }))}
+                  className="mt-1 text-base sm:text-lg"
+                />
+              </div>
+              <div className="flex items-center space-x-2 mt-4">
+                <Switch
+                  id="ativo"
+                  checked={configuracaoRelatorio.ativo}
+                  onCheckedChange={(checked: boolean) => setConfiguracaoRelatorio(prev => ({
+                    ...prev,
+                    ativo: checked
+                  }))}
+                />
+                <Label htmlFor="ativo" className="text-base sm:text-lg font-medium">
+                  Enviar relatório diariamente
+                </Label>
+              </div>
+              <div className="flex justify-end gap-2 sm:gap-4 mt-4">
+                <Button
+                  onClick={() => setMostrarNotificacoes(false)}
+                  className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-gray-200 hover:bg-gray-300 text-gray-800"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={salvarConfiguracaoRelatorio}
+                  disabled={enviandoEmail}
+                  className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {enviandoEmail ? 'Salvando...' : 'Salvar'}
+                </Button>
+                <Button
+                  onClick={enviarTesteEmail}
+                  disabled={enviandoEmailTeste}
+                  className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {enviandoEmailTeste ? 'Enviando...' : 'Enviar Email de Teste'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Feedback das configurações de notificações */}
-      {configuracaoRelatorio.email ? (
-        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <span className="font-medium">Email:</span> {configuracaoRelatorio.email}
-            </div>
-            <div>
-              <span className="font-medium">Horário de envio:</span> {configuracaoRelatorio.horario}
-            </div>
-            <div>
-              <span className="font-medium">Status:</span>{' '}
-              {configuracaoRelatorio.ativo ? (
-                <span className="text-green-600 font-medium">Ativo</span>
-              ) : (
-                <span className="text-red-600 font-medium">Inativo</span>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
-          <p className="text-gray-700">
-            Nenhuma configuração de email definida. Clique em "Configurar Notificações" para definir um email para receber relatórios.
-          </p>
-        </div>
-      )}
-
-      {notificacoes.length > 0 && (
-        <div className="mb-4 sm:mb-6">
-          {notificacoes.map((notificacao, index) => (
-            <div
-              key={index}
-              className={`p-3 sm:p-4 mb-2 rounded-lg text-base sm:text-lg font-medium
-                ${notificacao.tipo === 'erro'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-yellow-100 text-yellow-800'
-                }`}
-            >
-              {notificacao.mensagem}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {refeicoes.length > 0 ? (
-        <RelatorioPorTurma />
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-base sm:text-lg text-gray-600">
-            Selecione os filtros e clique em Buscar para ver o relatório
-          </p>
-        </div>
-      )}
-
-      <Dialog
-        open={mostrarNotificacoes}
-        onOpenChange={setMostrarNotificacoes}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configurar Notificações</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="email" className="text-base sm:text-lg font-medium">
-                Email para receber relatório
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={configuracaoRelatorio.email}
-                onChange={(e) => setConfiguracaoRelatorio(prev => ({
-                  ...prev,
-                  email: e.target.value
-                }))}
-                className="mt-1 text-base sm:text-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="horario" className="text-base sm:text-lg font-medium">
-                Horário do envio
-              </Label>
-              <Input
-                id="horario"
-                type="time"
-                value={configuracaoRelatorio.horario}
-                onChange={(e) => setConfiguracaoRelatorio(prev => ({
-                  ...prev,
-                  horario: e.target.value
-                }))}
-                className="mt-1 text-base sm:text-lg"
-              />
-            </div>
-            <div className="flex items-center space-x-2 mt-4">
-              <Switch
-                id="ativo"
-                checked={configuracaoRelatorio.ativo}
-                onCheckedChange={(checked: boolean) => setConfiguracaoRelatorio(prev => ({
-                  ...prev,
-                  ativo: checked
-                }))}
-              />
-              <Label htmlFor="ativo" className="text-base sm:text-lg font-medium">
-                Enviar relatório diariamente
-              </Label>
-            </div>
-            <div className="flex justify-end gap-2 sm:gap-4 mt-4">
-              <Button
-                onClick={() => setMostrarNotificacoes(false)}
-                className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-gray-200 hover:bg-gray-300 text-gray-800"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={salvarConfiguracaoRelatorio}
-                disabled={enviandoEmail}
-                className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {enviandoEmail ? 'Salvando...' : 'Salvar'}
-              </Button>
-              <Button
-                onClick={enviarTesteEmail}
-                disabled={enviandoEmailTeste}
-                className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                {enviandoEmailTeste ? 'Enviando...' : 'Enviar Email de Teste'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </ProtectedRoute>
   );
 }

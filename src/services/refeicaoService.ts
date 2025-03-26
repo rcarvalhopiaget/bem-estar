@@ -256,9 +256,58 @@ export const refeicaoService = {
     try {
       await verificarPermissoes();
       
+      // Formatar a data para comparação (apenas a parte da data, sem a hora)
+      const dataFormatada = new Date(dados.data);
+      dataFormatada.setHours(0, 0, 0, 0);
+      const dataInicio = Timestamp.fromDate(dataFormatada);
+      
+      const dataFim = Timestamp.fromDate(new Date(dataFormatada.getTime() + 24 * 60 * 60 * 1000));
+      
+      // Verificar se já existe uma refeição para este aluno nesta data e tipo
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where("alunoId", "==", dados.alunoId),
+        where("tipo", "==", dados.tipo),
+        where("data", ">=", dataInicio),
+        where("data", "<", dataFim)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      // Se já existe uma refeição, atualiza em vez de criar uma nova
+      if (!querySnapshot.empty) {
+        const docExistente = querySnapshot.docs[0];
+        console.log('Refeição já existe, atualizando:', docExistente.id);
+        
+        const dadosAtualizados = {
+          ...dados,
+          presente: dados.presente ?? true,
+          updatedAt: Timestamp.now()
+        };
+        
+        await updateDoc(doc(db, COLLECTION_NAME, docExistente.id), dadosAtualizados);
+        
+        // Registrar atividade de atualização
+        try {
+          await atividadeService.registrarAtividade({
+            tipo: 'REFEICAO',
+            descricao: `Refeição atualizada para ${dados.nomeAluno}`,
+            usuarioId: '',
+            usuarioEmail: '',
+            entidadeId: docExistente.id,
+            entidadeTipo: 'refeicao'
+          });
+        } catch (error) {
+          console.warn('Erro ao registrar atividade para atualização de refeição, continuando fluxo:', error);
+        }
+        
+        return docExistente.id;
+      }
+      
+      // Se não existe, cria uma nova refeição
       const novaRefeicao = {
         ...dados,
-        presente: dados.presente ?? false, // Define como false por padrão
+        presente: dados.presente ?? true, // Define como true por padrão
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       };
@@ -290,6 +339,14 @@ export const refeicaoService = {
            error.message.includes('Missing or insufficient permissions'))) {
         console.warn('Erro de permissão ao registrar refeição, continuando com ID falso');
         return 'permission-denied-' + Date.now();
+      }
+      
+      // Se for um erro de documento já existente, tenta novamente com um pequeno atraso
+      if (error instanceof Error && error.message.includes('already exists')) {
+        console.warn('Documento já existe, tentando novamente com ID gerado automaticamente');
+        // Espera um pequeno tempo para evitar colisões
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return await this.registrarRefeicao(dados);
       }
       
       throw error;

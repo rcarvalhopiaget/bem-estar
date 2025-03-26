@@ -10,6 +10,8 @@ import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
 import SoupKitchenIcon from '@mui/icons-material/SoupKitchen';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   alunos: Aluno[];
@@ -58,34 +60,38 @@ const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; L
 };
 
 // Tipos de refeição disponíveis
-const TIPOS_REFEICAO = [
+const TODOS_TIPOS_REFEICAO = [
   { 
     id: 'LANCHE_MANHA' as TipoRefeicao, 
     nome: 'Lanche da Manhã', 
     horario: '09:30',
     icon: CoffeeIcon,
-    color: '#1976d2' // Azul
+    color: '#1976d2', // Azul
+    operador: true
   },
   { 
     id: 'ALMOCO' as TipoRefeicao, 
     nome: 'Almoço', 
     horario: '12:00',
     icon: RestaurantIcon,
-    color: '#2e7d32' // Verde
+    color: '#2e7d32', // Verde
+    operador: true
   },
   { 
     id: 'LANCHE_TARDE' as TipoRefeicao, 
     nome: 'Lanche da Tarde', 
     horario: '15:30',
     icon: CakeIcon,
-    color: '#ed6c02' // Laranja
+    color: '#ed6c02', // Laranja
+    operador: true
   },
   { 
     id: 'SOPA' as TipoRefeicao, 
     nome: 'Sopa', 
     horario: '18:00',
     icon: SoupKitchenIcon,
-    color: '#d32f2f' // Vermelho
+    color: '#d32f2f', // Vermelho
+    operador: true
   }
 ];
 
@@ -95,6 +101,21 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
+  const { perfil, isAdmin } = usePermissions();
+  const { user } = useAuth();
+  const [isRestauranteUser, setIsRestauranteUser] = useState(false);
+  
+  useEffect(() => {
+    // Verificar se o email do usuário contém "restaurante"
+    if (user?.email && user.email.includes('restaurante')) {
+      setIsRestauranteUser(true);
+      console.log('RefeicaoRapida: É usuário do restaurante!');
+    }
+  }, [user]);
+  
+  // Filtrar tipos de refeição com base no perfil do usuário
+  // Operadores (incluindo usuário do restaurante) veem todas as opções
+  const TIPOS_REFEICAO = TODOS_TIPOS_REFEICAO;
 
   // Formata a data de forma simplificada
   const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
@@ -284,7 +305,10 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         {!isMesmoDia(data, new Date()) && (
           <Alert 
             severity="info" 
-            sx={{ mt: 2, mb: 1 }}
+            sx={{ 
+              mt: 2, 
+              mb: 1 
+            }}
           >
             Visualizando dados históricos. Apenas o dia atual permite registrar refeições.
           </Alert>
