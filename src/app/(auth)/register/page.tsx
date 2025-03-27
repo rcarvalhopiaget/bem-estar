@@ -6,21 +6,29 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { mockAuthService } from '@/services/mockAuth';
+import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseError } from 'firebase/app';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { signUp, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !passwordConfirm) {
       setError('Por favor, preencha todos os campos');
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      setError('As senhas não coincidem');
       return;
     }
 
@@ -33,14 +41,31 @@ export default function RegisterPage() {
       setLoading(true);
       setError('');
       
-      console.log('Tentando criar conta...');
-      await mockAuthService.register(name, email, password);
-      console.log('Conta criada com sucesso!');
+      console.log('Tentando registrar...');
+      await signUp(email, password, name);
+      console.log('Registro bem-sucedido!');
       
       router.push('/dashboard');
     } catch (err: any) {
-      console.error('Erro ao criar conta:', err);
-      setError(err.message || 'Erro ao criar conta. Tente novamente');
+      console.error('Erro detalhado ao registrar:', err);
+      
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            setError('Este email já está em uso');
+            break;
+          case 'auth/invalid-email':
+            setError('Email inválido');
+            break;
+          case 'auth/weak-password':
+            setError('Senha muito fraca');
+            break;
+          default:
+            setError(`Erro ao registrar: ${err.message}`);
+        }
+      } else {
+        setError('Ocorreu um erro inesperado. Tente novamente');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +79,7 @@ export default function RegisterPage() {
             Crie sua conta
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Preencha os dados abaixo para se registrar
+            Registre-se para começar a usar o sistema
           </p>
         </div>
         
@@ -72,7 +97,7 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite seu nome"
-              disabled={loading}
+              disabled={loading || authLoading}
             />
 
             <Input
@@ -81,7 +106,7 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              disabled={loading}
+              disabled={loading || authLoading}
             />
 
             <Input
@@ -90,7 +115,16 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              disabled={loading}
+              disabled={loading || authLoading}
+            />
+
+            <Input
+              label="Confirme a senha"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              placeholder="Confirme sua senha"
+              disabled={loading || authLoading}
             />
           </div>
 
@@ -98,10 +132,10 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              disabled={loading}
-              isLoading={loading}
+              disabled={loading || authLoading}
+              isLoading={loading || authLoading}
             >
-              {loading ? 'Criando conta...' : 'Criar conta'}
+              {loading || authLoading ? 'Registrando...' : 'Registrar'}
             </Button>
           </div>
 

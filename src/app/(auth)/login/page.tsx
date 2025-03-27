@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { mockAuthService } from '@/services/mockAuth';
+import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,13 +30,31 @@ export default function LoginPage() {
       setError('');
       
       console.log('Tentando fazer login...');
-      await mockAuthService.login(email, password);
+      await signIn(email, password);
       console.log('Login bem-sucedido!');
       
       router.push('/dashboard');
     } catch (err: any) {
-      console.error('Erro ao fazer login:', err);
-      setError('Email ou senha incorretos');
+      console.error('Erro detalhado ao fazer login:', err);
+      
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            setError('Email ou senha incorretos');
+            break;
+          case 'auth/invalid-email':
+            setError('Email inválido');
+            break;
+          case 'auth/too-many-requests':
+            setError('Muitas tentativas. Tente novamente mais tarde');
+            break;
+          default:
+            setError(`Erro ao fazer login: ${err.message}`);
+        }
+      } else {
+        setError('Ocorreu um erro inesperado. Tente novamente');
+      }
     } finally {
       setLoading(false);
     }
@@ -69,7 +89,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              disabled={loading}
+              disabled={loading || authLoading}
             />
 
             <Input
@@ -78,7 +98,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              disabled={loading}
+              disabled={loading || authLoading}
             />
           </div>
 
@@ -86,10 +106,10 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              disabled={loading}
-              isLoading={loading}
+              disabled={loading || authLoading}
+              isLoading={loading || authLoading}
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading || authLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
 
