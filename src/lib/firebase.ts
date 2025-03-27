@@ -43,12 +43,6 @@ try {
 }
 
 // Inicializa serviços
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-console.log('Serviços Firebase inicializados:', {
-  auth: !!auth,
-  db: !!db,
-});
-
-export { app, auth, db };
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export default app;

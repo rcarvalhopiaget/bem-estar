@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,17 +9,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { signInWithEmailAndPassword, getAuth, onAuthStateChanged } from 'firebase/auth';
-import { initializeApp, getApps } from 'firebase/app';
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -30,41 +20,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn, loading: authLoading } = useFirebaseAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    try {
-      console.log('Verificando configuração do Firebase:', {
-        apiKey: firebaseConfig.apiKey ? 'Presente' : 'Ausente',
-        authDomain: firebaseConfig.authDomain ? 'Presente' : 'Ausente',
-        projectId: firebaseConfig.projectId ? 'Presente' : 'Ausente'
-      });
-
-      if (!getApps().length) {
-        console.log('Inicializando Firebase...');
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            console.log('Usuário já está autenticado');
-            router.push('/dashboard');
-          }
-        });
-
-        console.log('Firebase inicializado com sucesso');
-      } else {
-        console.log('Firebase já está inicializado');
-      }
-
-      setIsInitialized(true);
-    } catch (error) {
-      console.error('Erro ao inicializar Firebase:', error);
-      setLoginError('Erro ao inicializar o sistema. Por favor, recarregue a página.');
-    }
-  }, [router]);
 
   const {
     register,
@@ -75,20 +33,14 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    if (!isInitialized) {
-      setLoginError('Sistema ainda não foi inicializado. Por favor, aguarde.');
-      return;
-    }
-
     try {
       setIsLoading(true);
       setLoginError(null);
       
       console.log('Tentando fazer login...');
-      const auth = getAuth();
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      await signIn(data.email, data.password);
+      console.log('Login bem-sucedido!');
       
-      console.log('Login bem-sucedido:', userCredential.user.email);
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Erro detalhado ao fazer login:', error);
@@ -118,7 +70,7 @@ export default function LoginPage() {
     }
   };
 
-  if (!isInitialized) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
