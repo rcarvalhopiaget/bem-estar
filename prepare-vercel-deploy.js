@@ -4,6 +4,28 @@ const { execSync } = require('child_process');
 
 console.log('=== Preparando projeto para deploy na Vercel ===');
 
+// Função para criar diretório se não existir
+function ensureDirectoryExists(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+// Função para copiar arquivo
+function copyFile(src, dest) {
+  fs.copyFileSync(src, dest);
+}
+
+// Função para ler arquivo
+function readFile(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+// Função para escrever arquivo
+function writeFile(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
 // Função para listar todos os arquivos .ts/.tsx recursivamente
 function findTsFiles(dir, fileList = []) {
   const files = fs.readdirSync(dir);
@@ -234,6 +256,83 @@ try {
 } catch (error) {
   console.error('❌ Erro ao verificar arquivo vercel.json:', error);
 }
+
+// Função principal
+function prepareForVercel() {
+  console.log('Preparando projeto para deploy na Vercel...');
+
+  // 1. Criar diretório .vercel se não existir
+  ensureDirectoryExists('.vercel');
+
+  // 2. Copiar arquivos de configuração necessários
+  const configFiles = [
+    'next.config.js',
+    'package.json',
+    'tsconfig.json',
+    'tailwind.config.ts',
+    'postcss.config.js'
+  ];
+
+  configFiles.forEach(file => {
+    if (fs.existsSync(file)) {
+      copyFile(file, path.join('.vercel', file));
+      console.log(`✓ Copiado ${file}`);
+    }
+  });
+
+  // 3. Criar arquivo de configuração do projeto
+  const projectConfig = {
+    name: 'bem-estar',
+    framework: 'nextjs',
+    buildCommand: 'npm run build',
+    outputDirectory: '.next',
+    installCommand: 'npm install',
+    devCommand: 'npm run dev'
+  };
+
+  writeFile(
+    path.join('.vercel', 'project.json'),
+    JSON.stringify(projectConfig, null, 2)
+  );
+  console.log('✓ Criado project.json');
+
+  // 4. Criar arquivo de configuração de ambiente
+  const envConfig = {
+    production: true,
+    env: {
+      NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+      EMAIL_USER: process.env.EMAIL_USER,
+      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+      EMAIL_SMTP_HOST: process.env.EMAIL_SMTP_HOST,
+      EMAIL_SMTP_PORT: process.env.EMAIL_SMTP_PORT,
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      EMAIL_TEST_MODE: process.env.EMAIL_TEST_MODE,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      SESSION_SECRET: process.env.SESSION_SECRET,
+      NEXT_PUBLIC_CACHE_TTL: process.env.NEXT_PUBLIC_CACHE_TTL,
+      NEXT_PUBLIC_CACHE_MAX_AGE: process.env.NEXT_PUBLIC_CACHE_MAX_AGE
+    }
+  };
+
+  writeFile(
+    path.join('.vercel', 'env.json'),
+    JSON.stringify(envConfig, null, 2)
+  );
+  console.log('✓ Criado env.json');
+
+  console.log('\nPreparação concluída! Agora você pode fazer o deploy usando:');
+  console.log('vercel deploy');
+}
+
+// Executar preparação
+prepareForVercel();
 
 console.log('\n=== Projeto preparado para deploy! 🚀 ===');
 console.log('\nPróximos passos:');

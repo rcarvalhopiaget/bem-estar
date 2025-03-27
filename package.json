@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "limpar-duplicados": "ts-node src/scripts/executarLimpeza.ts",
-    "sendDailyReport": "node scripts/sendDailyReport.js"
+    "sendDailyReport": "node scripts/sendDailyReport.js",
+    "vercel:prepare": "node prepare-vercel-deploy.js",
+    "vercel:deploy": "node vercel-deploy.js",
+    "deploy": "npm run vercel:prepare && npm run vercel:deploy"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

@@ -428,4 +428,74 @@ console.log('3. Acesse a dashboard da Vercel: https://vercel.com/dashboard');
 console.log('4. Inicie um novo deploy: https://vercel.com/new\n');
 console.log('Se preferir deploy via CLI:');
 console.log('- vercel login');
-console.log('- vercel --prod\n'); 
+console.log('- vercel --prod\n');
+
+// Função para verificar se o Vercel CLI está instalado
+function checkVercelCLI() {
+  try {
+    execSync('vercel --version', { stdio: 'ignore' })
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
+// Função para instalar Vercel CLI
+function installVercelCLI() {
+  console.log('Instalando Vercel CLI...')
+  execSync('npm install -g vercel', { stdio: 'inherit' })
+}
+
+// Função para fazer login na Vercel
+function loginToVercel() {
+  console.log('Fazendo login na Vercel...')
+  execSync('vercel login', { stdio: 'inherit' })
+}
+
+// Função para fazer o deploy
+function deployToVercel() {
+  console.log('Iniciando deploy na Vercel...')
+  
+  // Verificar se o arquivo .env.production existe
+  if (!fs.existsSync('.env.production')) {
+    console.error('❌ Arquivo .env.production não encontrado!')
+    console.log('Por favor, crie o arquivo .env.production com as variáveis necessárias.')
+    process.exit(1)
+  }
+
+  // Carregar variáveis de ambiente do .env.production
+  require('dotenv').config({ path: '.env.production' })
+
+  // Executar o script de preparação
+  console.log('Preparando projeto...')
+  require('./prepare-vercel-deploy')
+
+  // Executar o deploy
+  try {
+    execSync('vercel deploy --prod', { stdio: 'inherit' })
+    console.log('\n✅ Deploy concluído com sucesso! 🚀')
+  } catch (error) {
+    console.error('\n❌ Erro durante o deploy:', error.message)
+    process.exit(1)
+  }
+}
+
+// Função principal
+function main() {
+  console.log('=== Iniciando processo de deploy na Vercel ===\n')
+
+  // Verificar e instalar Vercel CLI se necessário
+  if (!checkVercelCLI()) {
+    console.log('Vercel CLI não encontrado.')
+    installVercelCLI()
+  }
+
+  // Fazer login na Vercel
+  loginToVercel()
+
+  // Fazer o deploy
+  deployToVercel()
+}
+
+// Executar o processo
+main() 
