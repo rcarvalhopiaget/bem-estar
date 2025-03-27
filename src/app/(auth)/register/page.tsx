@@ -13,7 +13,11 @@ const Button = ({
   className = "", 
   isLoading = false, 
   ...props 
-}) => {
+}: {
+  children: React.ReactNode;
+  className?: string;
+  isLoading?: boolean;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   return (
     <button
       className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 ${className}`}
@@ -41,7 +45,11 @@ const Input = ({
   className = "", 
   type = "text", 
   ...props 
-}) => {
+}: {
+  label?: string;
+  className?: string;
+  type?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) => {
   return (
     <div className="flex flex-col space-y-2">
       {label && (
@@ -142,7 +150,7 @@ export default function RegisterPage() {
               label="Nome"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
               placeholder="Digite seu nome"
               disabled={loading || authLoading}
             />
@@ -151,7 +159,7 @@ export default function RegisterPage() {
               label="Email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder="Digite seu email"
               disabled={loading || authLoading}
             />
@@ -160,7 +168,7 @@ export default function RegisterPage() {
               label="Senha"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
               disabled={loading || authLoading}
             />
@@ -169,7 +177,7 @@ export default function RegisterPage() {
               label="Confirme a senha"
               type="password"
               value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPasswordConfirm(e.target.value)}
               placeholder="Confirme sua senha"
               disabled={loading || authLoading}
             />
