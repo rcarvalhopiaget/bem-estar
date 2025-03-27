@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,8 +9,17 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, getAuth, onAuthStateChanged } from 'firebase/auth';
+import { initializeApp, getApps } from 'firebase/app';
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -23,6 +32,39 @@ export default function LoginPage() {
   const router = useRouter();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    try {
+      console.log('Verificando configuração do Firebase:', {
+        apiKey: firebaseConfig.apiKey ? 'Presente' : 'Ausente',
+        authDomain: firebaseConfig.authDomain ? 'Presente' : 'Ausente',
+        projectId: firebaseConfig.projectId ? 'Presente' : 'Ausente'
+      });
+
+      if (!getApps().length) {
+        console.log('Inicializando Firebase...');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            console.log('Usuário já está autenticado');
+            router.push('/dashboard');
+          }
+        });
+
+        console.log('Firebase inicializado com sucesso');
+      } else {
+        console.log('Firebase já está inicializado');
+      }
+
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Erro ao inicializar Firebase:', error);
+      setLoginError('Erro ao inicializar o sistema. Por favor, recarregue a página.');
+    }
+  }, [router]);
 
   const {
     register,
@@ -33,17 +75,23 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    if (!isInitialized) {
+      setLoginError('Sistema ainda não foi inicializado. Por favor, aguarde.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setLoginError(null);
       
       console.log('Tentando fazer login...');
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      console.log('Login bem-sucedido!');
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       
+      console.log('Login bem-sucedido:', userCredential.user.email);
       router.push('/dashboard');
     } catch (error: any) {
-      console.error('Erro ao fazer login:', error);
+      console.error('Erro detalhado ao fazer login:', error);
       
       switch (error?.code) {
         case 'auth/user-not-found':
@@ -63,12 +111,23 @@ export default function LoginPage() {
           setLoginError('Esta conta foi desativada');
           break;
         default:
-          setLoginError('Erro ao fazer login. Tente novamente');
+          setLoginError(`Erro ao fazer login: ${error.message || 'Tente novamente'}`);
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-2">Carregando...</h2>
+          <p className="text-gray-600">Inicializando o sistema</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
