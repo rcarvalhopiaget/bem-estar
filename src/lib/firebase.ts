@@ -1,8 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,37 +10,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Log para debug
-console.log('Valores das variáveis de ambiente Firebase:', {
-  NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.substring(0, 5) + '...',
-  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+console.log('Configuração do Firebase:', {
+  apiKey: firebaseConfig.apiKey ? 'Presente' : 'Ausente',
+  authDomain: firebaseConfig.authDomain ? 'Presente' : 'Ausente',
+  projectId: firebaseConfig.projectId ? 'Presente' : 'Ausente',
 });
 
-// Verifica se a configuração do Firebase está completa
-const requiredFields = ['apiKey', 'authDomain', 'projectId'] as const;
-const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
-
-if (missingFields.length > 0) {
-  throw new Error(`Firebase configuration is incomplete. Missing fields: ${missingFields.join(', ')}`);
-}
-
 // Inicializa o Firebase
-let app;
-try {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log('Firebase inicializado com sucesso');
-  } else {
-    app = getApps()[0];
-    console.log('Usando instância existente do Firebase');
-  }
-} catch (error) {
-  console.error('Erro ao inicializar Firebase:', error);
-  throw error;
-}
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
 
-// Inicializa serviços
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export default app;
+export { auth };

@@ -1,85 +1,59 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, loading: authLoading } = useFirebaseAuth();
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
 
-  const onSubmit = async (data: LoginFormData) => {
     try {
-      setIsLoading(true);
-      setLoginError(null);
+      setLoading(true);
+      setError('');
       
       console.log('Tentando fazer login...');
-      await signIn(data.email, data.password);
-      console.log('Login bem-sucedido!');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login bem-sucedido:', userCredential.user.email);
       
       router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Erro detalhado ao fazer login:', error);
+    } catch (err: any) {
+      console.error('Erro ao fazer login:', err);
       
-      switch (error?.code) {
+      switch (err.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
-          setLoginError('Email ou senha incorretos');
-          break;
-        case 'auth/too-many-requests':
-          setLoginError('Muitas tentativas de login. Tente novamente mais tarde');
-          break;
-        case 'auth/network-request-failed':
-          setLoginError('Erro de conexão. Verifique sua internet');
+          setError('Email ou senha incorretos');
           break;
         case 'auth/invalid-email':
-          setLoginError('Email inválido');
+          setError('Email inválido');
           break;
-        case 'auth/user-disabled':
-          setLoginError('Esta conta foi desativada');
+        case 'auth/too-many-requests':
+          setError('Muitas tentativas. Tente novamente mais tarde');
           break;
         default:
-          setLoginError(`Erro ao fazer login: ${error.message || 'Tente novamente'}`);
+          setError('Erro ao fazer login. Tente novamente');
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Carregando...</h2>
-          <p className="text-gray-600">Inicializando o sistema</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -93,30 +67,30 @@ export default function LoginPage() {
           </p>
         </div>
         
-        {loginError && (
+        {error && (
           <Alert severity="error" className="mt-4">
-            {loginError}
+            {error}
           </Alert>
         )}
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <Input
               label="Email"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              {...register('email')}
-              error={errors.email?.message}
-              disabled={isLoading}
+              disabled={loading}
             />
 
             <Input
               label="Senha"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              {...register('password')}
-              error={errors.password?.message}
-              disabled={isLoading}
+              disabled={loading}
             />
           </div>
 
@@ -124,10 +98,10 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              disabled={isLoading}
-              isLoading={isLoading}
+              disabled={loading}
+              isLoading={loading}
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
 
