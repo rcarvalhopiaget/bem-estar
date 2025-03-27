@@ -7,10 +7,11 @@ node_modules
 .github
 .vscode
 
-# Ignorar scripts de desenvolvimento
+# Manter o script de solução direta e ignorar outros scripts de desenvolvimento
 *.ps1
 fix-ui-components.js
 fix-imports.js
 fix-ui-imports.js
 patch-imports.js
-prepare-vercel-deploy.js 
+prepare-vercel-deploy.js
+# fix-ui-direct.js # NÃO IGNORE ESTE ARQUIVO, NECESSÁRIO PARA O BUILD 

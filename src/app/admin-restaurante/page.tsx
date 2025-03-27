@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { useState, forwardRef } from 'react';
+import { cn } from '@/lib/utils';
+import { cva } from 'class-variance-authority';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, setDoc, getFirestore } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function AdminRestaurantePage() {
@@ -17,6 +19,13 @@ export default function AdminRestaurantePage() {
     try {
       setIsLoading(true);
       setResultado(null);
+
+      // Verificar se o db está disponível
+      if (!db) {
+        setResultado("Erro: Banco de dados não está disponível no momento");
+        toast.error("Erro ao conectar ao banco de dados");
+        return;
+      }
 
       // Buscar o usuário pelo email
       const email = 'restaurante.piaget@jpiaget.com.br';

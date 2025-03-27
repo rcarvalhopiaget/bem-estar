@@ -81,6 +81,12 @@ export default function AdminPage() {
     setResultadoAdmin([]);
     
     try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
       // Dados do usuário admin
       const adminData = {
         email: 'rodrigo.carvalho@jpiaget.com.br',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/MockAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 
 // Tipos de perfil de usuário
@@ -18,12 +18,16 @@ export function usePermissions() {
   const isProfessor = perfil === 'professor' || false;
   const isCoordenador = perfil === 'coordenador' || false;
   
+  // Permissões específicas
+  const podeGerenciarConfiguracoes = isAdmin || isCoordenador;
+  
   return {
     perfil,
     isAdmin,
     isOperador,
     isProfessor,
     isCoordenador,
+    podeGerenciarConfiguracoes,
     hasPermission: (permission: string) => true, // Simulando que tem todas as permissões
   };
 }
