@@ -12,6 +12,16 @@ export async function POST(request: NextRequest) {
     
     console.log('Dados recebidos:', userData);
     
+    // Verificar se o banco de dados está disponível
+    if (!db) {
+      console.error('Banco de dados não disponível');
+      return NextResponse.json({
+        success: false,
+        message: 'Erro ao atualizar usuário',
+        error: 'Banco de dados não disponível'
+      }, { status: 500 });
+    }
+    
     // Buscar o usuário pelo email
     const usuariosRef = collection(db, 'usuarios');
     console.log('Buscando usuário com email:', email);

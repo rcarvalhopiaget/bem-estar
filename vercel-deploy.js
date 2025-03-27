@@ -291,6 +291,51 @@ try {
       console.log('ℹ️ Verificação de db nulo já existente em api/admin/route.ts');
     }
   }
+  
+  // Correção do atualizar-usuario-restaurante/route.ts
+  const atualizarUsuarioRestaurantePath = path.join(__dirname, 'src', 'app', 'api', 'atualizar-usuario-restaurante', 'route.ts');
+  if (fs.existsSync(atualizarUsuarioRestaurantePath)) {
+    let content = fs.readFileSync(atualizarUsuarioRestaurantePath, 'utf8');
+    
+    // Verificar se o arquivo já tem a verificação null para db
+    if (!content.includes('if (!db)')) {
+      // Adicionar verificação de null para o Firebase db
+      content = content.replace(
+        /export async function POST\(request: NextRequest\) {[\s\S]*?try {[\s\S]*?console\.log\('Dados recebidos:'/g,
+        `export async function POST(request: NextRequest) {
+  try {
+    console.log('Iniciando atualização do usuário do restaurante...');
+    
+    // Obter dados do corpo da requisição
+    const userData = await request.json();
+    const email = userData.email || 'restaurante.piaget@jpiaget.com.br';
+    
+    console.log('Dados recebidos:'`
+      );
+      
+      content = content.replace(
+        /console\.log\('Dados recebidos:'[\s\S]*?\/\/ Buscar o usuário pelo email/g,
+        `console.log('Dados recebidos:', userData);
+    
+    // Verificar se o banco de dados está disponível
+    if (!db) {
+      console.error('Banco de dados não disponível');
+      return NextResponse.json({
+        success: false,
+        message: 'Erro ao atualizar usuário',
+        error: 'Banco de dados não disponível'
+      }, { status: 500 });
+    }
+    
+    // Buscar o usuário pelo email`
+      );
+      
+      fs.writeFileSync(atualizarUsuarioRestaurantePath, content, 'utf8');
+      console.log('✅ Verificação de db nulo adicionada ao arquivo api/atualizar-usuario-restaurante/route.ts');
+    } else {
+      console.log('ℹ️ Verificação de db nulo já existente em api/atualizar-usuario-restaurante/route.ts');
+    }
+  }
 } catch (error) {
   console.error('❌ Erro ao corrigir uso do Firebase:', error);
 }

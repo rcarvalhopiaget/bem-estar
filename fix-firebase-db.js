@@ -85,14 +85,41 @@ function hasDbNullCheck(content) {
  * @returns {string} Conteúdo modificado
  */
 function addDbNullCheckToApiFile(content) {
-  // Para rotas de API
-  if (content.includes('export async function')) {
-    return content.replace(
-      /(export async function (?:GET|POST|PUT|DELETE)\([^)]*\)\s*{[^{]*try\s*{)/,
+  let modified = content;
+  
+  // Para rotas de API com GET
+  if (content.includes('export async function GET')) {
+    modified = modified.replace(
+      /(export async function GET\([^)]*\)\s*{[^{]*try\s*{)/,
       '$1\n    // Verificar se o banco de dados está disponível\n    if (!db) {\n      return NextResponse.json(\n        { success: false, error: \'Banco de dados não disponível\' },\n        { status: 500 }\n      );\n    }\n'
     );
   }
-  return content;
+  
+  // Para rotas de API com POST
+  if (content.includes('export async function POST')) {
+    modified = modified.replace(
+      /(export async function POST\([^)]*\)\s*{[^{]*try\s*{)/,
+      '$1\n    // Verificar se o banco de dados está disponível\n    if (!db) {\n      return NextResponse.json(\n        { success: false, error: \'Banco de dados não disponível\' },\n        { status: 500 }\n      );\n    }\n'
+    );
+  }
+  
+  // Para rotas de API com PUT
+  if (content.includes('export async function PUT')) {
+    modified = modified.replace(
+      /(export async function PUT\([^)]*\)\s*{[^{]*try\s*{)/,
+      '$1\n    // Verificar se o banco de dados está disponível\n    if (!db) {\n      return NextResponse.json(\n        { success: false, error: \'Banco de dados não disponível\' },\n        { status: 500 }\n      );\n    }\n'
+    );
+  }
+  
+  // Para rotas de API com DELETE
+  if (content.includes('export async function DELETE')) {
+    modified = modified.replace(
+      /(export async function DELETE\([^)]*\)\s*{[^{]*try\s*{)/,
+      '$1\n    // Verificar se o banco de dados está disponível\n    if (!db) {\n      return NextResponse.json(\n        { success: false, error: \'Banco de dados não disponível\' },\n        { status: 500 }\n      );\n    }\n'
+    );
+  }
+  
+  return modified;
 }
 
 /**
