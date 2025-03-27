@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@radix-ui/react-switch';
+import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
@@ -52,7 +52,7 @@ const TIPOS_REFEICAO: Record<TipoRefeicao, string> = {
   'SOPA': 'Sopa'
 };
 
-const ICONES_REFEICAO: Record<TipoRefeicao, any> = {
+const ICONES_REFEICAO: Record<TipoRefeicao, React.ElementType> = {
   'LANCHE_MANHA': CoffeeIcon,
   'ALMOCO': RestaurantIcon,
   'LANCHE_TARDE': CakeIcon,
@@ -285,6 +285,11 @@ export default function RelatoriosPage() {
                       const tipoNome = TIPOS_REFEICAO[refeicao.tipo];
                       const corRefeicao = CORES_REFEICAO[refeicao.tipo];
 
+                      if (!Icon) {
+                        console.error(`Ícone não encontrado para o tipo: ${refeicao.tipo}`);
+                        return null;
+                      }
+
                       return (
                         <tr key={`${refeicao.alunoId}-${refeicao.tipo}`} 
                           className={`border-t ${refeicao.presente ? 'bg-green-50' : 'bg-red-50'}`}
@@ -336,7 +341,7 @@ export default function RelatoriosPage() {
     setRefeicoes([]);
   };
 
-  const salvarConfiguracaoRelatorio = async () => {
+  const salvarConfigEmail = async () => {
     try {
       setEnviandoEmail(true);
       await salvarConfiguracaoEnvioRelatorio(
@@ -658,7 +663,7 @@ export default function RelatoriosPage() {
                 <Switch
                   id="ativo"
                   checked={configuracaoRelatorio.ativo}
-                  onCheckedChange={(checked: boolean) => setConfiguracaoRelatorio(prev => ({
+                  onCheckedChange={(checked) => setConfiguracaoRelatorio(prev => ({
                     ...prev,
                     ativo: checked
                   }))}
@@ -675,7 +680,7 @@ export default function RelatoriosPage() {
                   Cancelar
                 </Button>
                 <Button
-                  onClick={salvarConfiguracaoRelatorio}
+                  onClick={salvarConfigEmail}
                   disabled={enviandoEmail}
                   className="px-3 sm:px-4 py-2 text-base sm:text-lg bg-blue-600 hover:bg-blue-700 text-white"
                 >
