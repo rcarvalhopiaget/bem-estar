@@ -10,4 +10,7 @@ node_modules
 # Ignorar scripts de desenvolvimento
 *.ps1
 fix-ui-components.js
-fix-imports.js 
+fix-imports.js
+fix-ui-imports.js
+patch-imports.js
+prepare-vercel-deploy.js 

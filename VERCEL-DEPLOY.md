@@ -7,9 +7,9 @@ Este documento fornece instruções detalhadas para fazer deploy desta aplicaç�
 1. Uma conta na Vercel: [vercel.com](https://vercel.com)
 2. Repositório do projeto no GitHub, GitLab ou Bitbucket
 
-## Correções Realizadas
+## Correções Implementadas
 
-Antes do deploy, foram realizadas as seguintes correções no projeto:
+Antes do deploy, foram implementadas as seguintes correções no projeto:
 
 1. **Correção dos nomes dos componentes UI**
    - Os nomes dos arquivos de componentes foram padronizados para letra minúscula para corresponder às importações:
@@ -26,6 +26,31 @@ Antes do deploy, foram realizadas as seguintes correções no projeto:
      - De: `"firebase": "^11.3.0"`
      - Para: `"firebase": "^10.8.1"`
 
+3. **Criação de barrel files para compatibilidade entre sistemas de arquivos**
+   - Foram criados arquivos de barril (barrel files) para cada componente UI, o que resolve problemas de case-sensitivity entre Windows (case-insensitive) e Linux/Vercel (case-sensitive).
+
+4. **Correção das importações nos arquivos**
+   - As importações de componentes UI foram padronizadas em todo o projeto para usar a forma minúscula, evitando problemas de importação durante o build.
+
+5. **Configuração do .vercelignore**
+   - Foi criado um arquivo `.vercelignore` para excluir arquivos desnecessários do deploy, melhorando a performance e evitando problemas relacionados a submódulos Git.
+
+## Como Usar as Correções
+
+Todas as correções foram automatizadas em um único script. Para aplicá-las antes do deploy, execute:
+
+```bash
+node prepare-vercel-deploy.js
+```
+
+Este script:
+- Renomeia os componentes UI para minúsculas
+- Cria barrel files para compatibilidade entre sistemas de arquivos
+- Corrige importações nos arquivos TypeScript/TSX
+- Atualiza a dependência do Firebase no connector
+- Configura o arquivo .vercelignore
+- Verifica o arquivo vercel.json
+
 ## Passos para Deploy na Vercel
 
 ### 1. Preparação do Repositório
@@ -33,6 +58,10 @@ Antes do deploy, foram realizadas as seguintes correções no projeto:
 Certifique-se de que todas as correções foram aplicadas e faça commit das alterações:
 
 ```bash
+# Executar o script de preparação para deploy
+node prepare-vercel-deploy.js
+
+# Commit e push das alterações
 git add .
 git commit -m "Fix: Prepare for Vercel deployment"
 git push
@@ -54,7 +83,25 @@ git push
 
 5. Clique em "Deploy"
 
-### 3. Verificação Pós-Deploy
+### 3. Deploy via CLI (Opcional)
+
+Se preferir usar a CLI da Vercel:
+
+```bash
+# Instalar a CLI da Vercel
+npm install -g vercel
+
+# Login na Vercel
+vercel login
+
+# Deploy do projeto
+vercel --prod
+
+# Ou use o script preparado
+./deploy.sh
+```
+
+### 4. Verificação Pós-Deploy
 
 Depois que o deploy for concluído, verifique:
 
@@ -66,21 +113,25 @@ Depois que o deploy for concluído, verifique:
 
 ### Erro: "Module not found: Can't resolve '@/components/ui/button'"
 
-**Causa**: Incompatibilidade entre os nomes dos arquivos de componentes e as importações.
+**Causa**: Incompatibilidade entre os nomes dos arquivos de componentes e as importações, geralmente devido à diferença de case-sensitivity entre sistemas de arquivos.
 
-**Solução**: Renomeie os arquivos de componentes para letras minúsculas ou ajuste as importações para corresponder aos nomes dos arquivos.
+**Solução**: 
+1. Execute o script `prepare-vercel-deploy.js` para aplicar todas as correções necessárias
+2. Verifique as importações nos arquivos problemáticos manualmente
 
 ### Erro: "Peer dependency conflict: firebase"
 
 **Causa**: O pacote `@firebasegen/default-connector` espera uma versão diferente do Firebase.
 
-**Solução**: Edite o arquivo `dataconnect-generated/js/default-connector/package.json` para aceitar a versão atual do Firebase.
+**Solução**: O script de preparação já corrige esta dependência, mas você pode verificar manualmente o arquivo `dataconnect-generated/js/default-connector/package.json`.
 
 ### Erro: "Failed to fetch git submodules"
 
-**Causa**: O repositório contém submódulos Git que não foram configurados corretamente.
+**Causa**: O repositório contém referências a submódulos Git que não foram configurados corretamente.
 
-**Solução**: Adicione os submódulos ao repositório ou remova as referências a eles.
+**Solução**: 
+1. O arquivo `.vercelignore` já configurado deve resolver este problema
+2. Se persistir, verifique se existem referências a submódulos no arquivo `.gitmodules` e remova-as
 
 ## Configurações Avançadas
 

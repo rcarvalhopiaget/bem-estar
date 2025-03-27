@@ -1,7 +1,7 @@
 'use client';
 
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Toaster as RadixToaster } from '@/components/ui/toaster';
+import { Toaster as RadixToaster } from '@/components/ui/toast';
 import { Toaster as HotToaster } from 'react-hot-toast';
 import { Providers } from '@/components/Providers';
 import { EmailJSInit } from '@/components/EmailJSInit';
