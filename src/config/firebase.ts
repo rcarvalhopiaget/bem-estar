@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 
 // Configuração do Firebase
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+export const firebaseConfig = {
+  apiKey: "AIzaSyBxjBGF_ZvUo9u_2MJrwVc2Og7uD5TDkQE",
+  authDomain: "bem-estar-temp.firebaseapp.com",
+  projectId: "bem-estar-temp",
+  storageBucket: "bem-estar-temp.appspot.com",
+  messagingSenderId: "654007389715",
+  appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
 };
 
 // Verifica se a configuração do Firebase está completa
