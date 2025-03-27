@@ -1,0 +1,13 @@
+# Ignorar arquivos relacionados a submódulos Git
+.git
+.gitmodules
+
+# Ignorar arquivos desnecessários para o build
+node_modules
+.github
+.vscode
+
+# Ignorar scripts de desenvolvimento
+*.ps1
+fix-ui-components.js
+fix-imports.js 
