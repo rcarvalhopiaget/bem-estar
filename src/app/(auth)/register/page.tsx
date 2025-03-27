@@ -1,44 +1,70 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-
-const registerSchema = z.object({
-  name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'As senhas não conferem',
-  path: ['confirmPassword'],
-});
-
-type RegisterFormData = z.infer<typeof registerSchema>;
+import { Alert } from '@mui/material';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '@/config/firebase';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !email || !password) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
 
-  const onSubmit = async (data: RegisterFormData) => {
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
     try {
-      await signUp(data.email, data.password, data.name);
+      setLoading(true);
+      setError('');
+      
+      console.log('Tentando criar conta...');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Atualiza o perfil do usuário com o nome
+      await updateProfile(userCredential.user, {
+        displayName: name
+      });
+      
+      console.log('Conta criada com sucesso:', userCredential.user.email);
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Erro ao criar conta:', error);
+    } catch (err: any) {
+      console.error('Erro ao criar conta:', err);
+      
+      switch (err.code) {
+        case 'auth/email-already-in-use':
+          setError('Este email já está em uso');
+          break;
+        case 'auth/invalid-email':
+          setError('Email inválido');
+          break;
+        case 'auth/operation-not-allowed':
+          setError('Criação de conta desativada');
+          break;
+        case 'auth/weak-password':
+          setError('Senha muito fraca');
+          break;
+        default:
+          setError('Erro ao criar conta. Tente novamente');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,41 +76,43 @@ export default function RegisterPage() {
             Crie sua conta
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Preencha os dados abaixo para começar
+            Preencha os dados abaixo para se registrar
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        
+        {error && (
+          <Alert severity="error" className="mt-4">
+            {error}
+          </Alert>
+        )}
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <Input
-              label="Nome completo"
+              label="Nome"
               type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Digite seu nome"
-              {...register('name')}
-              error={errors.name?.message}
+              disabled={loading}
             />
 
             <Input
               label="Email"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              {...register('email')}
-              error={errors.email?.message}
+              disabled={loading}
             />
 
             <Input
               label="Senha"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              {...register('password')}
-              error={errors.password?.message}
-            />
-
-            <Input
-              label="Confirme sua senha"
-              type="password"
-              placeholder="Digite sua senha novamente"
-              {...register('confirmPassword')}
-              error={errors.confirmPassword?.message}
+              disabled={loading}
             />
           </div>
 
@@ -92,9 +120,10 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              isLoading={isSubmitting}
+              disabled={loading}
+              isLoading={loading}
             >
-              Criar conta
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </Button>
           </div>
 
@@ -103,7 +132,7 @@ export default function RegisterPage() {
               href="/login"
               className="font-medium text-primary hover:text-primary/80"
             >
-              Já tem uma conta? Entre aqui
+              Já tem uma conta? Faça login
             </Link>
           </div>
         </form>
