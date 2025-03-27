@@ -1,6 +1,3 @@
-import { auth } from '@/lib/firebase';
-import { User } from 'firebase/auth';
-
 // Serviço de autenticação simulado para desenvolvimento
 interface User {
   id: string;
@@ -24,10 +21,14 @@ const MOCK_USERS: User[] = [
 
 // Mock de armazenamento local para simular persistência
 const storeUserInSession = (user: User): void => {
-  localStorage.setItem('currentUser', JSON.stringify(user));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  }
 };
 
 const getUserFromSession = (): User | null => {
+  if (typeof window === 'undefined') return null;
+  
   const stored = localStorage.getItem('currentUser');
   if (!stored) return null;
   try {
@@ -39,11 +40,13 @@ const getUserFromSession = (): User | null => {
 };
 
 export const clearUserSession = (): void => {
-  localStorage.removeItem('currentUser');
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('currentUser');
+  }
 };
 
 // Serviço de autenticação simulado
-export const authService = {
+export const mockAuthService = {
   // Login simulado
   login: async (email: string, password: string): Promise<User> => {
     console.log('Tentando login com:', email);
@@ -112,64 +115,4 @@ export const authService = {
       }, 300);
     });
   }
-};
-
-export class AuthService {
-  static async setSession(user: User): Promise<boolean> {
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao configurar sessão');
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Erro ao configurar sessão:', error);
-      return false;
-    }
-  }
-
-  static async removeSession(): Promise<void> {
-    try {
-      await fetch('/api/auth/session', {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('Erro ao remover sessão:', error);
-    }
-  }
-
-  static async redirectToDashboard(user: User | null): Promise<void> {
-    if (!user) return;
-
-    try {
-      // Garante que a sessão está configurada
-      const sessionConfigured = await this.setSession(user);
-      
-      if (sessionConfigured) {
-        // Aguarda um momento para garantir que o token foi processado
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        window.location.href = '/dashboard';
-      }
-    } catch (error) {
-      console.error('Erro ao redirecionar:', error);
-    }
-  }
-
-  static async redirectToLogin(): Promise<void> {
-    try {
-      await this.removeSession();
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Erro ao redirecionar para login:', error);
-    }
-  }
-}
+}; 

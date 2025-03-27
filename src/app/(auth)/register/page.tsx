@@ -6,22 +6,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-
-// Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBxjBGF_ZvUo9u_2MJrwVc2Og7uD5TDkQE",
-  authDomain: "bem-estar-temp.firebaseapp.com",
-  projectId: "bem-estar-temp",
-  storageBucket: "bem-estar-temp.appspot.com",
-  messagingSenderId: "654007389715",
-  appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
-};
-
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+import { mockAuthService } from '@/services/mockAuth';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -49,34 +34,13 @@ export default function RegisterPage() {
       setError('');
       
       console.log('Tentando criar conta...');
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await mockAuthService.register(name, email, password);
+      console.log('Conta criada com sucesso!');
       
-      // Atualiza o perfil do usuário com o nome
-      await updateProfile(userCredential.user, {
-        displayName: name
-      });
-      
-      console.log('Conta criada com sucesso:', userCredential.user.email);
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Erro ao criar conta:', err);
-      
-      switch (err.code) {
-        case 'auth/email-already-in-use':
-          setError('Este email já está em uso');
-          break;
-        case 'auth/invalid-email':
-          setError('Email inválido');
-          break;
-        case 'auth/operation-not-allowed':
-          setError('Criação de conta desativada');
-          break;
-        case 'auth/weak-password':
-          setError('Senha muito fraca');
-          break;
-        default:
-          setError('Erro ao criar conta. Tente novamente');
-      }
+      setError(err.message || 'Erro ao criar conta. Tente novamente');
     } finally {
       setLoading(false);
     }

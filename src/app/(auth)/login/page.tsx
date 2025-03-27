@@ -6,22 +6,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-
-// Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBxjBGF_ZvUo9u_2MJrwVc2Og7uD5TDkQE",
-  authDomain: "bem-estar-temp.firebaseapp.com",
-  projectId: "bem-estar-temp",
-  storageBucket: "bem-estar-temp.appspot.com",
-  messagingSenderId: "654007389715",
-  appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
-};
-
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+import { mockAuthService } from '@/services/mockAuth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,27 +28,13 @@ export default function LoginPage() {
       setError('');
       
       console.log('Tentando fazer login...');
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login bem-sucedido:', userCredential.user.email);
+      await mockAuthService.login(email, password);
+      console.log('Login bem-sucedido!');
       
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Erro ao fazer login:', err);
-      
-      switch (err.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          setError('Email ou senha incorretos');
-          break;
-        case 'auth/invalid-email':
-          setError('Email inválido');
-          break;
-        case 'auth/too-many-requests':
-          setError('Muitas tentativas. Tente novamente mais tarde');
-          break;
-        default:
-          setError('Erro ao fazer login. Tente novamente');
-      }
+      setError('Email ou senha incorretos');
     } finally {
       setLoading(false);
     }
@@ -78,6 +49,9 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Faça login para acessar o sistema
+          </p>
+          <p className="mt-2 text-center text-sm text-blue-600">
+            <strong>Dica:</strong> Utilize admin@example.com com qualquer senha de 6+ caracteres
           </p>
         </div>
         
