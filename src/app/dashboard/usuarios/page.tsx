@@ -40,7 +40,7 @@ import {
   Check as CheckIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { useToast } from '@/components/ui/toast';
+import { useToast, toast } from '@/components/ui/toast-wrapper';
 import { Usuario, PerfilUsuario, PERFIS_USUARIO } from '@/types/usuario';
 import { 
   listarUsuarios, 

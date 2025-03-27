@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AtualizarUsuarioRestaurantePage() {

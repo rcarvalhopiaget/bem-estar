@@ -23,6 +23,22 @@ export async function GET() {
     const cargo = 'Administrador';
     const perfil = 'ADMIN';
     
+    // Verificar se o banco de dados está disponível
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Banco de dados não disponível' },
+        { status: 500 }
+      );
+    }
+    
+    // Verificar se o auth está disponível
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Serviço de autenticação não disponível' },
+        { status: 500 }
+      );
+    }
+    
     // Verificar se o usuário já existe no Firestore
     const usuariosRef = collection(db, 'usuarios');
     const q = query(usuariosRef, where('email', '==', email));

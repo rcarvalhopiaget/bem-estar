@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, Save, Send } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarEmailTeste } from '@/services/emailService';
 import { usePermissions } from '@/hooks/usePermissions';
 

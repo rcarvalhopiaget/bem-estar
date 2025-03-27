@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useState, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc, getFirestore } from 'firebase/firestore';
 import Link from 'next/link';

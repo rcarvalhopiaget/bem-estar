@@ -5,7 +5,7 @@ import { restauranteService } from '@/services/restauranteService';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/components/ui/toast';
+import { useToast, toast } from '@/components/ui/toast-wrapper';
 
 interface RestauranteConfig {
   id?: string;

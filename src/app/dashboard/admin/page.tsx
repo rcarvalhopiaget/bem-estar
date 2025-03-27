@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { Typography, Box, Paper, Divider, CircularProgress } from '@mui/material';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
