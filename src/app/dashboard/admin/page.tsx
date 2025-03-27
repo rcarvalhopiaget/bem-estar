@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { Typography, Box, Paper, Divider, CircularProgress } from '@mui/material';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -81,6 +81,12 @@ export default function AdminPage() {
     setResultadoAdmin([]);
     
     try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
       // Dados do usuário admin
       const adminData = {
         email: 'rodrigo.carvalho@jpiaget.com.br',
@@ -211,7 +217,7 @@ export default function AdminPage() {
           <Button 
             onClick={handleCriarUsuarioAdmin}
             disabled={loadingAdmin}
-            variant="primary"
+            variant="default"
             color="primary"
           >
             {loadingAdmin ? <CircularProgress size={24} /> : 'Criar/Atualizar Usuário Admin'}
@@ -245,7 +251,7 @@ export default function AdminPage() {
           <Button 
             onClick={handleLimparDuplicados}
             disabled={loading}
-            variant="primary"
+            variant="default"
             color="error"
           >
             {loading ? <CircularProgress size={24} /> : 'Limpar Duplicados'}

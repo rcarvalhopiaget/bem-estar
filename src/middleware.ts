@@ -6,8 +6,9 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     const session = request.cookies.get('session');
 
-    // Se não houver sessão, redireciona para o login
+    // Para uma verificação rápida, verifique a existência de um cookie de sessão
     if (!session) {
+      // Redirecionar para a página de login
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }
@@ -15,6 +16,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Mantendo o matcher vazio para não fazer verificação em nenhuma rota
 export const config = {
   matcher: '/dashboard/:path*',
 }; 

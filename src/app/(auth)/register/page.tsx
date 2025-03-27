@@ -1,44 +1,128 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Alert } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseError } from 'firebase/app';
 
-const registerSchema = z.object({
-  name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'As senhas não conferem',
-  path: ['confirmPassword'],
-});
+// Componente Button incorporado
+const Button = ({ 
+  children, 
+  className = "", 
+  isLoading = false, 
+  ...props 
+}: {
+  children: React.ReactNode;
+  className?: string;
+  isLoading?: boolean;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+  return (
+    <button
+      className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 ${className}`}
+      disabled={isLoading || props.disabled}
+      {...props}
+    >
+      {isLoading ? (
+        <div className="flex items-center">
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{typeof children === 'string' ? 'Carregando...' : children}</span>
+        </div>
+      ) : (
+        children
+      )}
+    </button>
+  );
+};
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+// Componente Input incorporado
+const Input = ({ 
+  label, 
+  className = "", 
+  type = "text", 
+  ...props 
+}: {
+  label?: string;
+  className?: string;
+  type?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) => {
+  return (
+    <div className="flex flex-col space-y-2">
+      {label && (
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+      )}
+      <input
+        type={type}
+        className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        {...props}
+      />
+    </div>
+  );
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, loading: authLoading } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !email || !password || !passwordConfirm) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
 
-  const onSubmit = async (data: RegisterFormData) => {
+    if (password !== passwordConfirm) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
     try {
-      await signUp(data.email, data.password, data.name);
+      setLoading(true);
+      setError('');
+      
+      console.log('Tentando registrar...');
+      await signUp(email, password, name);
+      console.log('Registro bem-sucedido!');
+      
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Erro ao criar conta:', error);
+    } catch (err: any) {
+      console.error('Erro detalhado ao registrar:', err);
+      
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            setError('Este email já está em uso');
+            break;
+          case 'auth/invalid-email':
+            setError('Email inválido');
+            break;
+          case 'auth/weak-password':
+            setError('Senha muito fraca');
+            break;
+          default:
+            setError(`Erro ao registrar: ${err.message}`);
+        }
+      } else {
+        setError('Ocorreu um erro inesperado. Tente novamente');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,41 +134,52 @@ export default function RegisterPage() {
             Crie sua conta
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Preencha os dados abaixo para começar
+            Registre-se para começar a usar o sistema
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        
+        {error && (
+          <Alert severity="error" className="mt-4">
+            {error}
+          </Alert>
+        )}
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <Input
-              label="Nome completo"
+              label="Nome"
               type="text"
+              value={name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
               placeholder="Digite seu nome"
-              {...register('name')}
-              error={errors.name?.message}
+              disabled={loading || authLoading}
             />
 
             <Input
               label="Email"
               type="email"
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              {...register('email')}
-              error={errors.email?.message}
+              disabled={loading || authLoading}
             />
 
             <Input
               label="Senha"
               type="password"
+              value={password}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              {...register('password')}
-              error={errors.password?.message}
+              disabled={loading || authLoading}
             />
 
             <Input
-              label="Confirme sua senha"
+              label="Confirme a senha"
               type="password"
-              placeholder="Digite sua senha novamente"
-              {...register('confirmPassword')}
-              error={errors.confirmPassword?.message}
+              value={passwordConfirm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPasswordConfirm(e.target.value)}
+              placeholder="Confirme sua senha"
+              disabled={loading || authLoading}
             />
           </div>
 
@@ -92,9 +187,10 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              isLoading={isSubmitting}
+              disabled={loading || authLoading}
+              isLoading={loading || authLoading}
             >
-              Criar conta
+              {loading || authLoading ? 'Registrando...' : 'Registrar'}
             </Button>
           </div>
 
@@ -103,7 +199,7 @@ export default function RegisterPage() {
               href="/login"
               className="font-medium text-primary hover:text-primary/80"
             >
-              Já tem uma conta? Entre aqui
+              Já tem uma conta? Faça login
             </Link>
           </div>
         </form>

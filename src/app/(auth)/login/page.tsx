@@ -1,59 +1,117 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { Alert } from '@mui/material';
+import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseError } from 'firebase/app';
 
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
-});
+// Componente Button incorporado
+const Button = ({ 
+  children, 
+  className = "", 
+  isLoading = false, 
+  ...props 
+}: {
+  children: React.ReactNode;
+  className?: string;
+  isLoading?: boolean;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+  return (
+    <button
+      className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 ${className}`}
+      disabled={isLoading || props.disabled}
+      {...props}
+    >
+      {isLoading ? (
+        <div className="flex items-center">
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{typeof children === 'string' ? 'Carregando...' : children}</span>
+        </div>
+      ) : (
+        children
+      )}
+    </button>
+  );
+};
 
-type LoginFormData = z.infer<typeof loginSchema>;
+// Componente Input incorporado
+const Input = ({ 
+  label, 
+  className = "", 
+  type = "text", 
+  ...props 
+}: {
+  label?: string;
+  className?: string;
+  type?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) => {
+  return (
+    <div className="flex flex-col space-y-2">
+      {label && (
+        <label className="text-sm font-medium text-gray-700">{label}</label>
+      )}
+      <input
+        type={type}
+        className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        {...props}
+      />
+    </div>
+  );
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAuth();
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const { signIn, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
 
-  const onSubmit = async (data: LoginFormData) => {
     try {
-      setLoginError(null);
-      await signIn(data.email, data.password);
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Erro ao fazer login:', error);
+      setLoading(true);
+      setError('');
       
-      // Tratamento de erros específicos do Firebase
-      if (error instanceof Error) {
-        const errorCode = (error as any).code;
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
-          setLoginError('Email ou senha incorretos');
-        } else if (errorCode === 'auth/too-many-requests') {
-          setLoginError('Muitas tentativas de login. Tente novamente mais tarde');
-        } else if (errorCode === 'auth/network-request-failed') {
-          setLoginError('Erro de conexão. Verifique sua internet');
-        } else {
-          setLoginError('Erro ao fazer login. Tente novamente');
+      console.log('Tentando fazer login...');
+      await signIn(email, password);
+      console.log('Login bem-sucedido!');
+      
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.error('Erro detalhado ao fazer login:', err);
+      
+      if (err instanceof FirebaseError) {
+        switch (err.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            setError('Email ou senha incorretos');
+            break;
+          case 'auth/invalid-email':
+            setError('Email inválido');
+            break;
+          case 'auth/too-many-requests':
+            setError('Muitas tentativas. Tente novamente mais tarde');
+            break;
+          default:
+            setError(`Erro ao fazer login: ${err.message}`);
         }
       } else {
-        setLoginError('Ocorreu um erro inesperado. Tente novamente');
+        setError('Ocorreu um erro inesperado. Tente novamente');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,30 +125,35 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Faça login para acessar o sistema
           </p>
+          <p className="mt-2 text-center text-sm text-blue-600">
+            <strong>Dica:</strong> Utilize admin@example.com com qualquer senha de 6+ caracteres
+          </p>
         </div>
         
-        {loginError && (
+        {error && (
           <Alert severity="error" className="mt-4">
-            {loginError}
+            {error}
           </Alert>
         )}
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <Input
               label="Email"
               type="email"
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder="Digite seu email"
-              {...register('email')}
-              error={errors.email?.message}
+              disabled={loading || authLoading}
             />
 
             <Input
               label="Senha"
               type="password"
+              value={password}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
-              {...register('password')}
-              error={errors.password?.message}
+              disabled={loading || authLoading}
             />
           </div>
 
@@ -98,9 +161,10 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full py-3 text-lg"
-              isLoading={isSubmitting}
+              disabled={loading || authLoading}
+              isLoading={loading || authLoading}
             >
-              Entrar
+              {loading || authLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
 

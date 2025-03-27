@@ -91,10 +91,10 @@ export default function AlunosPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Gerenciamento de Alunos</h1>
           <div className="space-x-4">
-            <Button variant="primary" onClick={() => setMostrarImportacao(true)}>
+            <Button variant="default" onClick={() => setMostrarImportacao(true)}>
               Importar Alunos
             </Button>
-            <Button variant="primary" onClick={() => setMostrarFormulario(true)}>
+            <Button variant="default" onClick={() => setMostrarFormulario(true)}>
               Novo Aluno
             </Button>
           </div>
@@ -111,21 +111,21 @@ export default function AlunosPage() {
           <span className="mr-3 font-medium">Filtrar por status:</span>
           <div className="flex space-x-2">
             <Button 
-              variant={filtroAtivo === true ? "primary" : "outline"}
+              variant={filtroAtivo === true ? "default" : "outline"}
               onClick={() => setFiltroAtivo(true)}
               className="px-4 py-2"
             >
               Ativos
             </Button>
             <Button 
-              variant={filtroAtivo === false ? "primary" : "outline"}
+              variant={filtroAtivo === false ? "default" : "outline"}
               onClick={() => setFiltroAtivo(false)}
               className="px-4 py-2"
             >
               Inativos
             </Button>
             <Button 
-              variant={filtroAtivo === undefined ? "primary" : "outline"}
+              variant={filtroAtivo === undefined ? "default" : "outline"}
               onClick={() => setFiltroAtivo(undefined)}
               className="px-4 py-2"
             >

@@ -201,6 +201,12 @@ export function useLogService() {
     if (!user) return;
     
     try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
       await logService.addLog({
         action,
         module,

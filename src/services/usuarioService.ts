@@ -255,6 +255,12 @@ export const excluirUsuario = async (id: string): Promise<void> => {
 // Atualizar o usuário admin
 export const atualizarUsuarioAdmin = async () => {
   try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
     const email = 'rodrigo.carvalho@jpiaget.com.br';
     const nome = 'Rodrigo Carvalho';
     const cargo = 'Administrador';
@@ -317,6 +323,12 @@ export const atualizarUsuarioAdmin = async () => {
 // Criar usuário Adriana
 export const criarUsuarioAdriana = async () => {
   try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
     const email = 'adriana.diari@jpiaget.com.br';
     const nome = 'Adriana Diari';
     const cargo = 'Coordenadora';

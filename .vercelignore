@@ -1,0 +1,17 @@
+# Ignorar arquivos relacionados a submódulos Git
+.git
+.gitmodules
+
+# Ignorar arquivos desnecessários para o build
+node_modules
+.github
+.vscode
+
+# Manter o script de solução direta e ignorar outros scripts de desenvolvimento
+*.ps1
+fix-ui-components.js
+fix-imports.js
+fix-ui-imports.js
+patch-imports.js
+prepare-vercel-deploy.js
+# fix-ui-direct.js # NÃO IGNORE ESTE ARQUIVO, NECESSÁRIO PARA O BUILD 

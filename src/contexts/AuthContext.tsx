@@ -9,9 +9,8 @@ import {
   onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { refreshUserToken, setupTokenRefresh, clearSession } from '@/lib/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 // Interface para os dados do usuário no Firestore
 export interface UserData {
@@ -28,8 +27,8 @@ interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<User | null>;
-  signUp: (email: string, password: string, name: string) => Promise<User | null>;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, name: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -42,6 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Função para buscar dados do usuário no Firestore
   const fetchUserData = async (userId: string) => {
+    if (!db) {
+      console.error('Firestore não está inicializado');
+      return;
+    }
+    
     try {
       const userDocRef = doc(db, 'usuarios', userId);
       const userDoc = await getDoc(userDocRef);
@@ -59,63 +63,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    if (!auth) {
+      console.error('Auth não está inicializado');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          // Configura a atualização automática do token
-          try {
-            const cleanup = await setupTokenRefresh(user);
-            setUser(user);
-            
-            // Buscar dados adicionais do usuário no Firestore
-            await fetchUserData(user.uid);
-            
-            return cleanup;
-          } catch (tokenError) {
-            console.error('Erro ao configurar atualização de token:', tokenError);
-            // Mesmo com erro no token, mantemos o usuário autenticado
-            setUser(user);
-            
-            // Buscar dados adicionais do usuário no Firestore
-            await fetchUserData(user.uid);
-          }
-        } else {
-          // Limpa a sessão quando o usuário faz logout
-          try {
-            await clearSession();
-          } catch (sessionError) {
-            console.error('Erro ao limpar sessão:', sessionError);
-          }
-          setUser(null);
-          setUserData(null);
-        }
-      } catch (error) {
-        console.error('Erro ao gerenciar estado de autenticação:', error);
-        // Em caso de erro, limpa o estado do usuário
-        setUser(null);
+      setUser(user);
+      if (user) {
+        await fetchUserData(user.uid);
+      } else {
         setUserData(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<User> => {
+    if (!auth) {
+      console.error('Auth não está inicializado');
+      throw new Error('Autenticação não inicializada');
+    }
+    
     try {
       setLoading(true);
       const result = await signInWithEmailAndPassword(auth, email, password);
-      // Força a atualização do token após o login
-      try {
-        await refreshUserToken(result.user);
-      } catch (tokenError) {
-        console.error('Erro ao atualizar token após login:', tokenError);
-        // Continuamos mesmo se houver erro no token
-      }
-      
-      // Buscar dados adicionais do usuário no Firestore
       await fetchUserData(result.user.uid);
+      
+      // Criar um cookie de sessão no cliente
+      if (typeof document !== 'undefined') {
+        document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
+      }
       
       return result.user;
     } catch (error) {
@@ -126,22 +107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string): Promise<User> => {
+    if (!auth) {
+      console.error('Auth não está inicializado');
+      throw new Error('Autenticação não inicializada');
+    }
+    
     try {
       setLoading(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      // Atualiza o perfil do usuário com o nome
       await updateProfile(result.user, { displayName: name });
-      // Força a atualização do token após o registro
-      try {
-        await refreshUserToken(result.user);
-      } catch (tokenError) {
-        console.error('Erro ao atualizar token após registro:', tokenError);
-        // Continuamos mesmo se houver erro no token
-      }
-      
-      // Buscar dados adicionais do usuário no Firestore
       await fetchUserData(result.user.uid);
+      
+      // Criar um cookie de sessão no cliente
+      if (typeof document !== 'undefined') {
+        document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
+      }
       
       return result.user;
     } catch (error) {
@@ -153,15 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (!auth) {
+      console.error('Auth não está inicializado');
+      throw new Error('Autenticação não inicializada');
+    }
+    
     try {
       setLoading(true);
       await signOut(auth);
-      try {
-        await clearSession();
-      } catch (sessionError) {
-        console.error('Erro ao limpar sessão durante logout:', sessionError);
-      }
       setUserData(null);
+      
+      // Remover o cookie de sessão
+      if (typeof document !== 'undefined') {
+        document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;
@@ -172,9 +158,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, userData, loading, signIn, signUp, logout }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};

@@ -40,6 +40,12 @@ export default function VerificarUsuariosPage() {
 
   const carregarUsuarios = async () => {
     try {
+      // Verificar se o banco de dados está disponível
+      if (!db) {
+        toast?.error?.("Erro ao conectar ao banco de dados");
+        return;
+      }
+
       setIsLoading(true);
       
       const usuariosRef = collection(db, 'usuarios');

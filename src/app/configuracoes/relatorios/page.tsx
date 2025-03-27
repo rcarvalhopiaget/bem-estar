@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { useState, forwardRef } from 'react';
+import { cn } from '@/lib/utils';
+import { cva } from 'class-variance-authority';
+import { useRouter } from 'next/navigation';
 import { Loader2, Mail, Save, Send } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarEmailTeste } from '@/services/emailService';
 import { usePermissions } from '@/hooks/usePermissions';
 

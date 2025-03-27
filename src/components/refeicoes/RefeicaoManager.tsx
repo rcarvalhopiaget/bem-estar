@@ -9,7 +9,7 @@ import { alunoService } from '@/services/alunoService';
 import { Refeicao, TIPOS_REFEICAO } from '@/types/refeicao';
 import { Aluno } from '@/types/aluno';
 import { usePermissions } from '@/hooks/usePermissions';
-import { PermissionAlert } from '@/components/ui/permissionAlert';
+import { PermissionAlert } from '@/components/ui/permission-alert';
 import { isFirebasePermissionError } from '@/lib/errors';
 
 export function RefeicaoManager() {
@@ -246,7 +246,7 @@ export function RefeicaoManager() {
                   <Button
                     onClick={() => handleTogglePresenca(refeicao)}
                     disabled={!canWrite}
-                    variant={refeicao.presente ? 'primary' : 'outline'}
+                    variant={refeicao.presente ? 'default' : 'outline'}
                     title={!canWrite ? 'Verifique seu email para atualizar presenças' : ''}
                   >
                     {refeicao.presente ? 'Presente' : 'Ausente'}

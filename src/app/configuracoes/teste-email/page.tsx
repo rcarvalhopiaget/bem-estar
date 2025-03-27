@@ -7,7 +7,7 @@ import {
   List, ListItem, ListItemText, Chip
 } from '@mui/material';
 import { Send as SendIcon, Check as CheckIcon, Error as ErrorIcon } from '@mui/icons-material';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 
 export default function TesteEmailPage() {
   const [loading, setLoading] = useState(false);

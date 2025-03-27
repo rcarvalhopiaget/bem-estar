@@ -23,7 +23,7 @@ import { IconButton } from '@mui/material';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/components/ui/toast-wrapper';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface NotificacaoConfig {
