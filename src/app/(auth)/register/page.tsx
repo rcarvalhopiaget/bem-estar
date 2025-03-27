@@ -6,8 +6,22 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@mui/material';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
+
+// Configuração do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyBxjBGF_ZvUo9u_2MJrwVc2Og7uD5TDkQE",
+  authDomain: "bem-estar-temp.firebaseapp.com",
+  projectId: "bem-estar-temp",
+  storageBucket: "bem-estar-temp.appspot.com",
+  messagingSenderId: "654007389715",
+  appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
+};
+
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 export default function RegisterPage() {
   const router = useRouter();
