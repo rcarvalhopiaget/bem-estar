@@ -13,7 +13,10 @@ import { PermissionAlert } from '@/components/ui/permission-alert';
 import { isFirebasePermissionError } from '@/lib/errors';
 
 export function RefeicaoManager() {
-  const { canWrite, isEmailVerified } = usePermissions();
+  const { isAuthenticated, isAdmin, isOperador, isProfessor } = usePermissions();
+  // Definir permissão de escrita com base no perfil do usuário
+  const podeEscrever = isAuthenticated && (isAdmin || isOperador || isProfessor);
+  
   const [showForm, setShowForm] = useState(false);
   const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -77,7 +80,7 @@ export function RefeicaoManager() {
       let mensagem = 'Erro ao carregar refeições. Por favor, tente novamente.';
       
       if (isFirebasePermissionError(error)) {
-        mensagem = 'Você não tem permissão para acessar as refeições. Verifique seu email para obter acesso completo.';
+        mensagem = 'Você não tem permissão para acessar as refeições. Verifique suas credenciais.';
       }
       
       setError(mensagem);
@@ -88,8 +91,8 @@ export function RefeicaoManager() {
   };
 
   const handleSubmit = async (data: any) => {
-    if (!canWrite) {
-      setError('Você precisa verificar seu email para registrar refeições.');
+    if (!podeEscrever) {
+      setError('Você não tem permissão para registrar refeições.');
       return;
     }
 
@@ -106,7 +109,7 @@ export function RefeicaoManager() {
       let mensagem = 'Erro ao registrar refeição. Por favor, tente novamente.';
       
       if (isFirebasePermissionError(error)) {
-        mensagem = 'Você não tem permissão para registrar refeições. Verifique seu email para obter acesso completo.';
+        mensagem = 'Você não tem permissão para registrar refeições.';
       }
       
       setError(mensagem);
@@ -114,8 +117,8 @@ export function RefeicaoManager() {
   };
 
   const handleTogglePresenca = async (refeicao: Refeicao) => {
-    if (!canWrite) {
-      setError('Você precisa verificar seu email para atualizar refeições.');
+    if (!podeEscrever) {
+      setError('Você não tem permissão para atualizar refeições.');
       return;
     }
 
@@ -130,7 +133,7 @@ export function RefeicaoManager() {
       let mensagem = 'Erro ao atualizar presença. Por favor, tente novamente.';
       
       if (isFirebasePermissionError(error)) {
-        mensagem = 'Você não tem permissão para atualizar refeições. Verifique seu email para obter acesso completo.';
+        mensagem = 'Você não tem permissão para atualizar refeições.';
       }
       
       setError(mensagem);
@@ -147,8 +150,8 @@ export function RefeicaoManager() {
         <div className="space-x-4">
           <Button 
             onClick={() => setShowForm(true)}
-            disabled={!canWrite}
-            title={!canWrite ? 'Verifique seu email para criar novas refeições' : ''}
+            disabled={!podeEscrever}
+            title={!podeEscrever ? 'Você não tem permissão para criar novas refeições' : ''}
           >
             Nova Refeição
           </Button>
@@ -245,9 +248,9 @@ export function RefeicaoManager() {
                   </div>
                   <Button
                     onClick={() => handleTogglePresenca(refeicao)}
-                    disabled={!canWrite}
+                    disabled={!podeEscrever}
                     variant={refeicao.presente ? 'default' : 'outline'}
-                    title={!canWrite ? 'Verifique seu email para atualizar presenças' : ''}
+                    title={!podeEscrever ? 'Você não tem permissão para atualizar presenças' : ''}
                   >
                     {refeicao.presente ? 'Presente' : 'Ausente'}
                   </Button>

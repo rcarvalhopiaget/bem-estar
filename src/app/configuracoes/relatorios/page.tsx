@@ -10,13 +10,13 @@ import { useState, forwardRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, Save, Send } from 'lucide-react';
+import { Loader2, Mail, Save, Send, Plus, X } from 'lucide-react';
 import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarEmailTeste } from '@/services/emailService';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 
 export default function ConfiguracoesRelatorios() {
-  const [email, setEmail] = useState('');
+  const [emails, setEmails] = useState<string[]>(['']);
   const [horario, setHorario] = useState('18:00');
   const [ativo, setAtivo] = useState(true);
   const [carregando, setCarregando] = useState(true);
@@ -31,7 +31,7 @@ export default function ConfiguracoesRelatorios() {
       try {
         setCarregando(true);
         const config = await obterConfiguracaoEnvioRelatorio();
-        setEmail(config.email || '');
+        setEmails(config.emails.length > 0 ? config.emails : ['']);
         setHorario(config.horario || '18:00');
         setAtivo(config.ativo !== undefined ? config.ativo : true);
       } catch (error) {
@@ -46,14 +46,16 @@ export default function ConfiguracoesRelatorios() {
   }, []);
 
   const handleSalvar = async () => {
-    if (!email) {
-      toast.error('O email é obrigatório');
+    const emailsValidos = emails.filter(email => email.trim() !== '');
+    
+    if (emailsValidos.length === 0) {
+      toast.error('É necessário informar pelo menos um email');
       return;
     }
 
     try {
       setSalvando(true);
-      await salvarConfiguracaoEnvioRelatorio(email, horario, ativo);
+      await salvarConfiguracaoEnvioRelatorio(emailsValidos, horario, ativo);
       toast.success('Configuração salva com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
@@ -64,8 +66,10 @@ export default function ConfiguracoesRelatorios() {
   };
 
   const handleEnviarTeste = async () => {
-    if (!email) {
-      toast.error('O email é obrigatório');
+    const emailsValidos = emails.filter(email => email.trim() !== '');
+    
+    if (emailsValidos.length === 0) {
+      toast.error('É necessário informar pelo menos um email');
       return;
     }
 
@@ -88,6 +92,28 @@ export default function ConfiguracoesRelatorios() {
     } finally {
       setEnviandoTeste(false);
     }
+  };
+
+  const adicionarEmail = () => {
+    setEmails([...emails, '']);
+  };
+
+  const removerEmail = (index: number) => {
+    const novosEmails = [...emails];
+    novosEmails.splice(index, 1);
+    
+    // Garantir que sempre temos pelo menos um campo de email
+    if (novosEmails.length === 0) {
+      novosEmails.push('');
+    }
+    
+    setEmails(novosEmails);
+  };
+
+  const atualizarEmail = (index: number, valor: string) => {
+    const novosEmails = [...emails];
+    novosEmails[index] = valor;
+    setEmails(novosEmails);
   };
 
   if (!podeGerenciarConfiguracoes) {
@@ -119,14 +145,37 @@ export default function ConfiguracoesRelatorios() {
           ) : (
             <div className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email para receber relatórios</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="exemplo@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <Label>Emails para receber relatórios</Label>
+                {emails.map((email, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="email"
+                      placeholder="exemplo@email.com"
+                      value={email}
+                      onChange={(e) => atualizarEmail(index, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removerEmail(index)}
+                      disabled={emails.length === 1}
+                      className="shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="mt-2" 
+                  onClick={adicionarEmail}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar email
+                </Button>
               </div>
 
               <div className="grid gap-2">
@@ -157,7 +206,7 @@ export default function ConfiguracoesRelatorios() {
           <Button
             variant="outline"
             onClick={handleEnviarTeste}
-            disabled={enviandoTeste || !email}
+            disabled={enviandoTeste || emails.every(email => email.trim() === '')}
           >
             {enviandoTeste ? (
               <>
@@ -173,7 +222,7 @@ export default function ConfiguracoesRelatorios() {
           </Button>
           <Button
             onClick={handleSalvar}
-            disabled={salvando || !email}
+            disabled={salvando || emails.every(email => email.trim() === '')}
           >
             {salvando ? (
               <>

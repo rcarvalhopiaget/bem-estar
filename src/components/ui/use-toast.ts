@@ -1,12 +1,15 @@
 import * as React from "react"
+import { useContext } from 'react';
 
 import type {
   ToastActionElement,
   ToastProps,
+  ToastProvider,
+  ToastViewport
 } from '@/components/ui/toast'
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -25,7 +28,7 @@ const actionTypes = {
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_VALUE
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
 }
 
@@ -138,7 +141,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+const toast = ({ ...props }: Toast) => {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -167,7 +170,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
-function useToast() {
+const useToast = () => {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
@@ -188,3 +191,7 @@ function useToast() {
 }
 
 export { useToast, toast }
+
+
+
+

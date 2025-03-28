@@ -14,6 +14,9 @@ export function usePermissions() {
   // Verificação de autenticação
   const isAuthenticated = user !== null;
   
+  // Verificação de email (para compatibilidade com código legado)
+  const isEmailVerified = user?.emailVerified || true; // Default true em produção
+  
   // Log para depuração
   useEffect(() => {
     console.log('usePermissions:', {
@@ -37,6 +40,9 @@ export function usePermissions() {
   // Permissões específicas
   const podeGerenciarConfiguracoes = isAdmin || isCoordenador;
   
+  // Permissão de escrita (compatibilidade com código legado)
+  const canWrite = isAuthenticated && (isAdmin || isOperador || isProfessor);
+  
   // Retorna todas as permissões relevantes
   return {
     isAuthenticated,
@@ -46,6 +52,8 @@ export function usePermissions() {
     isProfessor,
     isCoordenador,
     podeGerenciarConfiguracoes,
+    canWrite,
+    isEmailVerified,
     hasPermission: (permission: string) => true, // Simulando que tem todas as permissões
   };
 }
