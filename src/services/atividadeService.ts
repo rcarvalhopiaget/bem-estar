@@ -99,15 +99,26 @@ export const atividadeService = {
 
   async registrarAtividade(dados: AtividadeFormData): Promise<string> {
     try {
-      const currentUser = await verificarPermissoes();
+      console.log('Iniciando registro de atividade:', dados);
+      
+      let currentUser;
+      try {
+        currentUser = await verificarPermissoes();
+        console.log('Usuário autenticado para registro de atividade:', currentUser?.email);
+      } catch (error) {
+        console.warn('Erro na verificação de permissões, continuando sem usuário autenticado:', error);
+        // Continua mesmo sem usuário autenticado para não bloquear o fluxo principal
+      }
       
       // Garantir que o usuário atual seja registrado como autor da atividade
       const dadosCompletos = {
         ...dados,
-        usuarioId: dados.usuarioId || currentUser.uid,
-        usuarioEmail: dados.usuarioEmail || currentUser.email,
+        usuarioId: dados.usuarioId || currentUser?.uid || 'sistema',
+        usuarioEmail: dados.usuarioEmail || currentUser?.email || 'sistema@app.com',
         createdAt: Timestamp.now()
       };
+      
+      console.log('Dados completos da atividade:', dadosCompletos);
 
       // Adicionar um identificador único baseado em timestamp para evitar conflitos de ID
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -116,7 +127,7 @@ export const atividadeService = {
       try {
         // Usar setDoc em vez de addDoc para definir explicitamente o ID do documento
         await setDoc(docRef, dadosCompletos);
-        console.log('Atividade registrada com ID:', uniqueId);
+        console.log('Atividade registrada com sucesso, ID:', uniqueId);
         return uniqueId;
       } catch (error: any) {
         // Tratar especificamente o erro "already-exists"
@@ -135,8 +146,16 @@ export const atividadeService = {
       // Melhorar o log para diferenciar tipos de erro
       if (error?.code === 'already-exists') {
         console.warn('Erro de ID duplicado ao registrar atividade:', error);
+      } else if (error?.code === 'permission-denied') {
+        console.warn('Erro de permissão ao registrar atividade:', error);
       } else {
-        console.error('Erro ao registrar atividade:', error);
+        console.error('Erro desconhecido ao registrar atividade:', error);
+        console.error('Detalhes completos do erro:', JSON.stringify({
+          message: error?.message,
+          code: error?.code,
+          stack: error?.stack,
+          dados
+        }, null, 2));
       }
       
       // Se for um erro de permissão, retorna um ID falso para não quebrar o fluxo

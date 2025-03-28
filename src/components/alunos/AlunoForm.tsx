@@ -3,8 +3,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { Aluno, AlunoFormData } from '@/types/aluno';
 
 const alunoSchema = z.object({
@@ -151,10 +151,10 @@ export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
         </Button>
         <Button
           type="submit"
-          isLoading={isSubmitting}
+          disabled={isSubmitting}
           className="px-6 py-3 text-lg bg-primary hover:bg-primary/90"
         >
-          {aluno ? 'Salvar Alterações' : 'Criar Aluno'}
+          {isSubmitting ? 'Salvando...' : aluno ? 'Salvar Alterações' : 'Criar Aluno'}
         </Button>
       </div>
     </form>

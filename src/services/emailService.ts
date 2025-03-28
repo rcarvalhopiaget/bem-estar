@@ -318,7 +318,7 @@ export const enviarRelatorioEmail = async (
  * @returns Promise que resolve com a configuração de envio
  */
 export const obterConfiguracaoEnvioRelatorio = async (): Promise<{
-  email: string;
+  emails: string[];
   horario: string;
   ativo: boolean;
 }> => {
@@ -329,8 +329,14 @@ export const obterConfiguracaoEnvioRelatorio = async (): Promise<{
     
     if (configDoc.exists()) {
       const data = configDoc.data();
+      
+      // Verificar se é formato antigo (string única) ou novo (array)
+      const emails = Array.isArray(data.emails) 
+        ? data.emails 
+        : (data.email ? [data.email] : ['bemestar@jpiaget.com.br']);
+      
       return {
-        email: data.email || 'bemestar@jpiaget.com.br',
+        emails,
         horario: data.horario || '18:00',
         ativo: data.ativo !== undefined ? data.ativo : true,
       };
@@ -353,7 +359,7 @@ export const obterConfiguracaoEnvioRelatorio = async (): Promise<{
 // Função auxiliar para retornar a configuração padrão
 const getDefaultConfig = () => {
   return {
-    email: 'bemestar@jpiaget.com.br',
+    emails: ['bemestar@jpiaget.com.br'],
     horario: '18:00',
     ativo: true,
   };
@@ -361,21 +367,24 @@ const getDefaultConfig = () => {
 
 /**
  * Salva a configuração de envio automático de relatório
- * @param email Email do destinatário
+ * @param emails Lista de emails dos destinatários
  * @param horario Horário para envio do relatório
  * @param ativo Se o envio automático está ativo
  * @returns Promise que resolve quando a configuração é salva
  */
 export const salvarConfiguracaoEnvioRelatorio = async (
-  email: string,
+  emails: string[],
   horario: string,
   ativo: boolean
 ): Promise<void> => {
   try {
+    // Filtrar emails vazios
+    const emailsFiltrados = emails.filter(email => email.trim() !== '');
+    
     // Salvar diretamente no Firestore
     const configRef = doc(db, 'configuracoes', 'relatorios');
     await setDoc(configRef, {
-      email,
+      emails: emailsFiltrados,
       horario,
       ativo,
       atualizadoEm: new Date()
@@ -408,7 +417,7 @@ export const enviarEmailTeste = async (minutosAtraso: number = 0): Promise<{ suc
     // Obter configuração de email
     const config = await obterConfiguracaoEnvioRelatorio();
     
-    if (!config.email) {
+    if (!config.emails.length) {
       return { 
         success: false, 
         message: 'Nenhum email configurado para receber relatórios' 
@@ -425,18 +434,18 @@ export const enviarEmailTeste = async (minutosAtraso: number = 0): Promise<{ suc
 
     // Se estiver em modo de desenvolvimento ou simulação, apenas simular o envio
     if (process.env.NODE_ENV === 'development' || MODO_SIMULACAO) {
-      console.log(`[SIMULAÇÃO] Email de teste será enviado para ${config.email} às ${horarioFormatado}`);
+      console.log(`[SIMULAÇÃO] Email de teste será enviado para ${config.emails.join(', ')} às ${horarioFormatado}`);
       
       // Simular envio após o atraso especificado
       if (minutosAtraso > 0) {
         setTimeout(() => {
-          console.log(`[SIMULAÇÃO] Email de teste enviado para ${config.email}`);
+          console.log(`[SIMULAÇÃO] Email de teste enviado para ${config.emails.join(', ')}`);
         }, minutosAtraso * 60 * 1000);
       }
       
       return {
         success: true,
-        message: `Email de teste será enviado para ${config.email} ${minutosAtraso > 0 ? `às ${horarioFormatado}` : 'em instantes'}`,
+        message: `Email de teste será enviado para ${config.emails.join(', ')} ${minutosAtraso > 0 ? `às ${horarioFormatado}` : 'em instantes'}`,
         horarioEnvio: horarioFormatado,
         previewUrl: '/api/preview-email?tipo=teste'
       };
@@ -454,7 +463,7 @@ export const enviarEmailTeste = async (minutosAtraso: number = 0): Promise<{ suc
         const data = await response.json();
         return {
           success: true,
-          message: `Email de teste será enviado para ${config.email} ${minutosAtraso > 0 ? `às ${horarioFormatado}` : 'em instantes'}`,
+          message: `Email de teste será enviado para ${config.emails.join(', ')} ${minutosAtraso > 0 ? `às ${horarioFormatado}` : 'em instantes'}`,
           horarioEnvio: horarioFormatado,
           previewUrl: '/api/preview-email?tipo=teste'
         };
@@ -525,7 +534,7 @@ export const enviarRelatorioDiario = async (data: {
     // Obter configuração de email
     const config = await obterConfiguracaoEnvioRelatorio();
     
-    if (!config.email || !config.ativo) {
+    if (!config.emails.length || !config.ativo) {
       console.log('Envio de relatório não configurado ou desativado');
       return;
     }
@@ -735,8 +744,8 @@ export const enviarRelatorioDiario = async (data: {
     }
     
     // Configurar email
-    const emailConfig = {
-      to: config.email,
+    const emailConfigs = config.emails.map(email => ({
+      to: email,
       subject: `Relatório de Refeições - ${dataFormatada}`,
       html: htmlContent,
       attachments: [
@@ -745,14 +754,14 @@ export const enviarRelatorioDiario = async (data: {
           content: csvContent
         }
       ]
-    };
+    }));
     
-    // Enviar email
-    await enviarEmail(emailConfig);
-    console.log(`Relatório de refeições enviado com sucesso para ${config.email}`);
+    // Enviar emails
+    await Promise.all(emailConfigs.map(config => enviarEmail(config)));
+    console.log(`Relatórios de refeições enviados com sucesso para ${config.emails.join(', ')}`);
     
   } catch (error) {
-    console.error('Erro ao enviar relatório por email:', error);
+    console.error('Erro ao enviar relatórios por email:', error);
     throw error;
   }
 };

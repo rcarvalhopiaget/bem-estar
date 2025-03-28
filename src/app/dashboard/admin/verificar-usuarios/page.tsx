@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'react-hot-toast';
+import { Typography, Box, Paper, Divider, CircularProgress } from '@mui/material';
+import { query, where, doc, updateDoc } from 'firebase/firestore';
 
 interface Usuario {
   id: string;

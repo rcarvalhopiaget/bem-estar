@@ -125,9 +125,6 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Faça login para acessar o sistema
           </p>
-          <p className="mt-2 text-center text-sm text-blue-600">
-            <strong>Dica:</strong> Utilize admin@example.com com qualquer senha de 6+ caracteres
-          </p>
         </div>
         
         {error && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { 
   Typography, 
   Button, 
@@ -40,7 +41,6 @@ import {
   Check as CheckIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { useToast, toast } from '@/components/ui/toast-wrapper';
 import { Usuario, PerfilUsuario, PERFIS_USUARIO } from '@/types/usuario';
 import { 
   listarUsuarios, 
@@ -54,8 +54,13 @@ import {
 } from '@/services/usuarioService';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface AtualizarUsuarioResult {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
 export default function UsuariosPage() {
-  const { toast } = useToast();
   const { user } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,11 +98,7 @@ export default function UsuariosPage() {
       setUsuarios(data);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar a lista de usuários',
-        variant: 'destructive',
-      });
+      toast.error('Não foi possível carregar a lista de usuários');
     } finally {
       setLoading(false);
     }
@@ -220,10 +221,7 @@ export default function UsuariosPage() {
           cargo: formData.cargo,
           perfil: formData.perfil
         });
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário atualizado com sucesso!',
-        });
+        toast.success('Usuário atualizado com sucesso!');
       } else {
         // Criar novo usuário
         await criarUsuario(
@@ -233,21 +231,14 @@ export default function UsuariosPage() {
           formData.perfil,
           formData.cargo
         );
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário criado com sucesso!',
-        });
+        toast.success('Usuário criado com sucesso!');
       }
       
       handleCloseDialog();
       carregarUsuarios();
     } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      toast({
-        title: 'Erro',
-        description: error.message || 'Não foi possível salvar o usuário. Tente novamente.',
-        variant: 'destructive'
-      });
+      toast.error(error.message || 'Não foi possível salvar o usuário. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -259,25 +250,15 @@ export default function UsuariosPage() {
       setLoading(true);
       if (usuario.ativo) {
         await desativarUsuario(usuario.id);
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário desativado com sucesso!',
-        });
+        toast.success('Usuário desativado com sucesso!');
       } else {
         await ativarUsuario(usuario.id);
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário ativado com sucesso!',
-        });
+        toast.success('Usuário ativado com sucesso!');
       }
       carregarUsuarios();
     } catch (error) {
       console.error('Erro ao alterar status do usuário:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível alterar o status do usuário. Tente novamente.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível alterar o status do usuário. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -302,18 +283,11 @@ export default function UsuariosPage() {
     try {
       setLoading(true);
       await redefinirSenhaUsuario(usuarioAtual.email);
-      toast({
-        title: 'Sucesso',
-        description: 'Email de redefinição de senha enviado com sucesso!',
-      });
+      toast.success('Email de redefinição de senha enviado com sucesso!');
       handleCloseDialog();
     } catch (error) {
       console.error('Erro ao redefinir senha:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível enviar o email de redefinição de senha. Tente novamente.',
-        variant: 'destructive'
-      });
+      toast.error('Não foi possível enviar o email de redefinição de senha. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -344,30 +318,23 @@ export default function UsuariosPage() {
   const handleAtualizarAdmin = async () => {
     try {
       setLoading(true);
-      const resultado = await atualizarUsuarioAdmin();
-      
-      if (resultado.success) {
-        toast({
-          title: 'Sucesso',
-          description: resultado.message,
-        });
-        
-        // Recarregar a lista de usuários
-        await carregarUsuarios();
-      } else {
-        toast({
-          title: 'Erro',
-          description: resultado.error || 'Erro ao atualizar usuário admin',
-          variant: 'destructive'
-        });
+      const resultado = await atualizarUsuarioAdmin() as AtualizarUsuarioResult;
+
+      if (!resultado) {
+        toast.error('Erro ao atualizar usuário admin');
+        return;
       }
+
+      if (resultado.success) {
+        toast.success(resultado.message || 'Usuário admin atualizado com sucesso');
+      } else {
+        toast.error(resultado.error || 'Erro ao atualizar usuário admin');
+      }
+
+      await carregarUsuarios();
     } catch (error) {
       console.error('Erro ao atualizar usuário admin:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar usuário admin',
-        variant: 'destructive'
-      });
+      toast.error('Erro ao atualizar usuário admin');
     } finally {
       setLoading(false);
     }
@@ -377,30 +344,22 @@ export default function UsuariosPage() {
   const handleCriarAdriana = async () => {
     try {
       setLoading(true);
-      const resultado = await criarUsuarioAdriana();
-      
+      const resultado = await criarUsuarioAdriana() as AtualizarUsuarioResult;
+
+      if (!resultado) {
+        toast.error('Erro ao criar usuário Adriana');
+        return;
+      }
+
       if (resultado.success) {
-        toast({
-          title: 'Sucesso',
-          description: resultado.message,
-        });
-        
-        // Recarregar a lista de usuários
+        toast.success(resultado.message || 'Usuário Adriana criado com sucesso');
         await carregarUsuarios();
       } else {
-        toast({
-          title: 'Erro',
-          description: resultado.error || 'Erro ao criar usuário Adriana',
-          variant: 'destructive'
-        });
+        toast.error(resultado.error || 'Erro ao criar usuário Adriana');
       }
     } catch (error) {
       console.error('Erro ao criar usuário Adriana:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao criar usuário Adriana',
-        variant: 'destructive'
-      });
+      toast.error('Erro ao criar usuário Adriana');
     } finally {
       setLoading(false);
     }

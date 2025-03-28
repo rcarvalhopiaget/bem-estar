@@ -29,17 +29,21 @@ export default function LogsPage() {
     'rodrigo.carvalho@jpiaget.com.br'
   ].includes(user.email);
 
+  // Log para depuração
   useEffect(() => {
-    if (!isAdmin) {
-      router.push('/dashboard');
-      return;
-    }
+    console.log('LogsPage - Verificando permissões:', {
+      isAdmin,
+      userEmail: user?.email
+    });
+  }, [isAdmin, user]);
 
+  useEffect(() => {
     fetchLogs();
-  }, [isAdmin, router]);
+  }, []);
 
   const fetchLogs = async () => {
     try {
+      console.log('Iniciando busca de logs...');
       setLoading(true);
       setError(null);
       setIsSimulatedData(false);
@@ -64,17 +68,23 @@ export default function LogsPage() {
         options.endDate = endDateTime;
       }
       
+      console.log('Buscando logs com opções:', options);
       const fetchedLogs = await logService.getLogs(options);
+      console.log(`Logs encontrados: ${fetchedLogs.length}`);
       
-      // Verificar se os dados são simulados
-      if (fetchedLogs.length > 0 && fetchedLogs[0].id?.startsWith('simulated-')) {
-        setIsSimulatedData(true);
-      }
-      
+      // Remover verificação de dados simulados pois agora só exibimos dados reais
       setLogs(fetchedLogs);
     } catch (error: any) {
       console.error('Erro ao buscar logs:', error);
-      setError('Não foi possível carregar os logs. Verifique suas permissões.');
+      let mensagemErro = 'Não foi possível carregar os logs.';
+      
+      if (error?.code === 'permission-denied') {
+        mensagemErro = 'Erro de permissão: Você não tem acesso para visualizar os logs do sistema. Verifique suas permissões no Firebase.';
+      } else if (error?.code === 'failed-precondition' || error?.message?.includes('index')) {
+        mensagemErro = 'Erro de índice no Firestore: Faltam índices necessários para buscar logs. Entre em contato com o administrador.';
+      }
+      
+      setError(mensagemErro);
       setLogs([]);
     } finally {
       setLoading(false);
@@ -149,7 +159,7 @@ export default function LogsPage() {
   );
 
   return (
-    <ProtectedRoute allowedProfiles={['ADMIN']}>
+    <ProtectedRoute allowedProfiles={['ADMIN', 'admin']}>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
           Logs do Sistema
@@ -256,8 +266,19 @@ export default function LogsPage() {
               <Typography variant="h6">Carregando logs...</Typography>
             </Box>
           ) : filteredLogs.length === 0 ? (
-            <Box display="flex" justifyContent="center" alignItems="center" height="300px">
-              <Typography variant="h6">Nenhum log encontrado.</Typography>
+            <Box display="flex" justifyContent="center" alignItems="center" height="300px" flexDirection="column">
+              <Typography variant="h6" mb={2}>Nenhum log encontrado.</Typography>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Os logs são gerados automaticamente conforme as atividades são realizadas no sistema.<br />
+                Realize algumas ações como criar alunos ou registrar refeições para gerar logs.
+              </Typography>
+              <Button 
+                variant="outlined" 
+                sx={{ mt: 2 }}
+                onClick={handleFilter}
+              >
+                Atualizar
+              </Button>
             </Box>
           ) : (
             <Box sx={{ overflowX: 'auto' }}>

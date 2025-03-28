@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import { Label } from '@/components/ui/Label';
+import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
@@ -32,7 +32,7 @@ interface NotificacaoConfig {
 }
 
 interface ConfiguracaoRelatorio {
-  email: string;
+  emails: string[];
   horario: string;
   ativo: boolean;
 }
@@ -96,10 +96,11 @@ export default function RelatoriosPage() {
   const [enviandoEmailTeste, setEnviandoEmailTeste] = useState(false);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [configuracaoRelatorio, setConfiguracaoRelatorio] = useState<ConfiguracaoRelatorio>({
-    email: '',
+    emails: [''],
     horario: '18:00',
     ativo: false
   });
+  const [novoEmail, setNovoEmail] = useState<string>('');
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -345,7 +346,7 @@ export default function RelatoriosPage() {
     try {
       setEnviandoEmail(true);
       await salvarConfiguracaoEnvioRelatorio(
-        configuracaoRelatorio.email,
+        configuracaoRelatorio.emails,
         configuracaoRelatorio.horario,
         configuracaoRelatorio.ativo
       );
@@ -359,8 +360,8 @@ export default function RelatoriosPage() {
   };
 
   const enviarRelatorioPorEmail = async () => {
-    if (!configuracaoRelatorio.email) {
-      toast.error('Configure um email para receber notificações primeiro');
+    if (!configuracaoRelatorio.emails.length) {
+      toast.error('Configure pelo menos um email para receber notificações primeiro');
       return;
     }
 
@@ -389,13 +390,19 @@ export default function RelatoriosPage() {
         <p>Este relatório foi gerado automaticamente pelo sistema Bem-Estar.</p>
       `;
       
-      // Enviar email
-      await enviarRelatorioEmail(
-        configuracaoRelatorio.email,
-        `Relatório de Refeições - ${formatarData.dataSimples(filtro.dataInicio)} a ${formatarData.dataSimples(filtro.dataFim)}`,
-        htmlContent,
-        csv
-      );
+      // Enviar email para todos os destinatários configurados
+      for (const email of configuracaoRelatorio.emails) {
+        if (email.trim()) {
+          await enviarRelatorioEmail(
+            email,
+            `Relatório de Refeições - ${formatarData.dataSimples(filtro.dataInicio)} a ${formatarData.dataSimples(filtro.dataFim)}`,
+            htmlContent,
+            csv
+          );
+        }
+      }
+      
+      toast.success(`Relatório enviado para ${configuracaoRelatorio.emails.length} destinatário(s)`);
       
     } catch (error) {
       console.error('Erro ao enviar relatório por email:', error);
@@ -410,8 +417,8 @@ export default function RelatoriosPage() {
     try {
       setEnviandoEmailTeste(true);
       
-      if (!configuracaoRelatorio.email) {
-        toast.error('Configure um email para receber notificações primeiro');
+      if (!configuracaoRelatorio.emails.length) {
+        toast.error('Configure pelo menos um email para receber notificações primeiro');
         return;
       }
       
@@ -429,6 +436,25 @@ export default function RelatoriosPage() {
     } finally {
       setEnviandoEmailTeste(false);
     }
+  };
+
+  // Adicionar um novo email à lista
+  const adicionarEmail = () => {
+    if (novoEmail.trim() && !configuracaoRelatorio.emails.includes(novoEmail.trim())) {
+      setConfiguracaoRelatorio(prev => ({
+        ...prev,
+        emails: [...prev.emails, novoEmail.trim()]
+      }));
+      setNovoEmail('');
+    }
+  };
+
+  // Remover um email da lista
+  const removerEmail = (index: number) => {
+    setConfiguracaoRelatorio(prev => ({
+      ...prev,
+      emails: prev.emails.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -550,7 +576,7 @@ export default function RelatoriosPage() {
                 Exportar CSV
               </Button>
               
-              {configuracaoRelatorio.email && (
+              {configuracaoRelatorio.emails.length > 0 && (
                 <Button
                   onClick={enviarRelatorioPorEmail}
                   disabled={enviandoEmail}
@@ -564,12 +590,12 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Feedback das configurações de notificações */}
-        {configuracaoRelatorio.email ? (
+        {configuracaoRelatorio.emails.length > 0 ? (
           <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <span className="font-medium">Email:</span> {configuracaoRelatorio.email}
+                <span className="font-medium">Emails:</span> {configuracaoRelatorio.emails.join(', ')}
               </div>
               <div>
                 <span className="font-medium">Horário de envio:</span> {configuracaoRelatorio.horario}
@@ -588,7 +614,7 @@ export default function RelatoriosPage() {
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <h3 className="text-lg font-medium mb-2">Configurações de Notificações</h3>
             <p className="text-gray-700">
-              Nenhuma configuração de email definida. Clique em "Configurar Notificações" para definir um email para receber relatórios.
+              Nenhuma configuração de email definida. Clique em "Configurar Notificações" para definir emails para receber relatórios.
             </p>
           </div>
         )}
@@ -630,19 +656,53 @@ export default function RelatoriosPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="email" className="text-base sm:text-lg font-medium">
-                  Email para receber relatório
+                <Label htmlFor="email" className="text-base sm:text-lg font-medium mb-2 block">
+                  Emails para receber relatórios
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={configuracaoRelatorio.email}
-                  onChange={(e) => setConfiguracaoRelatorio(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))}
-                  className="mt-1 text-base sm:text-lg"
-                />
+                <div className="space-y-2">
+                  {configuracaoRelatorio.emails.map((email, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          const novaLista = [...configuracaoRelatorio.emails];
+                          novaLista[index] = e.target.value;
+                          setConfiguracaoRelatorio(prev => ({
+                            ...prev,
+                            emails: novaLista
+                          }));
+                        }}
+                        className="flex-1 text-base sm:text-lg"
+                      />
+                      <Button
+                        onClick={() => removerEmail(index)}
+                        type="button"
+                        variant="destructive"
+                        className="px-2 py-1"
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    type="email"
+                    value={novoEmail}
+                    onChange={(e) => setNovoEmail(e.target.value)}
+                    placeholder="Adicionar novo email"
+                    className="flex-1 text-base sm:text-lg"
+                  />
+                  <Button
+                    onClick={adicionarEmail}
+                    type="button"
+                    variant="outline"
+                    className="px-3 py-2"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
               </div>
               <div>
                 <Label htmlFor="horario" className="text-base sm:text-lg font-medium">

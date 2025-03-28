@@ -1,16 +1,19 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/switch';
-import { useState, forwardRef } from 'react';
+import { Label } from '@/components/ui/Label';
+import { Separator } from '@/components/ui/separator';
+import { useState, forwardRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, Save, Send } from 'lucide-react';
 import { obterConfiguracaoEnvioRelatorio, salvarConfiguracaoEnvioRelatorio, enviarEmailTeste } from '@/services/emailService';
 import { usePermissions } from '@/hooks/usePermissions';
+import { toast } from 'react-hot-toast';
 
 export default function ConfiguracoesRelatorios() {
   const [email, setEmail] = useState('');

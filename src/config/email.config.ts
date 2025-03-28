@@ -20,7 +20,7 @@ export const emailConfig = {
   testMode: process.env.EMAIL_TEST_MODE === 'true',
   // Configuração padrão para quando não for possível acessar o Firestore
   defaultConfig: {
-    email: process.env.EMAIL_FROM?.split('<')[1]?.split('>')[0] || 'bemestar@jpiaget.com.br',
+    emails: [process.env.EMAIL_FROM?.split('<')[1]?.split('>')[0] || 'bemestar@jpiaget.com.br'],
     horario: '18:00',
     ativo: true
   }

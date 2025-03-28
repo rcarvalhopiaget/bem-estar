@@ -7,21 +7,39 @@ import { useEmailVerification } from '@/hooks/useEmailVerification';
 // Tipos de perfil de usuário
 export type PerfilUsuario = 'ADMIN' | 'COORDENADOR' | 'PROFESSOR' | 'OPERADOR';
 
-// Hook simulado para retornar permissões de usuário
+// Hook para retornar permissões de usuário
 export function usePermissions() {
-  const { userData } = useAuth();
+  const { user, userData } = useAuth();
   
-  // Valores padrão para simulação
-  const perfil = userData?.perfil || 'admin';
-  const isAdmin = perfil === 'admin' || false;
-  const isOperador = perfil === 'operador' || false;
-  const isProfessor = perfil === 'professor' || false;
-  const isCoordenador = perfil === 'coordenador' || false;
+  // Verificação de autenticação
+  const isAuthenticated = user !== null;
+  
+  // Log para depuração
+  useEffect(() => {
+    console.log('usePermissions:', {
+      isAuthenticated,
+      user: user ? { email: user.email, uid: user.uid } : null,
+      userData
+    });
+  }, [isAuthenticated, user, userData]);
+  
+  // Normalizando perfil: converter para maiúsculas e tratar casos especiais
+  const perfil = userData?.perfil ? 
+                 userData.perfil.toUpperCase() : 
+                 'ADMIN'; // Valor padrão para desenvolvimento
+  
+  // Verificar perfis específicos
+  const isAdmin = perfil === 'ADMIN' || perfil === 'admin';
+  const isOperador = perfil === 'OPERADOR' || perfil === 'operador';
+  const isProfessor = perfil === 'PROFESSOR' || perfil === 'professor';
+  const isCoordenador = perfil === 'COORDENADOR' || perfil === 'coordenador';
   
   // Permissões específicas
   const podeGerenciarConfiguracoes = isAdmin || isCoordenador;
   
+  // Retorna todas as permissões relevantes
   return {
+    isAuthenticated,
     perfil,
     isAdmin,
     isOperador,

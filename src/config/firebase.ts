@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
@@ -13,12 +13,18 @@ const firebaseConfig = {
   appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
 };
 
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig);
+// Verifica se já existe uma instância do Firebase e usa ela, ou cria uma nova
+let app;
+if (getApps().length === 0) {
+  console.log("Inicializando nova instância do Firebase");
+  app = initializeApp(firebaseConfig);
+} else {
+  console.log("Usando instância existente do Firebase");
+  app = getApps()[0];
+}
 
-// Inicializa a autenticação
+// Inicializa os serviços
 const auth = getAuth(app);
-
 const db = getFirestore(app);
 const functions = getFunctions(app);
 

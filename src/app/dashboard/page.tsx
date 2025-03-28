@@ -2,22 +2,27 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { AtividadesRecentes } from '@/components/atividades/AtividadesRecentes';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useEffect, useState } from 'react';
-import { getPacientes, getConsultas, getProximasConsultas, mockPacientes, mockConsultas, Paciente, Consulta } from '@/services/mockData';
+import { alunoService } from '@/services/alunoService';
+import { refeicaoService } from '@/services/refeicaoService';
+import { Aluno } from '@/types/aluno';
+import { Refeicao } from '@/types/refeicao';
 
 export default function DashboardPage() {
   const { user, userData } = useAuth();
   const { perfil, isOperador, isProfessor, isCoordenador, isAdmin } = usePermissions();
   const [isRestauranteUser, setIsRestauranteUser] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [consultas, setConsultas] = useState<Consulta[]>([]);
-  const [proximasConsultas, setProximasConsultas] = useState<Consulta[]>([]);
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
+  const [refeicoesHoje, setRefeicoesHoje] = useState<Refeicao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refeicaoSelecionada, setRefeicaoSelecionada] = useState<Refeicao | null>(null);
+  const [dialogoAberto, setDialogoAberto] = useState(false);
 
   useEffect(() => {
     console.log('Perfil do usuário:', perfil);
@@ -44,15 +49,31 @@ export default function DashboardPage() {
 
     const carregarDados = async () => {
       try {
-        const [pacientesData, consultasData, proximasConsultasData] = await Promise.all([
-          getPacientes(),
-          getConsultas(),
-          getProximasConsultas()
-        ]);
+        // Carregar dados reais do sistema
+        const alunosData = await alunoService.listarAlunos();
         
-        setPacientes(pacientesData);
-        setConsultas(consultasData);
-        setProximasConsultas(proximasConsultasData);
+        // Buscar refeições recentes (últimos 30 dias)
+        const hoje = new Date();
+        const dataInicio = new Date();
+        dataInicio.setDate(hoje.getDate() - 30);
+        
+        const refeicoesData = await refeicaoService.listarRefeicoes({ 
+          dataInicio,
+          dataFim: hoje
+        });
+        
+        // Filtrar refeições de hoje
+        const inicioHoje = new Date();
+        inicioHoje.setHours(0, 0, 0, 0);
+        
+        const refeicoesHojeData = refeicoesData.filter(ref => {
+          const dataRefeicao = new Date(ref.data);
+          return dataRefeicao >= inicioHoje;
+        });
+        
+        setAlunos(alunosData);
+        setRefeicoes(refeicoesData);
+        setRefeicoesHoje(refeicoesHojeData);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       } finally {
@@ -63,8 +84,21 @@ export default function DashboardPage() {
     carregarDados();
   }, [perfil, userData, isOperador, isAdmin, user]);
 
-  const pacientesAtivos = mockPacientes.filter(p => p.status === 'ativo').length;
-  const consultasAgendadas = mockConsultas.filter(c => c.status === 'agendada').length;
+  const alunosAtivos = alunos.filter(a => a.ativo).length;
+  const refeicoesRegistradas = refeicoes.length;
+  const refeicoesHojeCount = refeicoesHoje.length;
+
+  // Função para lidar com o clique no botão "Ver detalhes"
+  const handleVerDetalhes = (refeicao: Refeicao) => {
+    setRefeicaoSelecionada(refeicao);
+    setDialogoAberto(true);
+  };
+
+  // Função para fechar o diálogo de detalhes
+  const handleFecharDetalhes = () => {
+    setDialogoAberto(false);
+    setRefeicaoSelecionada(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,7 +107,7 @@ export default function DashboardPage() {
       </h1>
       
       <p className="text-muted-foreground">
-        Este é um dashboard com dados simulados para demonstração.
+        Acompanhe as informações de refeições e alunos.
       </p>
 
       {/* Cards com estatísticas */}
@@ -81,14 +115,14 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Pacientes Ativos
+              Alunos Ativos
             </CardTitle>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pacientesAtivos}</div>
+            <div className="text-2xl font-bold">{alunosAtivos}</div>
             <p className="text-xs text-muted-foreground">
-              Pacientes com status ativo
+              Alunos com status ativo
             </p>
           </CardContent>
         </Card>
@@ -96,14 +130,14 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Consultas Agendadas
+              Refeições Hoje
             </CardTitle>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{consultasAgendadas}</div>
+            <div className="text-2xl font-bold">{refeicoesHojeCount}</div>
             <p className="text-xs text-muted-foreground">
-              Consultas futuras agendadas
+              Refeições registradas hoje
             </p>
           </CardContent>
         </Card>
@@ -111,14 +145,14 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total de Pacientes
+              Total de Alunos
             </CardTitle>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockPacientes.length}</div>
+            <div className="text-2xl font-bold">{alunos.length}</div>
             <p className="text-xs text-muted-foreground">
-              Total de pacientes cadastrados
+              Total de alunos cadastrados
             </p>
           </CardContent>
         </Card>
@@ -126,32 +160,32 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Consultas Realizadas
+              Refeições (30 dias)
             </CardTitle>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockConsultas.filter(c => c.status === 'concluida').length}</div>
+            <div className="text-2xl font-bold">{refeicoesRegistradas}</div>
             <p className="text-xs text-muted-foreground">
-              Consultas já realizadas
+              Refeições nos últimos 30 dias
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Lista de próximas consultas */}
+      {/* Lista de refeições de hoje */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">Próximas Consultas</h2>
+        <h2 className="text-lg font-semibold mb-4">Refeições de Hoje</h2>
         
         <div className="rounded-md border">
           <div className="relative w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead>
                 <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="h-12 px-4 text-left align-middle font-medium">Paciente</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium">Data</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium">Aluno</th>
                   <th className="h-12 px-4 text-left align-middle font-medium">Horário</th>
                   <th className="h-12 px-4 text-left align-middle font-medium">Tipo</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium">Turma</th>
                   <th className="h-12 px-4 text-left align-middle font-medium">Ações</th>
                 </tr>
               </thead>
@@ -160,22 +194,31 @@ export default function DashboardPage() {
                   <tr>
                     <td colSpan={5} className="p-4 text-center">Carregando...</td>
                   </tr>
-                ) : proximasConsultas.length === 0 ? (
+                ) : refeicoesHoje.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center">Nenhuma consulta agendada</td>
+                    <td colSpan={5} className="p-4 text-center">Nenhuma refeição registrada hoje</td>
                   </tr>
                 ) : (
-                  proximasConsultas.map((consulta) => (
-                    <tr key={consulta.id} className="border-b transition-colors hover:bg-muted/50">
-                      <td className="p-4 align-middle">{consulta.pacienteNome}</td>
-                      <td className="p-4 align-middle">{new Date(consulta.data).toLocaleDateString('pt-BR')}</td>
-                      <td className="p-4 align-middle">{consulta.horario}</td>
-                      <td className="p-4 align-middle">{consulta.tipo}</td>
-                      <td className="p-4 align-middle">
-                        <Button variant="outline" size="sm">Ver detalhes</Button>
-                      </td>
-                    </tr>
-                  ))
+                  refeicoesHoje.map((refeicao) => {
+                    const aluno = alunos.find(a => a.id === refeicao.alunoId);
+                    return (
+                      <tr key={refeicao.id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="p-4 align-middle">{aluno?.nome || 'Aluno não encontrado'}</td>
+                        <td className="p-4 align-middle">{new Date(refeicao.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="p-4 align-middle">{refeicao.tipo}</td>
+                        <td className="p-4 align-middle">{aluno?.turma || '-'}</td>
+                        <td className="p-4 align-middle">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleVerDetalhes(refeicao)}
+                          >
+                            Ver detalhes
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -183,16 +226,93 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Diálogo de detalhes da refeição */}
+      {dialogoAberto && refeicaoSelecionada && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Detalhes da Refeição</h3>
+              <button
+                onClick={handleFecharDetalhes}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {(() => {
+                const aluno = alunos.find(a => a.id === refeicaoSelecionada.alunoId);
+                return (
+                  <>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Aluno</p>
+                      <p className="mt-1">{aluno?.nome || 'Aluno não encontrado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Turma</p>
+                      <p className="mt-1">{aluno?.turma || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Tipo de Refeição</p>
+                      <p className="mt-1">{refeicaoSelecionada.tipo}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Data e Hora</p>
+                      <p className="mt-1">
+                        {new Date(refeicaoSelecionada.data).toLocaleDateString('pt-BR')} às {' '}
+                        {new Date(refeicaoSelecionada.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Status</p>
+                      <p className="mt-1">
+                        {refeicaoSelecionada.presente ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Presente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Ausente
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {refeicaoSelecionada.observacao && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Observação</p>
+                        <p className="mt-1">{refeicaoSelecionada.observacao}</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+            
+            <div className="mt-6">
+              <Button 
+                onClick={handleFecharDetalhes}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Links para diferentes seções */}
       <div className="grid gap-4 md:grid-cols-3 mt-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Gerenciar Pacientes
+              Gerenciar Alunos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/pacientes">
+            <Link href="/dashboard/alunos">
               <Button className="w-full">Acessar</Button>
             </Link>
           </CardContent>
@@ -201,11 +321,11 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Gerenciar Consultas
+              Registrar Refeições
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/consultas">
+            <Link href="/dashboard/refeicoes">
               <Button className="w-full">Acessar</Button>
             </Link>
           </CardContent>
@@ -214,15 +334,20 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Administração
+              Relatórios
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/admin">
+            <Link href="/dashboard/relatorios">
               <Button className="w-full">Acessar</Button>
             </Link>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Atividades Recentes */}
+      <div className="mt-8">
+        <AtividadesRecentes limite={10} />
       </div>
     </div>
   );

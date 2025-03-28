@@ -38,8 +38,8 @@ export async function GET(request: Request) {
       }
     }
     
-    // Usar o email do parâmetro de consulta, se fornecido, ou o email da configuração
-    const destinatario = emailParam || config.email;
+    // Usar o email do parâmetro de consulta, se fornecido, ou o primeiro email da configuração
+    const destinatario = emailParam || (config.emails && config.emails.length > 0 ? config.emails[0] : '');
     
     // Verificar se há um email configurado
     if (!destinatario && !modoSimulacao) {

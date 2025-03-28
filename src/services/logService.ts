@@ -1,5 +1,5 @@
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, limit as firestoreLimit, where, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface SystemLog {
@@ -17,11 +17,12 @@ export interface SystemLog {
 export type LogModule = 'AUTH' | 'ALUNOS' | 'REFEICOES' | 'USUARIOS' | 'RELATORIOS' | 'SISTEMA';
 export type LogAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'VIEW' | 'EXPORT' | 'IMPORT' | 'ERROR';
 
-// Modo de simulação para desenvolvimento
-const SIMULATION_MODE = false; // Temporariamente desativado para mostrar logs verdadeiros
+// Modo de simulação para desenvolvimento - definido como false para exibir apenas dados reais
+const SIMULATION_MODE = false;
 
 // Dados simulados para quando houver erros de permissão
 const getSimulatedLogs = (count: number = 10): SystemLog[] => {
+  // Função mantida apenas para referência, não será usada em produção
   const modules: LogModule[] = ['AUTH', 'ALUNOS', 'REFEICOES', 'USUARIOS', 'RELATORIOS', 'SISTEMA'];
   const actions: LogAction[] = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'ERROR'];
   
@@ -50,7 +51,7 @@ class LogService {
   private simulationMode: boolean;
 
   constructor() {
-    this.simulationMode = SIMULATION_MODE;
+    this.simulationMode = false; // Forçando modo de produção
     console.log(`LogService inicializado em modo ${this.simulationMode ? 'simulação' : 'produção'}`);
   }
 
@@ -59,6 +60,13 @@ class LogService {
    */
   async addLog(log: Omit<SystemLog, 'id' | 'timestamp'>): Promise<string> {
     try {
+      console.log('Tentando adicionar log:', log);
+      
+      if (!db) {
+        console.error('Erro: Firestore não inicializado');
+        throw new Error('Firestore não inicializado');
+      }
+      
       const logRef = await addDoc(collection(db, this.collectionName), {
         ...log,
         timestamp: new Date()
@@ -67,18 +75,8 @@ class LogService {
       console.log(`Log adicionado com ID: ${logRef.id}`);
       return logRef.id;
     } catch (error: any) {
-      // Verificar se é um erro de permissão
-      if (error?.code === 'permission-denied') {
-        console.warn('Erro de permissão ao adicionar log, continuando fluxo');
-        return `simulated-${Date.now()}`;
-      }
-      
       console.error('Erro ao adicionar log:', error);
-      // Em modo de simulação, retorna um ID falso para não quebrar o fluxo
-      if (this.simulationMode) {
-        return `simulated-${Date.now()}`;
-      }
-      throw error;
+      throw error; // Propaga o erro para ser tratado pela aplicação
     }
   }
 
@@ -94,41 +92,54 @@ class LogService {
     limit?: number;
   } = {}): Promise<SystemLog[]> {
     try {
+      console.log('LogService: Buscando logs com opções:', options);
+      
+      // Verificar se o Firestore está inicializado
+      if (!db) {
+        console.error('Erro: Firestore não inicializado');
+        throw new Error('Firestore não inicializado');
+      }
+      
       const { module, action, userId, startDate, endDate, limit: resultLimit = 100 } = options;
       
+      console.log(`LogService: Configurando consulta para coleção ${this.collectionName}`);
+      
+      // Abordagem alternativa para evitar problemas com índices ausentes
+      // 1. Começamos com uma consulta básica ordenada por timestamp, que tem índice automático
       let q = query(
         collection(db, this.collectionName),
         orderBy('timestamp', 'desc'),
-        limit(resultLimit)
+        firestoreLimit(resultLimit)
       );
       
-      // Adicionar filtros se fornecidos
+      // 2. Se houver filtro de módulo, usamos o índice composto que acabamos de adicionar,
+      // que inclui module e timestamp
       if (module) {
-        q = query(q, where('module', '==', module));
+        console.log(`LogService: Adicionando filtro de módulo: ${module}`);
+        q = query(
+          collection(db, this.collectionName),
+          where('module', '==', module),
+          orderBy('timestamp', 'desc'),
+          firestoreLimit(resultLimit)
+        );
       }
       
-      if (action) {
-        q = query(q, where('action', '==', action));
-      }
-      
-      if (userId) {
-        q = query(q, where('userId', '==', userId));
-      }
-      
-      if (startDate) {
-        q = query(q, where('timestamp', '>=', startDate));
-      }
-      
-      if (endDate) {
-        q = query(q, where('timestamp', '<=', endDate));
-      }
-      
+      console.log('LogService: Executando consulta inicial...');
       const querySnapshot = await getDocs(q);
       
-      const logs: SystemLog[] = [];
+      if (querySnapshot.empty) {
+        console.log('LogService: Nenhum log encontrado na consulta inicial.');
+        return [];
+      } else {
+        console.log(`LogService: ${querySnapshot.size} logs encontrados na consulta inicial.`);
+      }
+      
+      // 3. Aplicamos os demais filtros em memória para evitar necessidade de índices compostos adicionais
+      let logs: SystemLog[] = [];
+      
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        logs.push({
+        const log: SystemLog = {
           id: doc.id,
           action: data.action,
           module: data.module,
@@ -138,27 +149,39 @@ class LogService {
           userName: data.userName,
           timestamp: data.timestamp.toDate(),
           details: data.details
-        });
+        };
+        
+        // Aplicamos os demais filtros em memória
+        let incluir = true;
+        
+        if (action && log.action !== action) {
+          incluir = false;
+        }
+        
+        if (userId && log.userId !== userId) {
+          incluir = false;
+        }
+        
+        if (startDate && log.timestamp < startDate) {
+          incluir = false;
+        }
+        
+        if (endDate && log.timestamp > endDate) {
+          incluir = false;
+        }
+        
+        if (incluir) {
+          logs.push(log);
+        }
       });
       
-      return logs;
+      console.log(`LogService: ${logs.length} logs restantes após filtragem em memória.`);
+      
+      // 4. Limitamos o resultado final ao número desejado
+      return logs.slice(0, resultLimit);
     } catch (error: any) {
-      // Verificar se é um erro de permissão
-      if (error?.code === 'permission-denied') {
-        console.warn('Erro de permissão ao buscar logs, retornando dados simulados');
-        return getSimulatedLogs(options.limit || 10);
-      }
-      
       console.error('Erro ao buscar logs:', error);
-      
-      // Em modo de simulação ou se houver erro, retorna dados simulados
-      if (this.simulationMode) {
-        console.log('Retornando logs simulados devido ao modo de simulação');
-        return getSimulatedLogs(options.limit || 10);
-      }
-      
-      // Se não estiver em modo de simulação e não for erro de permissão, retorna array vazio
-      return [];
+      throw error; // Propaga o erro para forçar a aplicação a tratá-lo
     }
   }
 
@@ -203,7 +226,7 @@ export function useLogService() {
     try {
       // Verificar se o banco de dados está disponível
       if (!db) {
-        toast?.error?.("Erro ao conectar ao banco de dados");
+        console.error("Erro ao conectar ao banco de dados");
         return;
       }
 
