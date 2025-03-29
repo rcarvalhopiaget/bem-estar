@@ -116,7 +116,7 @@ export async function _enviarEmailServidor(config: EmailConfigServer): Promise<{
 
     const mailOptions = {
       from: process.env.EMAIL_FROM, // 'from' deve vir das variáveis de ambiente
-      to: simulado ? emailConfig.testRecipient || 'test@example.com' : config.to, // Usa destinatário de teste se configurado
+      to: simulado ? process.env.EMAIL_TEST_RECIPIENT || 'test@example.com' : config.to, // Usa variável de ambiente para teste
       subject: `${simulado ? '[SIMULAÇÃO] ' : ''}${config.subject}`,
       text: config.text,
       html: config.html,
@@ -275,7 +275,7 @@ async function enviarRelatorioEmailServidor(
 export async function enviarRelatorioDiario(
   dadosRelatorio: RelatorioData,
   emailsDestino: string[]
-): Promise<void> => {
+): Promise<void> {
   if (!emailsDestino || emailsDestino.length === 0) {
     console.log('[Servidor] Nenhum email configurado para receber o relatório diário. Abortando envio.');
     return; // Não há o que fazer

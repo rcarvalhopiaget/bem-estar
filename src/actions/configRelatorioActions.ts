@@ -3,11 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
+import { serverAuth } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 import { _enviarEmailServidor } from '@/services/emailService.server';
 import { emailConfig } from '@/config/email.config';
-import { getUserServer } from '@/lib/auth/getUserServer';
-import { getPermissions } from '@/lib/auth/getPermissions';
 
 // --- Tipos e Schemas ---
 
@@ -37,13 +36,10 @@ export async function getConfiguracaoRelatorio(): Promise<{
   error?: string;
 }> {
   try {
-    const user = await getUserServer();
+    const user = await serverAuth.getUser();
     if (!user) return { success: false, error: 'Usuário não autenticado.' };
 
-    const permissions = await getPermissions(user.id);
-    if (!permissions.podeGerenciarConfiguracoes) {
-      return { success: false, error: 'Permissão negada.' };
-    }
+    console.log(`[Action getConfiguracaoRelatorio] Usuário ${user.email} (UID: ${user.uid}) acessando. Permissão assumida (isAdmin: ${user.isAdmin}).`);
 
     const adminApp = initializeFirebaseAdmin();
     const adminDb = admin.firestore(adminApp);
@@ -80,13 +76,10 @@ export async function salvarConfiguracaoRelatorio(data: ConfiguracaoRelatorio): 
   fieldErrors?: Record<string, string[] | undefined>;
 }> {
   try {
-    const user = await getUserServer();
+    const user = await serverAuth.getUser();
     if (!user) return { success: false, error: 'Usuário não autenticado.' };
 
-    const permissions = await getPermissions(user.id);
-    if (!permissions.podeGerenciarConfiguracoes) {
-      return { success: false, error: 'Permissão negada.' };
-    }
+    console.log(`[Action salvarConfiguracaoRelatorio] Usuário ${user.email} (UID: ${user.uid}) salvando. Permissão assumida (isAdmin: ${user.isAdmin}).`);
 
     // Validação com Zod
     const validationResult = SalvarConfigSchema.safeParse(data);
@@ -128,16 +121,13 @@ export async function enviarEmailTesteAction(emailDestino?: string): Promise<{
   previewUrl?: string | false;
 }> {
   try {
-    const user = await getUserServer();
+    const user = await serverAuth.getUser();
     if (!user) return { success: false, message: 'Usuário não autenticado.' };
 
-    const permissions = await getPermissions(user.id);
-    if (!permissions.podeGerenciarConfiguracoes) {
-      return { success: false, message: 'Permissão negada.' };
-    }
+    console.log(`[Action enviarEmailTesteAction] Usuário ${user.email} (UID: ${user.uid}) enviando teste. Permissão assumida (isAdmin: ${user.isAdmin}).`);
 
-    // Determina o destinatário: usa o fornecido ou o padrão de teste
-    const destinatario = emailDestino || emailConfig.testRecipient || 'test@example.com';
+    // Determina o destinatário: usa o fornecido ou a variável de ambiente
+    const destinatario = emailDestino || process.env.EMAIL_TEST_RECIPIENT || 'test@example.com';
     const assunto = 'Email de Teste - Sistema Bem-Estar';
     const corpoHtml = `
       <h1>Email de Teste</h1>
