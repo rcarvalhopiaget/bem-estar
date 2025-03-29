@@ -4,7 +4,7 @@ const fs = require('fs');
 // Instalar dependências adicionais necessárias para o build na Vercel
 console.log('📦 Instalando dependências adicionais para o build...');
 try {
-  execSync('npm install critters tailwindcss postcss autoprefixer', { stdio: 'inherit' });
+  execSync('npm install tailwindcss postcss autoprefixer critters clsx tailwind-merge --save', { stdio: 'inherit' });
   console.log('✅ Dependências adicionais instaladas com sucesso!');
 } catch (error) {
   console.error('❌ Erro ao instalar dependências adicionais:', error);
@@ -31,7 +31,15 @@ if (!fs.existsSync('./src/contexts')) {
   try {
     fs.mkdirSync('./src/contexts', { recursive: true });
     console.log('✅ Diretório contexts criado com sucesso!');
-    
+  } catch (error) {
+    console.error('❌ Erro ao criar diretório contexts:', error);
+  }
+}
+
+// Criar AuthContext.tsx se não existir
+console.log('🔍 Verificando AuthContext.tsx...');
+if (!fs.existsSync('./src/contexts/AuthContext.tsx')) {
+  try {    
     // Criar AuthContext.tsx básico
     const authContextContent = `'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -85,18 +93,53 @@ export const useAuth = () => useContext(AuthContext);
   }
 }
 
+// Verificar e criar lib diretório e utils.ts
+console.log('🔍 Verificando diretório lib...');
+if (!fs.existsSync('./src/lib')) {
+  try {
+    fs.mkdirSync('./src/lib', { recursive: true });
+    console.log('✅ Diretório lib criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar diretório lib:', error);
+  }
+}
+
+console.log('🔍 Verificando utils.ts...');
+if (!fs.existsSync('./src/lib/utils.ts')) {
+  try {
+    const utilsContent = `import { ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+`;
+    fs.writeFileSync('./src/lib/utils.ts', utilsContent);
+    console.log('✅ utils.ts criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar utils.ts:', error);
+  }
+}
+
 // Verificar e criar componentes UI se não existirem
 console.log('🔍 Verificando componentes UI...');
 
-// Verificar e criar pasta ui
+// Verificar e criar pasta UI
+console.log('🔍 Verificando diretório components/ui...');
 if (!fs.existsSync('./src/components/ui')) {
-  fs.mkdirSync('./src/components/ui', { recursive: true });
-  console.log('✅ Diretório UI criado com sucesso!');
+  try {
+    fs.mkdirSync('./src/components/ui', { recursive: true });
+    console.log('✅ Diretório components/ui criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar diretório components/ui:', error);
+  }
 }
 
 // Componente button
-if (!fs.existsSync('./src/components/ui/button.tsx') || fs.readFileSync('./src/components/ui/button.tsx').length === 0) {
-  const buttonContent = `'use client';
+console.log('🔍 Verificando button.tsx...');
+if (!fs.existsSync('./src/components/ui/button.tsx')) {
+  try {
+    const buttonContent = `'use client';
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -121,13 +164,18 @@ Button.displayName = "Button";
 
 export { Button };
 `;
-  fs.writeFileSync('./src/components/ui/button.tsx', buttonContent);
-  console.log('✅ button.tsx criado com sucesso!');
+    fs.writeFileSync('./src/components/ui/button.tsx', buttonContent);
+    console.log('✅ button.tsx criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar button.tsx:', error);
+  }
 }
 
 // Componente card
-if (!fs.existsSync('./src/components/ui/card.tsx') || fs.readFileSync('./src/components/ui/card.tsx').length === 0) {
-  const cardContent = `'use client';
+console.log('🔍 Verificando card.tsx...');
+if (!fs.existsSync('./src/components/ui/card.tsx')) {
+  try {
+    const cardContent = `'use client';
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -195,13 +243,18 @@ CardFooter.displayName = "CardFooter";
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
 `;
-  fs.writeFileSync('./src/components/ui/card.tsx', cardContent);
-  console.log('✅ card.tsx criado com sucesso!');
+    fs.writeFileSync('./src/components/ui/card.tsx', cardContent);
+    console.log('✅ card.tsx criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar card.tsx:', error);
+  }
 }
 
 // Componente input
-if (!fs.existsSync('./src/components/ui/input.tsx') || fs.readFileSync('./src/components/ui/input.tsx').length === 0) {
-  const inputContent = `'use client';
+console.log('🔍 Verificando input.tsx...');
+if (!fs.existsSync('./src/components/ui/input.tsx')) {
+  try {
+    const inputContent = `'use client';
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -226,26 +279,100 @@ Input.displayName = "Input";
 
 export { Input };
 `;
-  fs.writeFileSync('./src/components/ui/input.tsx', inputContent);
-  console.log('✅ input.tsx criado com sucesso!');
+    fs.writeFileSync('./src/components/ui/input.tsx', inputContent);
+    console.log('✅ input.tsx criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar input.tsx:', error);
+  }
 }
 
-// Verificar e criar utils.ts se não existir
-if (!fs.existsSync('./src/lib')) {
-  fs.mkdirSync('./src/lib', { recursive: true });
-  console.log('✅ Diretório lib criado com sucesso!');
-}
+// Criar arquivos Tailwind necessários
+console.log('🔍 Verificando arquivos de configuração do Tailwind...');
 
-if (!fs.existsSync('./src/lib/utils.ts')) {
-  const utilsContent = `import { ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+// Verificar e criar postcss.config.js
+if (!fs.existsSync('./postcss.config.js')) {
+  try {
+    const postcssConfig = `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
 }
 `;
-  fs.writeFileSync('./src/lib/utils.ts', utilsContent);
-  console.log('✅ utils.ts criado com sucesso!');
+    fs.writeFileSync('./postcss.config.js', postcssConfig);
+    console.log('✅ postcss.config.js criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar postcss.config.js:', error);
+  }
+}
+
+// Verificar e criar tailwind.config.js
+if (!fs.existsSync('./tailwind.config.js')) {
+  try {
+    const tailwindConfig = `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: ["class"],
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      },
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+}
+`;
+    fs.writeFileSync('./tailwind.config.js', tailwindConfig);
+    console.log('✅ tailwind.config.js criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar tailwind.config.js:', error);
+  }
 }
 
 // Executar o build do Next.js
