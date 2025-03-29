@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { alunoService } from '@/services/alunoService';
 import { AlunoFormData } from '@/types/aluno';
-import { useToast, toast } from '@/components/ui/toast';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ImportarAlunosPage() {
   const [file, setFile] = useState<File | null>(null);
