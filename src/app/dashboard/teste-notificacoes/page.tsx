@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast as hotToast } from 'react-hot-toast';
-import { useToast, toast } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/use-toast';
+import { pm } from '@/components/ui/toast-utils';
 
 export default function TesteNotificacoesPage() {
   const { toast } = useToast();
