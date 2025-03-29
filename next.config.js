@@ -22,6 +22,8 @@ const nextConfig = {
   output: 'standalone',
   staticPageGenerationTimeout: 120,
   experimental: {
+    // Habilitar Server Actions
+    serverActions: true,
     // Desabilitar optimizações que estão causando problemas
     optimizeCss: false,
     largePageDataBytes: 128 * 1000, // 128KB
