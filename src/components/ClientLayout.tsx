@@ -2,7 +2,7 @@
 
 import { Toaster as HotToaster } from 'react-hot-toast';
 import { EmailJSInit } from '@/components/EmailJSInit';
-import { Toaster as RadixToaster } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function ClientLayout({
   children,
@@ -13,7 +13,7 @@ export default function ClientLayout({
     <>
       <EmailJSInit />
       {children}
-      <RadixToaster />
+      <Toaster />
       <HotToaster position="top-right" />
     </>
   );

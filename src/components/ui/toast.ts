@@ -1,4 +1,5 @@
 import { toast as reactHotToast } from 'react-hot-toast';
+import { useToast } from './use-toast';
 
 // Função auxiliar para exibir mensagens de toast (compatibilidade com pm)
 export const pm = (message: string, options?: { type?: 'success' | 'error' | 'warning' | 'info' }) => {
@@ -20,4 +21,6 @@ export const toast = {
   dismiss: reactHotToast.dismiss,
   remove: reactHotToast.remove,
   loading: reactHotToast.loading
-}; 
+};
+
+export { useToast }; 

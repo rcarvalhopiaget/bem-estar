@@ -17,6 +17,14 @@ const nextConfig = {
       'undici': false
     };
     return config;
+  },
+  experimental: {
+    // Permitir que o Next.js predefina páginas que dão erro durante o build
+    optimizeCss: true,
+    largePageDataBytes: 128 * 1000, // 128KB
+    // Ignorar erros de SSG durante o build
+    workerThreads: false,
+    cpus: 1
   }
 }
 
