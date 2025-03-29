@@ -4,7 +4,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu as MenuIcon, Home, People, Restaurant, Assessment, Close, Person, AccountCircle } from "@mui/icons-material";
+import { 
+  Menu, 
+  Home, 
+  Users,       // Equivalente a People
+  Utensils,    // Equivalente a Restaurant
+  BarChart3,   // Equivalente a Assessment
+  X,           // Equivalente a Close
+  User,        // Equivalente a Person
+  UserCircle   // Equivalente a AccountCircle
+} from "lucide-react"; // Importa ícones do lucide-react
 
 export default function DashboardLayout({
   children,
@@ -45,24 +54,24 @@ export default function DashboardLayout({
 
   // Define os itens do menu com base no perfil do usuário
   let menuItems = [
-    { href: "/dashboard", label: "Início", icon: <Home /> },
-    { href: "/dashboard/refeicoes-rapidas", label: "Refeições Rápidas", icon: <Restaurant /> },
+    { href: "/dashboard", label: "Início", icon: <Home className="h-5 w-5" /> },
+    { href: "/dashboard/refeicoes-rapidas", label: "Refeições Rápidas", icon: <Utensils className="h-5 w-5" /> },
   ];
 
   // Adiciona itens adicionais para usuários que não são operadores
   if (!isOperador) {
     menuItems = [
       ...menuItems,
-      { href: "/dashboard/alunos", label: "Alunos", icon: <People /> },
-      { href: "/dashboard/relatorios", label: "Relatórios", icon: <Assessment /> },
-      { href: "/dashboard/perfil", label: "Meu Perfil", icon: <AccountCircle /> },
+      { href: "/dashboard/alunos", label: "Alunos", icon: <Users className="h-5 w-5" /> },
+      { href: "/dashboard/relatorios", label: "Relatórios", icon: <BarChart3 className="h-5 w-5" /> },
+      { href: "/dashboard/perfil", label: "Meu Perfil", icon: <UserCircle className="h-5 w-5" /> },
     ];
   }
 
   // Adiciona a opção de usuários apenas para administradores
   if (isAdmin) {
-    menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <Person /> });
-    menuItems.push({ href: "/dashboard/logs", label: "Logs do Sistema", icon: <Assessment /> });
+    menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <User className="h-5 w-5" /> });
+    menuItems.push({ href: "/dashboard/logs", label: "Logs do Sistema", icon: <BarChart3 className="h-5 w-5" /> });
   }
 
   return (
@@ -77,7 +86,7 @@ export default function DashboardLayout({
                 className="p-2 rounded-md text-gray-600 hover:text-gray-900 focus:outline-none"
                 aria-label="Menu principal"
               >
-                <MenuIcon />
+                <Menu className="h-6 w-6" />
               </button>
               <div className="flex-shrink-0 flex items-center ml-2">
                 <span className="text-2xl font-bold text-primary">BemEstar</span>
@@ -85,7 +94,7 @@ export default function DashboardLayout({
             </div>
             <div className="flex items-center">
               <Link href="/dashboard/perfil" className="flex items-center px-3 py-2 text-sm text-gray-700 hover:text-primary">
-                <AccountCircle className="mr-1" />
+                <UserCircle className="mr-1 h-5 w-5" />
                 {user?.displayName || user?.email}
               </Link>
               <button
@@ -120,7 +129,7 @@ export default function DashboardLayout({
             onClick={closeMenu}
             className="p-1 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
           >
-            <Close />
+            <X className="h-5 w-5" />
           </button>
         </div>
         <nav className="p-4">
