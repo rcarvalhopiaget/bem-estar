@@ -1,12 +1,16 @@
+'use client';
+
 import * as React from "react"
 import { useContext } from 'react';
 
-import type {
-  ToastActionElement,
-  ToastProps,
-  ToastProvider,
-  ToastViewport
-} from '@/components/ui/toast'
+// Define tipos localmente em vez de importá-los de toast.tsx
+export type ToastProps = React.ComponentPropsWithoutRef<typeof React.Fragment> & {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  variant?: "default" | "destructive";
+};
+
+export type ToastActionElement = React.ReactElement;
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000
@@ -18,7 +22,7 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
-const actionTypes = {
+const ActionType = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
@@ -32,7 +36,7 @@ function genId() {
   return count.toString()
 }
 
-type ActionType = typeof actionTypes
+type ActionType = typeof ActionType
 
 type Action =
   | {
@@ -73,6 +77,8 @@ const addToRemoveQueue = (toastId: string) => {
 
   toastTimeouts.set(toastId, timeout)
 }
+
+const initialState: State = { toasts: [] }
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
@@ -130,7 +136,7 @@ export const reducer = (state: State, action: Action): State => {
 
 const listeners: Array<(state: State) => void> = []
 
-let memoryState: State = { toasts: [] }
+let memoryState: State = initialState
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
@@ -141,7 +147,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-const toast = ({ ...props }: Toast) => {
+const toast = (props: Toast) => {
   const id = genId()
 
   const update = (props: ToasterToast) =>

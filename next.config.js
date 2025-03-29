@@ -9,6 +9,14 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  webpack: (config, { isServer }) => {
+    // Resolver problema com o módulo undici
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'undici': false
+    };
+    return config;
   }
 }
 
