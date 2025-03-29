@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
-import { enviarRelatorioDiario, obterConfiguracaoEnvioRelatorio } from '@/services/emailService';
+import { enviarRelatorioDiario } from '@/services/emailService';
 import { emailConfig } from '@/config/email.config';
 
 // Modo de simulação baseado apenas na configuração
@@ -13,51 +13,54 @@ const MODO_SIMULACAO = emailConfig.testMode;
  */
 export async function GET(request: Request) {
   try {
-    initializeFirebaseAdmin(); // Garante que o SDK Admin está inicializado
-    const adminDb = admin.firestore();
+    const adminApp = initializeFirebaseAdmin(); // Garante inicialização e obtém a instância
+    const adminDb = admin.firestore(adminApp); // Usa a instância específica
     const Timestamp = admin.firestore.Timestamp;
 
-    // Verificar se o envio de relatórios está ativo (usando Admin SDK)
+    // --- Buscar Configuração de Envio (Usando Admin SDK) ---
+    let emailsDestino: string[] = [];
     let configuracaoAtiva = true;
     try {
       const configDoc = await adminDb.collection('configuracoes').doc('envioRelatorio').get();
       if (configDoc.exists) {
-        configuracaoAtiva = configDoc.data()?.ativo ?? true;
+        const configData = configDoc.data();
+        configuracaoAtiva = configData?.ativo ?? true;
+        // Garantir que emails seja um array de strings
+        emailsDestino = Array.isArray(configData?.emails) 
+                        ? configData.emails.filter((e: any) => typeof e === 'string' && e.trim() !== '') 
+                        : [];
       } else {
-        console.log('Documento de configuração envioRelatorio não encontrado, usando padrão (ativo).')
+        console.log('Documento de configuração envioRelatorio não encontrado, envio desativado por padrão.');
+        configuracaoAtiva = false; // Desativar se config não existe
       }
       
       if (!configuracaoAtiva) {
-        console.log('Envio de relatórios está desativado nas configurações.')
+        console.log('Envio de relatórios está desativado nas configurações.');
         return NextResponse.json({
           success: false,
           message: 'Envio de relatórios está desativado nas configurações',
         });
       }
+      if (emailsDestino.length === 0) {
+         console.log('Nenhum email de destino configurado para o envio de relatórios.');
+         return NextResponse.json({
+           success: false,
+           message: 'Nenhum email de destino configurado',
+         });
+      }
     } catch (configError: any) {
-       console.error('Erro ao obter configuração de envio do Firestore:', configError)
-       // Decide-se continuar ou não dependendo da criticidade
-       // return NextResponse.json({ success: false, error: 'Erro ao ler configuração' }, { status: 500 });
-       console.log('Continuando com envio ativo como padrão devido a erro na leitura da config.')
+       console.error('Erro ao obter configuração de envio do Firestore:', configError);
+       // Considerar falhar aqui, pois sem emails não há envio
+       return NextResponse.json({ success: false, error: 'Erro ao ler configuração de envio' }, { status: 500 });
     }
+    // --- Fim Buscar Configuração ---
 
-    // Obtendo a data - **REMOVIDO USO DINÂMICO de request.url**
-    // Se precisar de data dinâmica via param, a rota deve ser dinâmica.
-    // const dataParam = getSearchParam(request, 'data');
-    const dataRelatorio = new Date(); // Usar a data atual do servidor
-    
-    // Formatar a data para YYYY-MM-DD
+    const dataRelatorio = new Date(); 
     const dataFormatada = dataRelatorio.toISOString().split('T')[0];
-    
-    // Verificar se deve usar modo de simulação (apenas via config agora)
-    const usarSimulacao = MODO_SIMULACAO;
-    // const forcarSimulacaoParam = getSearchParam(request, 'simulacao') === 'true';
-    // const usarSimulacao = MODO_SIMULACAO || forcarSimulacaoParam;
+    const usarSimulacao = MODO_SIMULACAO; // Apenas via config central
     
     if (usarSimulacao) {
       console.log('[SIMULAÇÃO] Gerando relatório simulado para', dataFormatada);
-      
-      // Dados simulados para teste
       const dadosSimulados = {
         data: dataFormatada,
         totalAlunos: 50,
@@ -93,8 +96,8 @@ export async function GET(request: Request) {
         })
       };
       
-      // Enviar relatório simulado
-      await enviarRelatorioDiario(dadosSimulados);
+      // Enviar relatório simulado (passando emails de config, mesmo em simulação)
+      await enviarRelatorioDiario(dadosSimulados, emailsDestino); 
       
       return NextResponse.json({
         success: true,
@@ -111,26 +114,17 @@ export async function GET(request: Request) {
     
     // ----- Lógica de Geração de Relatório Real (usando Admin SDK) -----
     try {
-      // Buscar todos os alunos
       const alunosRef = adminDb.collection('alunos');
       const alunosSnapshot = await alunosRef.get();
-      const alunos = alunosSnapshot.docs.map(doc => ({
-        id: doc.id,
-        nome: doc.data().nome || '',
-        turma: doc.data().turma || ''
-        // ... outros dados do aluno se necessário
-      }));
+      const alunos = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Array<{id: string, nome?: string, turma?: string}>;
       
-      // Buscar as refeições do dia
       const refeicoesRef = adminDb.collection('refeicoes');
-      const dataInicio = new Date(dataFormatada);
-      dataInicio.setHours(0, 0, 0, 0); // Início do dia
-      const dataFim = new Date(dataFormatada);
-      dataFim.setHours(23, 59, 59, 999); // Fim do dia
+      const dataInicio = new Date(dataFormatada); dataInicio.setHours(0, 0, 0, 0);
+      const dataFim = new Date(dataFormatada); dataFim.setHours(23, 59, 59, 999);
       
       const refeicoesQuery = refeicoesRef
         .where('data', '>=', Timestamp.fromDate(dataInicio))
-        .where('data', '<', Timestamp.fromDate(dataFim)); // Correção: usar dataFim
+        .where('data', '<', Timestamp.fromDate(dataFim)); 
       
       const refeicoesSnapshot = await refeicoesQuery.get();
       const refeicoes = refeicoesSnapshot.docs.map(doc => {
@@ -140,31 +134,27 @@ export async function GET(request: Request) {
           alunoId: data.alunoId,
           nomeAluno: data.nomeAluno || '',
           turma: data.turma || '',
-          tipo: data.tipo || 'ALMOCO', // Use um valor padrão seguro
-          data: (data.data as admin.firestore.Timestamp)?.toDate() ?? new Date() // Converter Timestamp para Date
+          tipo: data.tipo || 'ALMOCO',
+          data: (data.data as admin.firestore.Timestamp)?.toDate() ?? new Date()
         };
       });
       
-      // Mapear os IDs dos alunos que comeram
       const alunosQueComeram = new Set(refeicoes.map(r => r.alunoId));
       
-      // Separar alunos que comeram e não comeram
       const alunosComeram = alunos
         .filter(aluno => alunosQueComeram.has(aluno.id))
-        .map(aluno => ({ nome: aluno.nome, turma: aluno.turma }));
+        .map(aluno => ({ nome: aluno.nome || 'Sem nome', turma: aluno.turma || 'Sem turma' }));
       
       const alunosNaoComeram = alunos
         .filter(aluno => !alunosQueComeram.has(aluno.id))
-        .map(aluno => ({ nome: aluno.nome, turma: aluno.turma }));
+        .map(aluno => ({ nome: aluno.nome || 'Sem nome', turma: aluno.turma || 'Sem turma' }));
       
-      // Contar refeições por tipo
       const refeicoesPorTipo: Record<string, number> = {};
       refeicoes.forEach(refeicao => {
         const tipoFormatado = formatarTipoRefeicao(refeicao.tipo);
         refeicoesPorTipo[tipoFormatado] = (refeicoesPorTipo[tipoFormatado] || 0) + 1;
       });
       
-      // Formatar as refeições para o relatório
       const refeicoesFormatadas = refeicoes.map(refeicao => ({
         alunoId: refeicao.alunoId,
         nomeAluno: refeicao.nomeAluno,
@@ -173,7 +163,6 @@ export async function GET(request: Request) {
         data: refeicao.data
       }));
       
-      // Preparar dados para o relatório
       const dadosRelatorio = {
         data: dataFormatada,
         totalAlunos: alunos.length,
@@ -185,8 +174,8 @@ export async function GET(request: Request) {
         refeicoes: refeicoesFormatadas
       };
       
-      // Enviar o relatório por email
-      await enviarRelatorioDiario(dadosRelatorio);
+      // Enviar o relatório por email, passando os emails de destino
+      await enviarRelatorioDiario(dadosRelatorio, emailsDestino); // <--- PASSAR emailsDestino
       
       return NextResponse.json({
         success: true,
@@ -199,8 +188,7 @@ export async function GET(request: Request) {
         }
       });
     } catch (dbError: any) {
-      console.error('Erro ao buscar dados no Firestore:', dbError);
-      // Decide se envia um relatório simulado ou falha
+      console.error('Erro ao buscar dados no Firestore ou gerar relatório:', dbError);
       return NextResponse.json(
         { success: false, error: 'Erro ao gerar dados para o relatório.' },
         { status: 500 }

@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Evite a duplicação de código sempre que possivel o que significa verficar em outras áreas do código e funcionalidades semelhantes.
