@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc, getFirestore } from 'firebase/firestore';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { upsertRestauranteUser } from '@/actions/adminActions';
 
 export default function AdminRestaurantePage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,63 +17,22 @@ export default function AdminRestaurantePage() {
   const [usuarioAtualizado, setUsuarioAtualizado] = useState(false);
 
   const handleAtualizarUsuario = async () => {
-    try {
-      setIsLoading(true);
-      setResultado(null);
+    setIsLoading(true);
+    setResultado(null);
+    setUsuarioAtualizado(false);
 
-      // Verificar se o db está disponível
-      if (!db) {
-        setResultado("Erro: Banco de dados não está disponível no momento");
-        toast.error("Erro ao conectar ao banco de dados");
-        return;
-      }
+    const result = await upsertRestauranteUser();
 
-      // Buscar o usuário pelo email
-      const email = 'restaurante.piaget@jpiaget.com.br';
-      const usuariosRef = collection(db, 'usuarios');
-      const q = query(usuariosRef, where('email', '==', email));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        // Atualizar o usuário existente
-        const docId = querySnapshot.docs[0].id;
-        const docRef = doc(db, 'usuarios', docId);
-        
-        await updateDoc(docRef, {
-          nome: 'Taina Soares',
-          perfil: 'OPERADOR',
-          ativo: true,
-          cargo: 'Operador de Restaurante',
-          updatedAt: new Date()
-        });
-        
-        setResultado(`Usuário atualizado com sucesso! ID: ${docId}`);
-        toast.success('Usuário atualizado com sucesso!');
-      } else {
-        // Criar um novo usuário
-        const novoUsuarioRef = doc(collection(db, 'usuarios'));
-        await setDoc(novoUsuarioRef, {
-          nome: 'Taina Soares',
-          email: 'restaurante.piaget@jpiaget.com.br',
-          perfil: 'OPERADOR',
-          ativo: true,
-          cargo: 'Operador de Restaurante',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        
-        setResultado(`Novo usuário criado com sucesso! ID: ${novoUsuarioRef.id}`);
-        toast.success('Novo usuário criado com sucesso!');
-      }
-      
+    if (result.success) {
+      setResultado(result.message);
+      toast.success('Operação concluída com sucesso!');
       setUsuarioAtualizado(true);
-    } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-      toast.error('Erro ao atualizar usuário');
-      setResultado(`Erro: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setResultado(`Erro: ${result.message}`);
+      toast.error(`Erro: ${result.message}`);
     }
+
+    setIsLoading(false);
   };
 
   return (
@@ -86,7 +46,7 @@ export default function AdminRestaurantePage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Informações do Usuário</CardTitle>
+          <CardTitle>Informações do Usuário (Pré-definidas)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -105,7 +65,7 @@ export default function AdminRestaurantePage() {
           disabled={isLoading}
           className="w-full sm:w-auto"
         >
-          {isLoading ? 'Atualizando...' : 'Atualizar Usuário do Restaurante'}
+          {isLoading ? 'Processando...' : 'Garantir/Atualizar Usuário do Restaurante'}
         </Button>
 
         {resultado && (
@@ -116,13 +76,8 @@ export default function AdminRestaurantePage() {
 
         {usuarioAtualizado && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-lg font-medium mb-2">Próximos Passos</h3>
-            <p>O usuário Taina Soares foi atualizado com sucesso. Agora você pode:</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Fazer logout e login novamente com o usuário do restaurante</li>
-              <li>Verificar se o usuário aparece corretamente na gestão de usuários</li>
-              <li>Confirmar que o usuário tem acesso apenas às refeições rápidas</li>
-            </ul>
+            <h3 className="text-lg font-medium mb-2">Usuário Criado/Atualizado</h3>
+            <p>O usuário Taina Soares foi criado ou atualizado no Firestore.</p>
           </div>
         )}
       </div>

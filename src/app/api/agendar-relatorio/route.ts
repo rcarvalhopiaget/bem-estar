@@ -1,16 +1,11 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/config/firebase';
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
+import * as admin from 'firebase-admin';
 import { enviarRelatorioDiario, obterConfiguracaoEnvioRelatorio } from '@/services/emailService';
 import { emailConfig } from '@/config/email.config';
 
 // Modo de simulação baseado apenas na configuração
 const MODO_SIMULACAO = emailConfig.testMode;
-// Parâmetro de URL para forçar simulação
-const forcarSimulacao = (request: Request) => {
-  const { searchParams } = new URL(request.url);
-  return searchParams.get('simulacao') === 'true';
-};
 
 /**
  * API para agendar o envio de relatórios diários
@@ -18,40 +13,46 @@ const forcarSimulacao = (request: Request) => {
  */
 export async function GET(request: Request) {
   try {
-    // Verificar se o envio de relatórios está ativo
+    initializeFirebaseAdmin(); // Garante que o SDK Admin está inicializado
+    const adminDb = admin.firestore();
+    const Timestamp = admin.firestore.Timestamp;
+
+    // Verificar se o envio de relatórios está ativo (usando Admin SDK)
     let configuracaoAtiva = true;
     try {
-      const config = await obterConfiguracaoEnvioRelatorio();
-      configuracaoAtiva = config.ativo;
+      const configDoc = await adminDb.collection('configuracoes').doc('envioRelatorio').get();
+      if (configDoc.exists) {
+        configuracaoAtiva = configDoc.data()?.ativo ?? true;
+      } else {
+        console.log('Documento de configuração envioRelatorio não encontrado, usando padrão (ativo).')
+      }
       
       if (!configuracaoAtiva) {
+        console.log('Envio de relatórios está desativado nas configurações.')
         return NextResponse.json({
           success: false,
           message: 'Envio de relatórios está desativado nas configurações',
         });
       }
     } catch (configError: any) {
-      // Se houver erro de permissão, continuar com valores padrão
-      if (configError?.code === 'permission-denied') {
-        console.log('Aviso: Usando configurações padrão devido a restrições de permissão');
-      } else {
-        console.error('Erro ao obter configurações:', configError);
-      }
+       console.error('Erro ao obter configuração de envio do Firestore:', configError)
+       // Decide-se continuar ou não dependendo da criticidade
+       // return NextResponse.json({ success: false, error: 'Erro ao ler configuração' }, { status: 500 });
+       console.log('Continuando com envio ativo como padrão devido a erro na leitura da config.')
     }
 
-    const { searchParams } = new URL(request.url);
-    const dataParam = searchParams.get('data');
-    
-    // Se não for fornecida uma data, usar a data atual
-    const dataRelatorio = dataParam 
-      ? new Date(dataParam) 
-      : new Date();
+    // Obtendo a data - **REMOVIDO USO DINÂMICO de request.url**
+    // Se precisar de data dinâmica via param, a rota deve ser dinâmica.
+    // const dataParam = getSearchParam(request, 'data');
+    const dataRelatorio = new Date(); // Usar a data atual do servidor
     
     // Formatar a data para YYYY-MM-DD
     const dataFormatada = dataRelatorio.toISOString().split('T')[0];
     
-    // Verificar se deve usar modo de simulação
-    const usarSimulacao = MODO_SIMULACAO || forcarSimulacao(request);
+    // Verificar se deve usar modo de simulação (apenas via config agora)
+    const usarSimulacao = MODO_SIMULACAO;
+    // const forcarSimulacaoParam = getSearchParam(request, 'simulacao') === 'true';
+    // const usarSimulacao = MODO_SIMULACAO || forcarSimulacaoParam;
     
     if (usarSimulacao) {
       console.log('[SIMULAÇÃO] Gerando relatório simulado para', dataFormatada);
@@ -108,38 +109,41 @@ export async function GET(request: Request) {
       });
     }
     
+    // ----- Lógica de Geração de Relatório Real (usando Admin SDK) -----
     try {
       // Buscar todos os alunos
-      const alunosRef = collection(db, 'alunos');
-      const alunosSnapshot = await getDocs(alunosRef);
+      const alunosRef = adminDb.collection('alunos');
+      const alunosSnapshot = await alunosRef.get();
       const alunos = alunosSnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data(),
         nome: doc.data().nome || '',
         turma: doc.data().turma || ''
+        // ... outros dados do aluno se necessário
       }));
       
       // Buscar as refeições do dia
-      const refeicoesRef = collection(db, 'refeicoes');
+      const refeicoesRef = adminDb.collection('refeicoes');
       const dataInicio = new Date(dataFormatada);
+      dataInicio.setHours(0, 0, 0, 0); // Início do dia
       const dataFim = new Date(dataFormatada);
-      dataFim.setDate(dataFim.getDate() + 1);
+      dataFim.setHours(23, 59, 59, 999); // Fim do dia
       
-      const refeicoesQuery = query(
-        refeicoesRef,
-        where('data', '>=', Timestamp.fromDate(dataInicio)),
-        where('data', '<', Timestamp.fromDate(dataFim))
-      );
+      const refeicoesQuery = refeicoesRef
+        .where('data', '>=', Timestamp.fromDate(dataInicio))
+        .where('data', '<', Timestamp.fromDate(dataFim)); // Correção: usar dataFim
       
-      const refeicoesSnapshot = await getDocs(refeicoesQuery);
-      const refeicoes = refeicoesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        alunoId: doc.data().alunoId,
-        nomeAluno: doc.data().nomeAluno || '',
-        turma: doc.data().turma || '',
-        tipo: doc.data().tipo || 'ALMOCO',
-        data: doc.data().data.toDate()
-      }));
+      const refeicoesSnapshot = await refeicoesQuery.get();
+      const refeicoes = refeicoesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          alunoId: data.alunoId,
+          nomeAluno: data.nomeAluno || '',
+          turma: data.turma || '',
+          tipo: data.tipo || 'ALMOCO', // Use um valor padrão seguro
+          data: (data.data as admin.firestore.Timestamp)?.toDate() ?? new Date() // Converter Timestamp para Date
+        };
+      });
       
       // Mapear os IDs dos alunos que comeram
       const alunosQueComeram = new Set(refeicoes.map(r => r.alunoId));
@@ -195,73 +199,18 @@ export async function GET(request: Request) {
         }
       });
     } catch (dbError: any) {
-      // Tratar erros de permissão do Firestore
-      if (dbError?.code === 'permission-denied') {
-        console.log('Erro de permissão ao acessar dados. Usando dados simulados.');
-        
-        // Usar dados simulados em caso de erro de permissão
-        const dadosSimulados = {
-          data: dataFormatada,
-          totalAlunos: 30,
-          totalComeram: 20,
-          totalNaoComeram: 10,
-          alunosComeram: Array(20).fill(0).map((_, i) => ({ 
-            nome: `Aluno ${i+1}`, 
-            turma: `Turma ${Math.floor(i/7) + 1}` 
-          })),
-          alunosNaoComeram: Array(10).fill(0).map((_, i) => ({ 
-            nome: `Aluno Ausente ${i+1}`, 
-            turma: `Turma ${Math.floor(i/3) + 1}` 
-          })),
-          refeicoesPorTipo: {
-            'Almoço': 12,
-            'Lanche da Manhã': 5,
-            'Lanche da Tarde': 3
-          },
-          refeicoes: Array(20).fill(0).map((_, i) => {
-            const tiposRefeicao = ['Almoço', 'Lanche da Manhã', 'Lanche da Tarde'];
-            const tipo = tiposRefeicao[Math.floor(Math.random() * tiposRefeicao.length)];
-            const hora = tipo === 'Almoço' ? 12 : (tipo === 'Lanche da Manhã' ? 9 : 15);
-            const dataRefeicao = new Date(dataFormatada);
-            dataRefeicao.setHours(hora, Math.floor(Math.random() * 59));
-            
-            return {
-              alunoId: `aluno-${i+1}`,
-              nomeAluno: `Aluno ${i+1}`,
-              turma: `Turma ${Math.floor(i/7) + 1}`,
-              tipo: tipo,
-              data: dataRefeicao
-            };
-          })
-        };
-        
-        // Enviar relatório com dados simulados
-        await enviarRelatorioDiario(dadosSimulados);
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Relatório enviado com dados padrão devido a restrições de permissão',
-          data: {
-            dataRelatorio: dataFormatada,
-            totalAlunos: dadosSimulados.totalAlunos,
-            totalComeram: dadosSimulados.totalComeram,
-            totalNaoComeram: dadosSimulados.totalNaoComeram,
-            dadosPadrao: true
-          }
-        });
-      } else {
-        // Repassar outros erros
-        throw dbError;
-      }
+      console.error('Erro ao buscar dados no Firestore:', dbError);
+      // Decide se envia um relatório simulado ou falha
+      return NextResponse.json(
+        { success: false, error: 'Erro ao gerar dados para o relatório.' },
+        { status: 500 }
+      );
     }
-  } catch (error: any) {
-    console.error('Erro ao agendar relatório:', error);
+
+  } catch (error) {
+    console.error('Erro inesperado na função GET /api/agendar-relatorio:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: `Erro ao agendar relatório: ${error.message}`,
-        error: error.toString()
-      },
+      { success: false, error: 'Erro interno do servidor.' },
       { status: 500 }
     );
   }
@@ -269,12 +218,14 @@ export async function GET(request: Request) {
 
 // Função auxiliar para formatar o tipo de refeição
 function formatarTipoRefeicao(tipo: string): string {
-  const tiposFormatados: Record<string, string> = {
-    'ALMOCO': 'Almoço',
-    'LANCHE_MANHA': 'Lanche da Manhã',
-    'LANCHE_TARDE': 'Lanche da Tarde',
-    'SOPA': 'Sopa'
-  };
-  
-  return tiposFormatados[tipo] || tipo;
+  switch (tipo?.toUpperCase()) {
+    case 'ALMOCO':
+      return 'Almoço';
+    case 'LANCHE_MANHA':
+      return 'Lanche da Manhã';
+    case 'LANCHE_TARDE':
+      return 'Lanche da Tarde';
+    default:
+      return tipo || 'Desconhecido';
+  }
 }
