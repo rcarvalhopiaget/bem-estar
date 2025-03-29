@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useState, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
@@ -8,13 +8,14 @@ import { cva } from 'class-variance-authority';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, setDoc, getFirestore } from 'firebase/firestore';
 import Link from 'next/link';
-import { toast } from 'react-hot-toast';
+import { useToast } from "@/components/ui/use-toast";
 import { upsertRestauranteUser } from '@/actions/adminActions';
 
 export default function AdminRestaurantePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
   const [usuarioAtualizado, setUsuarioAtualizado] = useState(false);
+  const { toast } = useToast();
 
   const handleAtualizarUsuario = async () => {
     setIsLoading(true);
@@ -25,11 +26,18 @@ export default function AdminRestaurantePage() {
 
     if (result.success) {
       setResultado(result.message);
-      toast.success('Operação concluída com sucesso!');
+      toast({
+        title: "Sucesso!",
+        description: result.message || 'Usuário do restaurante garantido/atualizado.',
+      });
       setUsuarioAtualizado(true);
     } else {
       setResultado(`Erro: ${result.message}`);
-      toast.error(`Erro: ${result.message}`);
+      toast({
+        variant: "destructive",
+        title: "Erro!",
+        description: result.message || 'Ocorreu um erro ao atualizar o usuário.',
+      });
     }
 
     setIsLoading(false);

@@ -7,7 +7,7 @@ import RefeicaoRapida from '@/components/refeicoes/RefeicaoRapida';
 import { EmailVerification } from '@/components/EmailVerification';
 import { alunoService } from '@/services/alunoService';
 import { Aluno } from '@/types/aluno';
-import { toast } from '@/components/ui/toast';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function RefeicoesRapidasPage() {
   const router = useRouter();
@@ -16,6 +16,7 @@ export default function RefeicoesRapidasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataAtual, setDataAtual] = useState(new Date());
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user) {
@@ -45,7 +46,11 @@ export default function RefeicoesRapidasPage() {
       setError(null);
     } catch (error) {
       console.error('Erro ao carregar alunos:', error);
-      toast.error('Erro ao carregar lista de alunos');
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao carregar lista de alunos.",
+      });
       setError('Erro ao carregar lista de alunos');
     } finally {
       setLoading(false);

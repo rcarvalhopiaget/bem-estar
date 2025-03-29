@@ -23,7 +23,7 @@ import { IconButton } from '@mui/material';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning } from 'lucide-react';
 
@@ -72,6 +72,7 @@ const formatarData = {
 
 export default function RelatoriosPage() {
   const { hasPermission, podeGerenciarConfiguracoes } = usePermissions();
+  const { toast } = useToast();
   const [filtro, setFiltro] = useState<RelatorioFiltro>({
     dataInicio: startOfMonth(new Date()),
     dataFim: endOfMonth(new Date()),
@@ -108,7 +109,7 @@ export default function RelatoriosPage() {
       variant: notificacao.tipo === 'erro' ? 'destructive' : 'default',
     });
     setNotificacoes(prev => [...prev, notificacao]);
-  }, []);
+  }, [toast]);
 
   const carregarAlunosETurmas = useCallback(async () => {
     try {

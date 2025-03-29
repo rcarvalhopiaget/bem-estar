@@ -84,7 +84,7 @@ export default function DashboardPage() {
     carregarDados();
   }, [perfil, userData, isOperador, isAdmin, user]);
 
-  const alunosAtivos = alunos.filter(a => a.ativo).length;
+  const alunosAtivos = alunos.filter((a: Aluno) => a.ativo).length;
   const refeicoesRegistradas = refeicoes.length;
   const refeicoesHojeCount = refeicoesHoje.length;
 
@@ -199,8 +199,8 @@ export default function DashboardPage() {
                     <td colSpan={5} className="p-4 text-center">Nenhuma refeição registrada hoje</td>
                   </tr>
                 ) : (
-                  refeicoesHoje.map((refeicao) => {
-                    const aluno = alunos.find(a => a.id === refeicao.alunoId);
+                  refeicoesHoje.map((refeicao: Refeicao) => {
+                    const aluno = alunos.find((a: Aluno) => a.id === refeicao.alunoId);
                     return (
                       <tr key={refeicao.id} className="border-b transition-colors hover:bg-muted/50">
                         <td className="p-4 align-middle">{aluno?.nome || 'Aluno não encontrado'}</td>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
             
             <div className="space-y-4">
               {(() => {
-                const aluno = alunos.find(a => a.id === refeicaoSelecionada.alunoId);
+                const aluno = alunos.find((a: Aluno) => a.id === refeicaoSelecionada.alunoId);
                 return (
                   <>
                     <div>

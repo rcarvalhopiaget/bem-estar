@@ -1,6 +1,6 @@
 import './globals.css'
-import { AuthProvider } from '@/contexts/AuthContext'
-import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/contexts/AuthContext' // Descomentado
+import { Toaster } from "@/components/ui/toaster" // Mantido importado
 
 export const metadata = {
   title: 'Bem Estar - Plataforma de Alimentação Saudável',
@@ -15,10 +15,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <AuthProvider>
+        <AuthProvider> {/* Descomentado */}
           {children}
-          <Toaster />
-        </AuthProvider>
+        </AuthProvider> {/* Descomentado */}
+        <Toaster /> {/* Descomentado */}
       </body>
     </html>
   )

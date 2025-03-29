@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth, db } from '@/config/firebase';
 
 // Interface para os dados do usuário no Firestore
 export interface UserData {

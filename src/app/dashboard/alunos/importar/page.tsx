@@ -46,7 +46,7 @@ export default function ImportarAlunosPage() {
         const line = lines[i].trim();
         if (!line) continue;
 
-        const [matricula, nome, email, tipo, turma] = line.split(',').map(s => s.trim());
+        const [matricula, nome, email, tipo, turma] = line.split(',').map((s: string) => s.trim());
         
         if (!matricula || !nome || !tipo || !turma) {
           console.error(`Linha ${i + 1} inválida:`, line);

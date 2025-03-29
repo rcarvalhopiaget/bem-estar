@@ -3,66 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Alert } from '@mui/material';
-import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/contexts/AuthContext'; // Mantido comentado por enquanto
 import { FirebaseError } from 'firebase/app';
-
-// Componente Button incorporado
-const Button = ({ 
-  children, 
-  className = "", 
-  isLoading = false, 
-  ...props 
-}: {
-  children: React.ReactNode;
-  className?: string;
-  isLoading?: boolean;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
-  return (
-    <button
-      className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 ${className}`}
-      disabled={isLoading || props.disabled}
-      {...props}
-    >
-      {isLoading ? (
-        <div className="flex items-center">
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>{typeof children === 'string' ? 'Carregando...' : children}</span>
-        </div>
-      ) : (
-        children
-      )}
-    </button>
-  );
-};
-
-// Componente Input incorporado
-const Input = ({ 
-  label, 
-  className = "", 
-  type = "text", 
-  ...props 
-}: {
-  label?: string;
-  className?: string;
-  type?: string;
-} & React.InputHTMLAttributes<HTMLInputElement>) => {
-  return (
-    <div className="flex flex-col space-y-2">
-      {label && (
-        <label className="text-sm font-medium text-gray-700">{label}</label>
-      )}
-      <input
-        type={type}
-        className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-        {...props}
-      />
-    </div>
-  );
-};
+// import { Button } from '../../../components/ui/button'; // Alterado para alias
+// import { Input } from '../../../components/ui/input'; // Alterado para alias
+import { Button } from '@/components/ui/button'; // Usando alias
+import { Input } from '@/components/ui/input'; // Usando alias
+import { useAuth } from '@/contexts/AuthContext'; // Usando alias
 
 export default function LoginPage() {
   const router = useRouter();
@@ -128,30 +75,36 @@ export default function LoginPage() {
         </div>
         
         {error && (
-          <Alert severity="error" className="mt-4">
-            {error}
-          </Alert>
+          <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
         )}
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              placeholder="Digite seu email"
-              disabled={loading || authLoading}
-            />
+            <div className="flex flex-col space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                placeholder="Digite seu email"
+                disabled={loading || authLoading}
+              />
+            </div>
 
-            <Input
-              label="Senha"
-              type="password"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              placeholder="Digite sua senha"
-              disabled={loading || authLoading}
-            />
+            <div className="flex flex-col space-y-1.5">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">Senha</label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                placeholder="Digite sua senha"
+                disabled={loading || authLoading}
+              />
+            </div>
           </div>
 
           <div>
@@ -159,7 +112,6 @@ export default function LoginPage() {
               type="submit"
               className="w-full py-3 text-lg"
               disabled={loading || authLoading}
-              isLoading={loading || authLoading}
             >
               {loading || authLoading ? 'Entrando...' : 'Entrar'}
             </Button>

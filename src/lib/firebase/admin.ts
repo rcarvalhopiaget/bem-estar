@@ -7,14 +7,14 @@ interface FirebaseAdminConfig {
 }
 
 function getFirebaseAdminConfig(): FirebaseAdminConfig {
-  const projectId = process.env.FIREBASE_PROJECT_ID
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL
   // Substitui \n por quebras de linha reais na chave privada
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\n/g, '\n')
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
-      'Variáveis de ambiente Firebase Admin (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) não estão configuradas.',
+      'Variáveis de ambiente Firebase Admin (FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY) não estão configuradas.',
     )
   }
 

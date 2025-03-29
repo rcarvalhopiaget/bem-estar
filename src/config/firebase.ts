@@ -3,20 +3,26 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 
-// Configuração do Firebase
+// Configuração do Firebase LENDO VARIÁVEIS DE AMBIENTE
 const firebaseConfig = {
-  apiKey: "AIzaSyBxjBGF_ZvUo9u_2MJrwVc2Og7uD5TDkQE",
-  authDomain: "bem-estar-temp.firebaseapp.com",
-  projectId: "bem-estar-temp",
-  storageBucket: "bem-estar-temp.appspot.com",
-  messagingSenderId: "654007389715",
-  appId: "1:654007389715:web:d4af06004886e3d8b5d0c6"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
+
+// Verifica se todos os valores necessários foram carregados
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  console.error("Erro: Variáveis de ambiente do Firebase não estão configuradas corretamente.");
+  // Você pode querer lançar um erro aqui ou lidar de outra forma
+}
 
 // Verifica se já existe uma instância do Firebase e usa ela, ou cria uma nova
 let app;
 if (getApps().length === 0) {
-  console.log("Inicializando nova instância do Firebase");
+  console.log("Inicializando nova instância do Firebase com variáveis de ambiente."); // Log atualizado
   app = initializeApp(firebaseConfig);
 } else {
   console.log("Usando instância existente do Firebase");

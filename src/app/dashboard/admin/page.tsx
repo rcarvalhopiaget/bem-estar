@@ -226,7 +226,7 @@ export default function AdminPage() {
             {resultadoAdmin.length > 0 && (
               <div className="mt-4 p-3 bg-muted rounded-md text-sm">
                 <h3 className="font-semibold mb-2">Resultado:</h3>
-                {resultadoAdmin.map((linha, index) => (
+                {resultadoAdmin.map((linha: string, index: number) => (
                   <p key={index} className="font-mono">
                     {linha}
                   </p>
@@ -258,7 +258,7 @@ export default function AdminPage() {
             {resultado.length > 0 && (
               <div className="mt-4 p-3 bg-muted rounded-md text-sm">
                 <h3 className="font-semibold mb-2">Resultado:</h3>
-                {resultado.map((linha, index) => (
+                {resultado.map((linha: string, index: number) => (
                   <p key={index} className="font-mono">
                     {linha}
                   </p>
