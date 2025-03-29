@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
-import { Typography, Box, Paper, Divider, CircularProgress } from '@mui/material';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
@@ -200,77 +202,72 @@ export default function AdminPage() {
   };
 
   return (
-    <div>
-      <Typography variant="h4" gutterBottom>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">
         Ferramentas de Administração
-      </Typography>
+      </h1>
 
-      <Box sx={{ mb: 4 }}>
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Criar/Atualizar Usuário Admin
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Esta ferramenta cria ou atualiza o usuário admin (rodrigo.carvalho@jpiaget.com.br) com perfil ADMIN e status ativo.
-          </Typography>
-          
-          <Button 
-            onClick={handleCriarUsuarioAdmin}
-            disabled={loadingAdmin}
-            variant="default"
-            color="primary"
-          >
-            {loadingAdmin ? <CircularProgress size={24} /> : 'Criar/Atualizar Usuário Admin'}
-          </Button>
-          
-          {resultadoAdmin.length > 0 && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Resultado:
-              </Typography>
-              {resultadoAdmin.map((linha, index) => (
-                <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
-                  {linha}
-                </Typography>
-              ))}
-            </Box>
-          )}
-        </Paper>
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Criar/Atualizar Usuário Admin</CardTitle>
+            <CardDescription>
+              Esta ferramenta cria ou atualiza o usuário admin (rodrigo.carvalho@jpiaget.com.br) com perfil ADMIN e status ativo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={handleCriarUsuarioAdmin}
+              disabled={loadingAdmin}
+            >
+              {loadingAdmin ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar/Atualizar Usuário Admin'}
+            </Button>
+            
+            {resultadoAdmin.length > 0 && (
+              <div className="mt-4 p-3 bg-muted rounded-md text-sm">
+                <h3 className="font-semibold mb-2">Resultado:</h3>
+                {resultadoAdmin.map((linha, index) => (
+                  <p key={index} className="font-mono">
+                    {linha}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
         
-        <Divider sx={{ my: 4 }} />
+        <Separator />
         
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Limpar Alunos Duplicados
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Esta ferramenta identifica e remove registros duplicados de alunos no banco de dados.
-            Use com cautela, pois esta ação não pode ser desfeita.
-          </Typography>
-          
-          <Button 
-            onClick={handleLimparDuplicados}
-            disabled={loading}
-            variant="default"
-            color="error"
-          >
-            {loading ? <CircularProgress size={24} /> : 'Limpar Duplicados'}
-          </Button>
-          
-          {resultado.length > 0 && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Resultado:
-              </Typography>
-              {resultado.map((linha, index) => (
-                <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
-                  {linha}
-                </Typography>
-              ))}
-            </Box>
-          )}
-        </Paper>
-      </Box>
+        <Card>
+          <CardHeader>
+            <CardTitle>Limpar Alunos Duplicados</CardTitle>
+            <CardDescription>
+              Esta ferramenta identifica e remove registros duplicados de alunos no banco de dados.
+              Use com cautela, pois esta ação não pode ser desfeita.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={handleLimparDuplicados}
+              disabled={loading}
+              variant="destructive"
+            >
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Limpar Duplicados'}
+            </Button>
+            
+            {resultado.length > 0 && (
+              <div className="mt-4 p-3 bg-muted rounded-md text-sm">
+                <h3 className="font-semibold mb-2">Resultado:</h3>
+                {resultado.map((linha, index) => (
+                  <p key={index} className="font-mono">
+                    {linha}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
