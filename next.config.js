@@ -29,8 +29,7 @@ const nextConfig = {
     cpus: 1,
     esmExternals: 'loose',
     outputFileTracingRoot: __dirname,
-    disableOptimizedLoading: true,
-    serverComponents: false, // Desabilitar React Server Components
+    disableOptimizedLoading: true
   }
 }
 
