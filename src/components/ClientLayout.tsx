@@ -1,8 +1,6 @@
 'use client';
 
-import { Toaster as HotToaster } from 'react-hot-toast';
-import { EmailJSInit } from '@/components/EmailJSInit';
-import { Toaster } from '@/components/ui/toaster';
+import React from 'react'
 
 export default function ClientLayout({
   children,
@@ -10,11 +8,8 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
-      <EmailJSInit />
+    <div className="min-h-screen">
       {children}
-      <Toaster />
-      <HotToaster position="top-right" />
-    </>
+    </div>
   );
 }

@@ -1,14 +1,6 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
-
-// Instalar dependências adicionais necessárias para o build na Vercel
-console.log('📦 Instalando dependências adicionais para o build...');
-try {
-  execSync('npm install tailwindcss postcss autoprefixer critters clsx tailwind-merge --save', { stdio: 'inherit' });
-  console.log('✅ Dependências adicionais instaladas com sucesso!');
-} catch (error) {
-  console.error('❌ Erro ao instalar dependências adicionais:', error);
-}
+const path = require('path');
 
 // Verificar e criar tsconfig.tsbuildinfo vazio se não existir
 console.log('🔍 Verificando tsconfig.tsbuildinfo...');
@@ -22,6 +14,103 @@ if (!fs.existsSync('./.next/tsconfig.tsbuildinfo')) {
     console.log('✅ tsconfig.tsbuildinfo criado com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao criar tsconfig.tsbuildinfo:', error);
+  }
+}
+
+// Garantir que as pastas src/ existam
+if (!fs.existsSync('./src')) {
+  fs.mkdirSync('./src', { recursive: true });
+}
+
+// Garantir que o arquivo global.css exista
+console.log('🔍 Verificando arquivo global.css...');
+if (!fs.existsSync('./src/app/globals.css')) {
+  try {
+    // Garantir que o diretório app exista
+    if (!fs.existsSync('./src/app')) {
+      fs.mkdirSync('./src/app', { recursive: true });
+    }
+
+    const globalCssContent = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+ 
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}`;
+    fs.writeFileSync('./src/app/globals.css', globalCssContent);
+    console.log('✅ globals.css criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar globals.css:', error);
   }
 }
 
@@ -128,6 +217,10 @@ console.log('🔍 Verificando componentes UI...');
 console.log('🔍 Verificando diretório components/ui...');
 if (!fs.existsSync('./src/components/ui')) {
   try {
+    // Garantir que o diretório components exista
+    if (!fs.existsSync('./src/components')) {
+      fs.mkdirSync('./src/components', { recursive: true });
+    }
     fs.mkdirSync('./src/components/ui', { recursive: true });
     console.log('✅ Diretório components/ui criado com sucesso!');
   } catch (error) {
@@ -375,10 +468,63 @@ module.exports = {
   }
 }
 
-// Executar o build do Next.js
+// Criar/modificar gitignore para ignorar node_modules
+if (!fs.existsSync('./.gitignore')) {
+  try {
+    fs.writeFileSync('./.gitignore', `# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+`);
+    console.log('✅ .gitignore criado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao criar .gitignore:', error);
+  }
+}
+
+// Instalar dependências de produção
+console.log('📦 Instalando dependências de produção (pode demorar um pouco)...');
+try {
+  execSync('npm install', { stdio: 'inherit' });
+  console.log('✅ Dependências instaladas com sucesso!');
+} catch (error) {
+  console.error('❌ Erro ao instalar dependências:', error);
+}
+
+// Executar o build do Next.js com NODE_ENV=production para garantir que as dependências corretas sejam usadas
 console.log('🔨 Executando build do Next.js...');
 try {
-  execSync('next build', { stdio: 'inherit' });
+  execSync('NODE_ENV=production next build', { stdio: 'inherit' });
   console.log('✅ Build concluído com sucesso!');
 } catch (error) {
   console.error('❌ Erro durante o build:', error);
