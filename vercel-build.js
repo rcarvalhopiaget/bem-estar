@@ -513,18 +513,19 @@ next-env.d.ts
 }
 
 // Instalar dependências de produção
-console.log('📦 Instalando dependências de produção (pode demorar um pouco)...');
+console.log('📦 Instalando dependências (pode demorar um pouco)...');
 try {
   execSync('npm install', { stdio: 'inherit' });
   console.log('✅ Dependências instaladas com sucesso!');
 } catch (error) {
   console.error('❌ Erro ao instalar dependências:', error);
+  process.exit(1);
 }
 
-// Executar o build do Next.js com NODE_ENV=production para garantir que as dependências corretas sejam usadas
+// Executar o build do Next.js
 console.log('🔨 Executando build do Next.js...');
 try {
-  execSync('NODE_ENV=production next build', { stdio: 'inherit' });
+  execSync('next build', { stdio: 'inherit' });
   console.log('✅ Build concluído com sucesso!');
 } catch (error) {
   console.error('❌ Erro durante o build:', error);
