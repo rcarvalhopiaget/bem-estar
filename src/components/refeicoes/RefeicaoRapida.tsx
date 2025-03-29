@@ -5,7 +5,7 @@ import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogCon
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
 import { TipoRefeicao } from '@/types/refeicao';
-import { toast } from '@/components/ui/toast-wrapper';
+import { toast } from '@/components/ui/toast';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';

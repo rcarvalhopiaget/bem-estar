@@ -1,7 +1,7 @@
 'use client';
 
 import { toast as reactHotToast } from 'react-hot-toast';
-import { useToast as shadcnUseToast, ToastProps, ToastActionElement } from '@/components/ui/use-toast';
+import { useToast as shadcnUseToast, ToastProps, ToastActionElement } from '@/components/ui/toast';
 
 // Re-exportar os tipos
 export type { ToastProps, ToastActionElement };

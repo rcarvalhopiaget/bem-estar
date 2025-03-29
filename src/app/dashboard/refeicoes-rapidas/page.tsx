@@ -7,7 +7,7 @@ import RefeicaoRapida from '@/components/refeicoes/RefeicaoRapida';
 import { EmailVerification } from '@/components/EmailVerification';
 import { alunoService } from '@/services/alunoService';
 import { Aluno } from '@/types/aluno';
-import { toast } from '@/components/ui/toast-wrapper';
+import { toast } from '@/components/ui/toast';
 
 export default function RefeicoesRapidasPage() {
   const router = useRouter();

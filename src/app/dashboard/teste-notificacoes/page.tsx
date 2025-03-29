@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast as hotToast } from 'react-hot-toast';
-import { useToast, toast } from '@/components/ui/toast-wrapper';
+import { useToast, toast } from '@/components/ui/toast';
 
 export default function TesteNotificacoesPage() {
   const { toast } = useToast();

@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/hooks/usePermissions';
 import { alunoService } from '@/services/alunoService';
@@ -23,7 +23,7 @@ import { IconButton } from '@mui/material';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
-import { toast } from '@/components/ui/toast-wrapper';
+import { toast } from '@/components/ui/toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface NotificacaoConfig {

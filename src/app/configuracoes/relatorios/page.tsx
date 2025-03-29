@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/Label';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useState, forwardRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';

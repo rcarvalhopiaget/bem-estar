@@ -20,7 +20,7 @@ import {
   Person as PersonIcon,
   LockReset as LockResetIcon
 } from '@mui/icons-material';
-import { useToast, toast } from '@/components/ui/toast-wrapper';
+import { useToast, toast } from '@/components/ui/toast';
 import { Usuario, PerfilUsuario, PERFIS_USUARIO } from '@/types/usuario';
 import { obterUsuarioPorEmail, atualizarUsuario, redefinirSenhaUsuario } from '@/services/usuarioService';
 import { useAuth } from '@/contexts/AuthContext';

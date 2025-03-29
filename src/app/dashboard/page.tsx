@@ -2,8 +2,8 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AtividadesRecentes } from '@/components/atividades/AtividadesRecentes';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useEffect, useState } from 'react';
