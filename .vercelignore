@@ -1,41 +1,59 @@
-# Ignorar arquivos relacionados a submódulos Git
-.git
+# Arquivos e diretórios do Git
+.git/
+.gitignore
 .gitmodules
 
-# Ignorar arquivos desnecessários para o build
-node_modules
-.github
-.vscode
-.env
+# Arquivos de desenvolvimento
 .env.local
 .env.development
 .env.test
-.env.production
-.vercel
-.idea
+
+# Diretórios de build e cache
+.next/
+out/
+build/
+dist/
+.cache/
+.vercel/
+
+# Dependências
+node_modules/
+
+# Arquivos de configuração de desenvolvimento
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.DS_Store
-*.pem
-coverage
-.next
-build
-dist
-dataconnect-generated
-scripts
-*.ps1
-*.sh
-*.js
-!next.config.js
-!vercel.json
 
-# Manter o script de solução direta e ignorar outros scripts de desenvolvimento
+# Arquivos de IDE e editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos temporários
+*.tmp
+*.temp
+.DS_Store
+
+# Arquivos de teste
+__tests__/
+*.test.*
+*.spec.*
+
+# Documentação
+docs/
+*.md
+!README.md
+
+# Scripts de desenvolvimento
+scripts/
+*.sh
 *.ps1
-fix-ui-components.js
-fix-imports.js
-fix-ui-imports.js
-patch-imports.js
-prepare-vercel-deploy.js
-# fix-ui-direct.js # NÃO IGNORE ESTE ARQUIVO, NECESSÁRIO PARA O BUILD 
+*.bat
+
+# Outros
+.husky/
+.github/
+coverage/
+bem-estar-1/ 
