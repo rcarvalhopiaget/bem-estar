@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   images: {
     domains: ['firebasestorage.googleapis.com'],
   },
@@ -18,13 +18,19 @@ const nextConfig = {
     };
     return config;
   },
+  // Desabilitar a geração estática de páginas para simplificar o build
+  output: 'standalone',
+  staticPageGenerationTimeout: 120,
   experimental: {
-    // Permitir que o Next.js predefina páginas que dão erro durante o build
-    optimizeCss: true,
+    // Desabilitar optimizações que estão causando problemas
+    optimizeCss: false,
     largePageDataBytes: 128 * 1000, // 128KB
-    // Ignorar erros de SSG durante o build
     workerThreads: false,
-    cpus: 1
+    cpus: 1,
+    esmExternals: 'loose',
+    outputFileTracingRoot: __dirname,
+    disableOptimizedLoading: true,
+    serverComponents: false, // Desabilitar React Server Components
   }
 }
 
