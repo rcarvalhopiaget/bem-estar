@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
-import { enviarRelatorioDiario } from '@/services/emailService';
+import { enviarRelatorioDiario } from '@/services/emailService.server';
 import { emailConfig } from '@/config/email.config';
 
 // Modo de simulação baseado apenas na configuração
