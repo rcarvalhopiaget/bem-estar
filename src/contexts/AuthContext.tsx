@@ -62,6 +62,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Função para chamar a API de sessão
+  const manageSession = async (action: 'login' | 'logout') => {
+    if (action === 'login') {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.warn('[manageSession] Tentativa de login na sessão sem usuário Firebase ativo.');
+        return;
+      }
+      try {
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch('/api/auth/session/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ idToken }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          console.error('[manageSession] Falha ao criar cookie de sessão:', result.error || response.statusText);
+          // Opcional: Deslogar usuário Firebase se a criação da sessão falhar?
+        } else {
+          console.log('[manageSession] Cookie de sessão criado com sucesso.');
+        }
+      } catch (error) {
+        console.error('[manageSession] Erro ao chamar API de login da sessão:', error);
+      }
+    } else if (action === 'logout') {
+      try {
+        const response = await fetch('/api/auth/session/logout', {
+          method: 'POST',
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          console.error('[manageSession] Falha ao limpar cookie de sessão:', result.error || response.statusText);
+        } else {
+          console.log('[manageSession] Cookie de sessão limpo com sucesso.');
+        }
+      } catch (error) {
+        console.error('[manageSession] Erro ao chamar API de logout da sessão:', error);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!auth) {
       console.error('Auth não está inicializado');
@@ -69,12 +111,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await fetchUserData(user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchUserData(currentUser.uid);
+        // **IMPORTANTE:** Criar/Validar sessão quando o estado muda para logado
+        await manageSession('login');
       } else {
         setUserData(null);
+        // **IMPORTANTE:** Limpar sessão quando o estado muda para deslogado
+        // Não precisa chamar se o logout já faz isso, mas garante limpeza em outros casos (ex: token expirado)
+        await manageSession('logout');
       }
       setLoading(false);
     });
@@ -93,10 +140,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await fetchUserData(result.user.uid);
       
-      // Criar um cookie de sessão no cliente
-      if (typeof document !== 'undefined') {
-        document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
-      }
+      // *** REMOVIDO: Cookie inseguro do cliente ***
+      // if (typeof document !== 'undefined') {
+      //   document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
+      // }
+      
+      // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
+      await manageSession('login');
       
       return result.user;
     } catch (error) {
@@ -117,12 +167,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName: name });
-      await fetchUserData(result.user.uid);
+      // Não precisa chamar fetchUserData aqui, onAuthStateChanged fará isso.
       
-      // Criar um cookie de sessão no cliente
-      if (typeof document !== 'undefined') {
-        document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
-      }
+      // *** REMOVIDO: Cookie inseguro do cliente ***
+      // if (typeof document !== 'undefined') {
+      //   document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
+      // }
+      
+      // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
+      // onAuthStateChanged já chamará manageSession('login') quando o usuário for criado
+      // await manageSession('login'); 
       
       return result.user;
     } catch (error) {
@@ -141,13 +195,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       setLoading(true);
+      // *** ADICIONADO: Limpar cookie HttpOnly ANTES de deslogar do Firebase ***
+      await manageSession('logout');
       await signOut(auth);
       setUserData(null);
       
-      // Remover o cookie de sessão
-      if (typeof document !== 'undefined') {
-        document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      }
+      // *** REMOVIDO: Limpeza do cookie inseguro do cliente ***
+      // if (typeof document !== 'undefined') {
+      //   document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      // }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;

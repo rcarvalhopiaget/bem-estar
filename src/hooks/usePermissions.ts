@@ -38,7 +38,7 @@ export function usePermissions() {
   const isCoordenador = perfil === 'COORDENADOR' || perfil === 'coordenador';
   
   // Permissões específicas
-  const podeGerenciarConfiguracoes = true; // isAdmin || isCoordenador;
+  const podeGerenciarConfiguracoes = isAdmin || isCoordenador;
   
   // Permissão de escrita (compatibilidade com código legado)
   const canWrite = isAuthenticated && (isAdmin || isOperador || isProfessor);
