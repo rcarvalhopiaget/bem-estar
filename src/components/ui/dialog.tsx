@@ -8,11 +8,11 @@ const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
-const DialogPortal = ({
-  className,
-  ...props
-}: DialogPrimitive.DialogPortalProps) => (
-  <DialogPrimitive.Portal className={cn(className)} {...props} />
+const DialogPortal = ({ 
+  children, 
+  ...props 
+}: DialogPrimitive.DialogPortalProps & { children?: React.ReactNode }) => (
+  <DialogPrimitive.Portal {...props}>{children}</DialogPrimitive.Portal>
 )
 DialogPortal.displayName = DialogPrimitive.Portal.displayName
 
