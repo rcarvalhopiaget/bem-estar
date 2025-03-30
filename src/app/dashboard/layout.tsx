@@ -12,8 +12,11 @@ import {
   BarChart3,   // Equivalente a Assessment
   X,           // Equivalente a Close
   User,        // Equivalente a Person
-  UserCircle   // Equivalente a AccountCircle
+  UserCircle,  // Equivalente a AccountCircle
+  CalendarIcon // Equivalente a Event
 } from "lucide-react"; // Importa ícones do lucide-react
+import { AuthProvider } from '@/contexts/AuthContext'; // Ajuste o caminho
+import { NotificationBell } from '@/components/notifications/NotificationBell'; // Importa o sino
 
 export default function DashboardLayout({
   children,
