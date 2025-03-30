@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getReportEmailRecipients } from './reportEmailService';
+import { _enviarEmailServidor } from './emailService.server';
 
 export interface MealReport {
   id: string;
@@ -91,17 +92,22 @@ export function generateCSV(data: MealReport[]): string {
   ];
   
   // Linhas de dados
-  const rows = data.map(item => [
-    item.id,
-    item.userId,
-    item.userName,
-    item.mealType,
-    item.mealName,
-    item.description || '',
-    item.calories.toString(),
-    format(item.date, 'dd/MM/yyyy', { locale: ptBR }),
-    format(item.date, 'HH:mm', { locale: ptBR })
-  ]);
+  const rows = data.map(item => {
+    const dataFormatada = format(item.date, 'dd/MM/yyyy');
+    const horaFormatada = format(item.date, 'HH:mm');
+    
+    return [
+      item.id,
+      item.userId,
+      item.userName,
+      item.mealType,
+      item.mealName,
+      item.description || '',
+      item.calories.toString(),
+      dataFormatada,
+      horaFormatada
+    ];
+  });
   
   // Combinar cabeçalho e linhas
   const allRows = [headers, ...rows];
@@ -147,24 +153,46 @@ export async function sendReportEmails(startDate?: Date, endDate?: Date): Promis
     
     // Gerar CSV
     const csvContent = generateCSV(reportData);
+
+    // Gerar HTML
+    const dataInicio = format(reportStartDate, 'dd/MM/yyyy');
+    const dataFim = format(reportEndDate, 'dd/MM/yyyy');
+    const nomeArquivo = `relatorio-refeicoes-${format(reportStartDate, 'dd-MM-yyyy')}-a-${format(reportEndDate, 'dd-MM-yyyy')}.csv`;
     
-    // Aqui você integraria com um serviço de envio de email como SendGrid, Mailgun, etc.
-    // Por exemplo, com Firebase Cloud Functions ou um serviço de API de email
+    const htmlContent = `
+      <h1>Relatório de Refeições</h1>
+      <p>Período: ${dataInicio} a ${dataFim}</p>
+      <p>Total de refeições: ${reportData.length}</p>
+      <p>Este é um relatório automático. O arquivo CSV completo está anexo.</p>
+    `;
+
+    // Enviar para cada destinatário ativo
+    const enviosPromises = activeRecipients.map(async (recipient) => {
+      try {
+        const resultado = await _enviarEmailServidor({
+          to: recipient.email,
+          subject: `Relatório de Refeições - ${dataInicio} a ${dataFim}`,
+          html: htmlContent,
+          attachments: [{
+            filename: nomeArquivo,
+            content: Buffer.from(csvContent, 'utf-8'),
+            contentType: 'text/csv'
+          }]
+        });
+
+        if (resultado.success) {
+          console.log(`Relatório enviado com sucesso para ${recipient.email}`);
+        } else {
+          console.error(`Falha ao enviar relatório para ${recipient.email}: ${resultado.message}`);
+        }
+      } catch (error) {
+        console.error(`Erro ao enviar relatório para ${recipient.email}:`, error);
+      }
+    });
+
+    // Aguardar todos os envios
+    await Promise.all(enviosPromises);
     
-    // Exemplo de integração com serviço de email (pseudocódigo):
-    // await emailService.send({
-    //   to: activeRecipients.map(r => r.email),
-    //   subject: `Relatório de Refeições - ${format(reportStartDate, 'dd/MM/yyyy')} a ${format(reportEndDate, 'dd/MM/yyyy')}`,
-    //   text: `Segue em anexo o relatório de refeições do período de ${format(reportStartDate, 'dd/MM/yyyy')} a ${format(reportEndDate, 'dd/MM/yyyy')}.`,
-    //   attachments: [
-    //     {
-    //       filename: `relatorio-refeicoes-${format(reportStartDate, 'dd-MM-yyyy')}-a-${format(reportEndDate, 'dd-MM-yyyy')}.csv`,
-    //       content: csvContent
-    //     }
-    //   ]
-    // });
-    
-    console.log(`Relatório enviado para ${activeRecipients.length} destinatários`);
     return true;
   } catch (error) {
     console.error('Erro ao enviar relatório por email:', error);
