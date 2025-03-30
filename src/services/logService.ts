@@ -230,15 +230,23 @@ export function useLogService() {
         return;
       }
 
-      await logService.addLog({
+      // Construir o objeto de log base
+      const logData: Omit<SystemLog, 'id' | 'timestamp' | 'userName'> & { userName?: string } = {
         action,
         module,
         description,
         userId: user.uid,
-        userEmail: user.email || 'unknown',
-        userName: user.displayName || undefined,
+        userEmail: user.email || 'unknown', // Email é obrigatório ou 'unknown'
         details
-      });
+      };
+
+      // Adicionar userName apenas se existir
+      if (user.displayName) {
+        logData.userName = user.displayName;
+      }
+
+      await logService.addLog(logData);
+
     } catch (error) {
       console.error('Erro ao registrar log:', error);
       // Erros de log não devem interromper o fluxo da aplicação
