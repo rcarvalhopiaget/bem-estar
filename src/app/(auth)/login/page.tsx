@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 // import { useAuth } from '@/contexts/AuthContext'; // Mantido comentado por enquanto
@@ -13,11 +13,23 @@ import { useAuth } from '@/contexts/AuthContext'; // Usando alias
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, loading: authLoading } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // useEffect para redirecionar quando o usuário estiver logado e o contexto carregado
+  useEffect(() => {
+    // Se o carregamento inicial do contexto terminou E o usuário está definido (logado)
+    if (!authLoading && user) {
+      console.log('Usuário autenticado no contexto, redirecionando para /dashboard...');
+      router.push('/dashboard');
+    }
+    // O redirecionamento SÓ deve acontecer quando o usuário LOGAR,
+    // não queremos redirecionar se ele já estiver logado ao visitar /login.
+    // As dependências garantem que isso só roda quando user ou authLoading mudam.
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +45,7 @@ export default function LoginPage() {
       
       console.log('Tentando fazer login...');
       await signIn(email, password);
-      console.log('Login bem-sucedido!');
-      
-      router.push('/dashboard');
+      console.log('Login bem-sucedido (signIn concluído)!');
     } catch (err: any) {
       console.error('Erro detalhado ao fazer login:', err);
       

@@ -140,13 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await fetchUserData(result.user.uid);
       
-      // *** REMOVIDO: Cookie inseguro do cliente ***
-      // if (typeof document !== 'undefined') {
-      //   document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
-      // }
-      
       // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
-      await manageSession('login');
       
       return result.user;
     } catch (error) {
@@ -169,14 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await updateProfile(result.user, { displayName: name });
       // Não precisa chamar fetchUserData aqui, onAuthStateChanged fará isso.
       
-      // *** REMOVIDO: Cookie inseguro do cliente ***
-      // if (typeof document !== 'undefined') {
-      //   document.cookie = `session=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 dias
-      // }
-      
       // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
-      // onAuthStateChanged já chamará manageSession('login') quando o usuário for criado
-      // await manageSession('login'); 
       
       return result.user;
     } catch (error) {
@@ -200,10 +187,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
       setUserData(null);
       
-      // *** REMOVIDO: Limpeza do cookie inseguro do cliente ***
-      // if (typeof document !== 'undefined') {
-      //   document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      // }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       throw error;
