@@ -219,37 +219,42 @@ export function useLogService() {
     action: LogAction,
     module: LogModule,
     description: string,
-    details?: any
+    details?: any // Parâmetro opcional
   ) => {
     if (!user) return;
     
     try {
-      // Verificar se o banco de dados está disponível
       if (!db) {
         console.error("Erro ao conectar ao banco de dados");
         return;
       }
 
-      // Construir o objeto de log base
-      const logData: Omit<SystemLog, 'id' | 'timestamp' | 'userName'> & { userName?: string } = {
+      // Construir o objeto de log base (sem campos opcionais inicialmente)
+      const logData: Omit<SystemLog, 'id' | 'timestamp' | 'userName' | 'details'> & { userName?: string, details?: any } = {
         action,
         module,
         description,
         userId: user.uid,
-        userEmail: user.email || 'unknown', // Email é obrigatório ou 'unknown'
-        details
+        userEmail: user.email || 'unknown',
       };
 
       // Adicionar userName apenas se existir
       if (user.displayName) {
         logData.userName = user.displayName;
       }
+      
+      // Adicionar details apenas se for fornecido e não for undefined
+      if (details !== undefined) { 
+        logData.details = details;
+      }
 
+      // Adicionar log ao Firestore
+      console.log('Tentando adicionar log com dados:', logData); // Log para verificar o objeto final
       await logService.addLog(logData);
+      console.log('Log registrado com sucesso (após addLog).');
 
     } catch (error) {
-      console.error('Erro ao registrar log:', error);
-      // Erros de log não devem interromper o fluxo da aplicação
+      console.error('Erro ao registrar log no hook useLogService:', error);
     }
   };
   
