@@ -37,7 +37,7 @@ import {
   Delete as DeleteIcon, 
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  LockReset as LockResetIcon,
+  LockReset as LockResetIcon, 
   Check as CheckIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
@@ -53,6 +53,7 @@ import {
   criarUsuarioAdriana
 } from '@/services/usuarioService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLogService } from '@/services/logService';
 
 interface AtualizarUsuarioResult {
   success: boolean;
@@ -63,6 +64,7 @@ interface AtualizarUsuarioResult {
 export default function UsuariosPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { logAction } = useLogService();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
@@ -73,6 +75,7 @@ export default function UsuariosPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openResetDialog, setOpenResetDialog] = useState(false);
+  const [openConfirmToggleDialog, setOpenConfirmToggleDialog] = useState(false);
   const [usuarioAtual, setUsuarioAtual] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState({
     nome: '',
@@ -208,6 +211,7 @@ export default function UsuariosPage() {
     setOpenDialog(false);
     setOpenDeleteDialog(false);
     setOpenResetDialog(false);
+    setOpenConfirmToggleDialog(false);
     setUsuarioAtual(null);
   };
 
@@ -215,9 +219,8 @@ export default function UsuariosPage() {
   const handleSaveUsuario = async () => {
     if (!validarFormulario()) return;
     
+    setLoading(true);
     try {
-      setLoading(true);
-      
       if (usuarioAtual) {
         // Atualizar usuário existente
         await atualizarUsuario(usuarioAtual.id, {
@@ -226,34 +229,28 @@ export default function UsuariosPage() {
           cargo: formData.cargo,
           perfil: formData.perfil
         });
-        toast({ 
-          title: "Sucesso", 
-          description: 'Usuário atualizado com sucesso!'
-        });
+        toast({ title: "Sucesso", description: 'Usuário atualizado com sucesso!'});
+        await logAction('UPDATE', 'USUARIOS', `Usuário ${formData.nome} (ID: ${usuarioAtual.id}) atualizado.`, { targetUserId: usuarioAtual.id, dados: formData });
       } else {
         // Criar novo usuário
-        await criarUsuario(
+        const novoUsuario = await criarUsuario(
           formData.email,
           formData.senha,
           formData.nome,
           formData.perfil,
           formData.cargo
         );
-        toast({ 
-          title: "Sucesso", 
-          description: 'Usuário criado com sucesso!'
-        });
+        toast({ title: "Sucesso", description: 'Usuário criado com sucesso!'});
+        await logAction('CREATE', 'USUARIOS', `Usuário ${formData.nome} criado.`, { targetUserId: novoUsuario.id, email: formData.email, perfil: formData.perfil });
       }
       
       handleCloseDialog();
       carregarUsuarios();
     } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Salvar", 
-        description: error.message || 'Não foi possível salvar o usuário. Tente novamente.'
-      });
+      const actionText = usuarioAtual ? 'atualizar' : 'criar';
+      toast({ variant: "destructive", title: "Erro", description: `Falha ao ${actionText} usuário: ${error?.message || 'Erro desconhecido'}` });
+      await logAction('ERROR', 'USUARIOS', `Falha ao ${actionText} usuário ${formData.nome}`, { error: error?.message, dados: formData, targetUserId: usuarioAtual?.id });
     } finally {
       setLoading(false);
     }
@@ -261,29 +258,20 @@ export default function UsuariosPage() {
 
   // Alternar status do usuário (ativar/desativar)
   const handleToggleStatus = async (usuario: Usuario) => {
+    const action = usuario.ativo ? desativarUsuario : ativarUsuario;
+    const actionText = usuario.ativo ? 'desativar' : 'ativar';
+    const newStatus = !usuario.ativo;
+
+    setLoading(true);
     try {
-      setLoading(true);
-      if (usuario.ativo) {
-        await desativarUsuario(usuario.id);
-        toast({ 
-          title: "Sucesso", 
-          description: 'Usuário desativado com sucesso!'
-        });
-      } else {
-        await ativarUsuario(usuario.id);
-        toast({ 
-          title: "Sucesso", 
-          description: 'Usuário ativado com sucesso!'
-        });
-      }
+      await action(usuario.id);
+      toast({ title: 'Sucesso', description: `Usuário ${usuario.nome} ${actionText}do com sucesso.` });
+      await logAction(newStatus ? 'UPDATE' : 'DELETE', 'USUARIOS', `Usuário ${usuario.nome} (ID: ${usuario.id}) ${actionText}do.`, { targetUserId: usuario.id, novoStatus: newStatus });
       carregarUsuarios();
-    } catch (error) {
-      console.error('Erro ao alterar status do usuário:', error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Alterar Status", 
-        description: 'Não foi possível alterar o status do usuário. Tente novamente.'
-      });
+    } catch (error: any) {
+      console.error(`Erro ao ${actionText} usuário:`, error);
+      toast({ variant: "destructive", title: "Erro", description: `Falha ao ${actionText} usuário: ${error?.message || 'Erro desconhecido'}` });
+      await logAction('ERROR', 'USUARIOS', `Falha ao ${actionText} usuário ${usuario.nome} (ID: ${usuario.id})`, { error: error?.message, targetUserId: usuario.id });
     } finally {
       setLoading(false);
     }
@@ -305,21 +293,16 @@ export default function UsuariosPage() {
   const handleResetPassword = async () => {
     if (!usuarioAtual) return;
     
+    setLoading(true);
     try {
-      setLoading(true);
       await redefinirSenhaUsuario(usuarioAtual.email);
-      toast({ 
-        title: "Sucesso", 
-        description: 'Email de redefinição de senha enviado com sucesso!'
-      });
+      toast({ title: 'Sucesso', description: `Email de redefinição de senha enviado para ${usuarioAtual.email}.` });
+      await logAction('UPDATE', 'AUTH', `Solicitação de redefinição de senha para ${usuarioAtual.email}.`, { targetUserId: usuarioAtual.id });
       handleCloseDialog();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao redefinir senha:', error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Redefinir Senha", 
-        description: 'Não foi possível enviar o email de redefinição de senha. Tente novamente.'
-      });
+      toast({ variant: "destructive", title: "Erro", description: `Falha ao enviar email de redefinição: ${error?.message || 'Erro desconhecido'}` });
+      await logAction('ERROR', 'AUTH', `Falha ao solicitar redefinição de senha para ${usuarioAtual.email}`, { error: error?.message, targetUserId: usuarioAtual.id });
     } finally {
       setLoading(false);
     }
@@ -708,10 +691,9 @@ export default function UsuariosPage() {
               if (usuarioAtual) handleToggleStatus(usuarioAtual);
               handleCloseDialog();
             }}
-            variant="contained"
-            color={usuarioAtual?.ativo ? 'error' : 'success'}
+            color="primary"
           >
-            {usuarioAtual?.ativo ? 'Desativar' : 'Ativar'}
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>
@@ -736,6 +718,37 @@ export default function UsuariosPage() {
             disabled={loading}
           >
             {loading ? <CircularProgress size={24} /> : 'Enviar Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo para confirmar alteração de status */}
+      <Dialog
+        open={openConfirmToggleDialog}
+        onClose={handleCloseDialog}
+      >
+        <DialogTitle>Confirmar Alteração de Status</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza que deseja {usuarioAtual?.ativo ? 'DESATIVAR' : 'ATIVAR'} o usuário {usuarioAtual?.nome}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancelar</Button>
+          <Button
+            onClick={() => {
+              if (usuarioAtual) {
+                  handleToggleStatus(usuarioAtual);
+              } else {
+                  console.error('Tentativa de toggle sem usuarioAtual definido');
+                  toast({ title: 'Erro', description: 'Erro interno ao tentar alterar status.', variant: 'destructive'});
+              }
+              handleCloseDialog();
+            }}
+            color={usuarioAtual?.ativo ? 'error' : 'success'}
+            variant="contained"
+          >
+            {usuarioAtual?.ativo ? 'Desativar' : 'Ativar'}
           </Button>
         </DialogActions>
       </Dialog>

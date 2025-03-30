@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
+import { useLogService } from '@/services/logService';
 
 // Interface para os dados do usuário no Firestore
 export interface UserData {
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logAction } = useLogService();
 
   // Função para buscar dados do usuário no Firestore
   const fetchUserData = async (userId: string) => {
@@ -135,16 +137,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Autenticação não inicializada');
     }
     
+    let loggedInUser: User | null = null;
     try {
       setLoading(true);
       const result = await signInWithEmailAndPassword(auth, email, password);
+      loggedInUser = result.user;
       await fetchUserData(result.user.uid);
       
-      // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
+      // Log de Login bem-sucedido
+      await logAction('LOGIN', 'AUTH', `Usuário ${email} logado com sucesso.`); 
       
       return result.user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao fazer login:', error);
+      // Log de falha no Login
+      await logAction('ERROR', 'AUTH', `Falha no login para ${email}`, { error: error?.message, code: error?.code });
       throw error;
     } finally {
       setLoading(false);
@@ -161,13 +168,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName: name });
+      // Log de SignUp (Criação de usuário)
+      await logAction('CREATE', 'AUTH', `Usuário ${email} criado com sucesso.`, { userId: result.user.uid });
       // Não precisa chamar fetchUserData aqui, onAuthStateChanged fará isso.
-      
-      // *** ADICIONADO: Chamar API para criar cookie HttpOnly ***
-      
+      // O manageSession('login') será chamado pelo onAuthStateChanged
       return result.user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar conta:', error);
+       await logAction('ERROR', 'AUTH', `Falha ao criar conta para ${email}`, { error: error?.message, code: error?.code });
       throw error;
     } finally {
       setLoading(false);
@@ -180,15 +188,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Autenticação não inicializada');
     }
     
+    const userBeforeLogout = user;
     try {
       setLoading(true);
-      // *** ADICIONADO: Limpar cookie HttpOnly ANTES de deslogar do Firebase ***
+      // Log de Logout ANTES de deslogar
+      if (userBeforeLogout) {
+        await logAction('LOGOUT', 'AUTH', `Usuário ${userBeforeLogout.email} deslogado.`);
+      }
       await manageSession('logout');
       await signOut(auth);
       setUserData(null);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao fazer logout:', error);
+      // Log de falha no Logout
+      if (userBeforeLogout) { // Tenta logar erro associado ao usuário que tentou deslogar
+         await logAction('ERROR', 'AUTH', `Falha ao deslogar usuário ${userBeforeLogout.email}`, { error: error?.message });
+      }
       throw error;
     } finally {
       setLoading(false);
