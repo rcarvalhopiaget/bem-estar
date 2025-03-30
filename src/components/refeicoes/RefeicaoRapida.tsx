@@ -5,7 +5,7 @@ import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogCon
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
 import { TipoRefeicao } from '@/types/refeicao';
-import { toast } from '@/components/ui/toast';
+import { useToast } from "@/components/ui/use-toast";
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
@@ -96,6 +96,7 @@ const TODOS_TIPOS_REFEICAO = [
 ];
 
 export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Props) {
+  const { toast } = useToast();
   const [busca, setBusca] = useState('');
   const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
@@ -195,7 +196,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         setRefeicoesSemanais(refeicoesSemanaisPorAluno);
       } catch (error) {
         console.error('Erro ao carregar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
-        toast.error('Erro ao carregar refeições do dia');
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar refeições do dia",
+          variant: "destructive",
+        });
       }
     };
 
@@ -214,7 +219,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     // Verifica se a data selecionada é a data atual
     const hoje = new Date();
     if (!isMesmoDia(data, hoje)) {
-      toast.error('Só é possível registrar refeições para o dia atual');
+      toast({
+        title: "Info",
+        description: "Só é possível registrar refeições para o dia atual",
+        variant: "default",
+      });
       return;
     }
 
@@ -222,7 +231,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
 
     if (todasRefeicoesFeitas) {
-      toast.error('O aluno já realizou todas as refeições de hoje');
+      toast({
+        title: "Info",
+        description: "O aluno já realizou todas as refeições de hoje",
+        variant: "default",
+      });
       return;
     }
 
@@ -235,7 +248,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
     const refeicoesHoje = alunosComeram[alunoSelecionado.id] || {};
     if (refeicoesHoje[tipoRefeicao]) {
-      toast.error('Esta refeição já foi registrada hoje');
+      toast({
+        title: "Info",
+        description: "Esta refeição já foi registrada hoje",
+        variant: "default",
+      });
       return;
     }
 
@@ -254,11 +271,18 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       };
 
       // Verifica se excedeu a cota para este tipo específico de refeição
-      if (refeicoesPorTipo[tipoRefeicao] >= limitesPorTipo[tipoRefeicao]) {
-        toast(`Atenção: Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida`, { 
-          icon: '⚠️',
-          duration: 4000
+      const refeicoesAtuais = refeicoesPorTipo[tipoRefeicao] || 0;
+      const tipoAluno = alunoSelecionado.tipo?.toUpperCase() || 'AVULSO';
+      const limiteTipo = LIMITE_REFEICOES[tipoAluno]?.[tipoRefeicao] || 999;
+      
+      if (refeicoesAtuais >= limiteTipo) {
+        toast({
+          title: "Atenção",
+          description: `Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida para ${alunoSelecionado.nome}`,
+          variant: "destructive",
         });
+        setDialogoAberto(false);
+        return;
       }
 
       // Atualiza o estado das refeições do aluno primeiro
@@ -280,10 +304,17 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       });
 
       onRefeicaoMarcada();
-      toast.success('Refeição registrada com sucesso!');
+      toast({
+        title: "Sucesso",
+        description: `Refeição (${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome}) marcada para ${alunoSelecionado.nome}.`,
+      });
     } catch (error) {
-      console.error('Erro ao registrar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
-      toast.error('Não foi possível registrar a refeição');
+      console.error('Erro ao marcar refeição:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao marcar refeição.",
+        variant: "destructive",
+      });
     } finally {
       setDialogoAberto(false);
       setAlunoSelecionado(null);
