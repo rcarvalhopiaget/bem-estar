@@ -2,36 +2,36 @@ import { auth } from '@/lib/firebase';
 import { User } from 'firebase/auth';
 
 // Serviço de autenticação simulado para desenvolvimento
-interface User {
-  id: string;
-  email: string;
-  name: string;
+interface AuthServiceUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
 }
 
 // Usuários para teste
-const MOCK_USERS: User[] = [
+const MOCK_USERS: AuthServiceUser[] = [
   {
-    id: '1',
+    uid: '1',
     email: 'admin@example.com',
-    name: 'Administrador'
+    displayName: 'Administrador'
   },
   {
-    id: '2',
+    uid: '2',
     email: 'usuario@example.com',
-    name: 'Usuário Padrão'
+    displayName: 'Usuário Padrão'
   }
 ];
 
 // Mock de armazenamento local para simular persistência
-const storeUserInSession = (user: User): void => {
+const storeUserInSession = (user: AuthServiceUser): void => {
   localStorage.setItem('currentUser', JSON.stringify(user));
 };
 
-const getUserFromSession = (): User | null => {
+const getUserFromSession = (): AuthServiceUser | null => {
   const stored = localStorage.getItem('currentUser');
   if (!stored) return null;
   try {
-    return JSON.parse(stored) as User;
+    return JSON.parse(stored) as AuthServiceUser;
   } catch (e) {
     console.error('Erro ao recuperar usuário da sessão', e);
     return null;
@@ -45,12 +45,12 @@ export const clearUserSession = (): void => {
 // Serviço de autenticação simulado
 export const authService = {
   // Login simulado
-  login: async (email: string, password: string): Promise<User> => {
+  login: async (email: string, password: string): Promise<AuthServiceUser> => {
     console.log('Tentando login com:', email);
     return new Promise((resolve, reject) => {
       // Simula uma pequena latência
       setTimeout(() => {
-        const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+        const user = MOCK_USERS.find(u => u.email === email);
         
         if (user && password.length >= 6) {
           console.log('Login bem-sucedido:', user);
@@ -65,12 +65,12 @@ export const authService = {
   },
   
   // Registro simulado
-  register: async (name: string, email: string, password: string): Promise<User> => {
+  register: async (name: string, email: string, password: string): Promise<AuthServiceUser> => {
     console.log('Tentando registrar:', email);
     return new Promise((resolve, reject) => {
       // Simula uma pequena latência
       setTimeout(() => {
-        if (MOCK_USERS.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        if (MOCK_USERS.some(u => u.email === email)) {
           console.error('Email já existe');
           reject(new Error('Email já cadastrado'));
           return;
@@ -83,10 +83,10 @@ export const authService = {
         }
         
         // Cria um novo usuário simulado
-        const newUser: User = {
-          id: String(Date.now()), // ID único baseado no timestamp
+        const newUser: AuthServiceUser = {
+          uid: String(Date.now()), // ID único baseado no timestamp
           email,
-          name
+          displayName: name
         };
         
         // Em uma aplicação real, o usuário seria persistido em um banco de dados
@@ -99,7 +99,7 @@ export const authService = {
   },
   
   // Verifica se o usuário está autenticado
-  getCurrentUser: (): User | null => {
+  getCurrentUser: (): AuthServiceUser | null => {
     return getUserFromSession();
   },
   
