@@ -82,17 +82,11 @@ service cloud.firestore {
     }
     
     match /configuracoes/{configId} {
-      allow read: if
-        isAuthenticated() && (
-          hasVerifiedEmail() ||
-          debug()
-        );
+      // Permitir que usuários autenticados/verificados leiam as configurações
+      allow read: if isAuthenticated() && (hasVerifiedEmail() || debug());
       
-      allow write: if
-        isAuthenticated() && (
-          hasVerifiedEmail() ||
-          debug()
-        );
+      // Permitir que APENAS administradores escrevam/atualizem configurações
+      allow write: if isAdmin();
     }
     
     match /atividades/{atividadeId} {
@@ -104,6 +98,12 @@ service cloud.firestore {
       // Permitir acesso aos logs apenas para administradores
       allow read: if isAdmin();
       allow write: if isAdmin();
+    }
+    
+    // Adicionando regra para destinatários de email do relatório
+    match /report_email_recipients/{recipientId} {
+      // Permitir leitura e escrita apenas para administradores
+      allow read, write: if isAdmin();
     }
     
     match /{document=**} {
