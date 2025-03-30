@@ -11,6 +11,8 @@ import { Aluno } from '@/types/aluno';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionAlert } from '@/components/ui/permission-alert';
 import { isFirebasePermissionError } from '@/lib/errors';
+import { useLogService } from '@/services/logService';
+import { useToast } from '@/components/ui/use-toast';
 
 export function RefeicaoManager() {
   const { isAuthenticated, isAdmin, isOperador, isProfessor } = usePermissions();
@@ -27,6 +29,9 @@ export function RefeicaoManager() {
   const [dataFiltro, setDataFiltro] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<Refeicao['tipo'] | ''>('');
   const [turmaFiltro, setTurmaFiltro] = useState('');
+
+  const { logAction } = useLogService();
+  const { toast } = useToast();
 
   useEffect(() => {
     carregarDados();
@@ -93,50 +98,56 @@ export function RefeicaoManager() {
   const handleSubmit = async (data: any) => {
     if (!podeEscrever) {
       setError('Você não tem permissão para registrar refeições.');
+      toast({ title: 'Erro de Permissão', description: 'Você não tem permissão para registrar refeições.', variant: 'destructive' });
       return;
     }
 
     try {
       setError(null);
-      await refeicaoService.registrarRefeicao({
+      const refeicaoId = await refeicaoService.registrarRefeicao({
         ...data,
         data: new Date(data.data)
       });
       setShowForm(false);
+      toast({ title: 'Sucesso', description: `Refeição registrada para ${data.nomeAluno}.` });
+      await logAction('CREATE', 'REFEICOES', `Refeição (${data.tipo}) registrada para ${data.nomeAluno}`, { refeicaoId, alunoId: data.alunoId });
       carregarRefeicoes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao registrar refeição:', error);
       let mensagem = 'Erro ao registrar refeição. Por favor, tente novamente.';
-      
       if (isFirebasePermissionError(error)) {
         mensagem = 'Você não tem permissão para registrar refeições.';
       }
-      
       setError(mensagem);
+      toast({ title: 'Erro', description: mensagem, variant: 'destructive' });
+      await logAction('ERROR', 'REFEICOES', `Falha ao registrar refeição para ${data.nomeAluno}`, { error: error?.message, dados: data });
     }
   };
 
   const handleTogglePresenca = async (refeicao: Refeicao) => {
     if (!podeEscrever) {
       setError('Você não tem permissão para atualizar refeições.');
+      toast({ title: 'Erro de Permissão', description: 'Você não tem permissão para atualizar refeições.', variant: 'destructive' });
       return;
     }
+    const novaPresenca = !refeicao.presente;
 
     try {
       await refeicaoService.atualizarRefeicao(refeicao.id, {
-        ...refeicao,
-        presente: !refeicao.presente
+        presente: novaPresenca
       });
+      toast({ title: 'Sucesso', description: `Presença atualizada para ${refeicao.nomeAluno}.` });
+      await logAction('UPDATE', 'REFEICOES', `Presença da refeição (${refeicao.tipo}) de ${refeicao.nomeAluno} alterada para ${novaPresenca ? 'Presente' : 'Ausente'}`, { refeicaoId: refeicao.id, alunoId: refeicao.alunoId });
       carregarRefeicoes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar presença:', error);
       let mensagem = 'Erro ao atualizar presença. Por favor, tente novamente.';
-      
       if (isFirebasePermissionError(error)) {
         mensagem = 'Você não tem permissão para atualizar refeições.';
       }
-      
       setError(mensagem);
+      toast({ title: 'Erro', description: mensagem, variant: 'destructive' });
+      await logAction('ERROR', 'REFEICOES', `Falha ao atualizar presença para ${refeicao.nomeAluno} (ID: ${refeicao.id})`, { error: error?.message });
     }
   };
 

@@ -7,6 +7,8 @@ import { AlunoForm } from '@/components/alunos/AlunoForm';
 import { ImportarAlunos } from '@/components/alunos/ImportarAlunos';
 import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useLogService } from '@/services/logService';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function AlunosPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -16,6 +18,8 @@ export default function AlunosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtroAtivo, setFiltroAtivo] = useState<boolean | undefined>(true); // Inicialmente mostra apenas ativos
+  const { logAction } = useLogService();
+  const { toast } = useToast();
 
   // Carregar lista de alunos
   const carregarAlunos = async () => {
@@ -45,11 +49,15 @@ export default function AlunosPage() {
   // Criar novo aluno
   const handleCriarAluno = async (dados: AlunoFormData) => {
     try {
-      await alunoService.criarOuAtualizarAluno(dados);
+      const alunoId = await alunoService.criarOuAtualizarAluno(dados);
+      toast({ title: 'Sucesso', description: `Aluno ${dados.nome} criado com sucesso.` });
+      await logAction('CREATE', 'ALUNOS', `Aluno ${dados.nome} (${dados.matricula}) criado.`, { alunoId });
       setMostrarFormulario(false);
       carregarAlunos();
-    } catch (error) {
+    } catch (error: any) {
       setError('Erro ao criar aluno');
+      toast({ title: 'Erro', description: error?.message || 'Falha ao criar aluno.', variant: 'destructive' });
+      await logAction('ERROR', 'ALUNOS', `Falha ao criar aluno ${dados.nome}`, { error: error?.message, dados });
       console.error(error);
     }
   };
@@ -57,26 +65,36 @@ export default function AlunosPage() {
   // Atualizar aluno
   const handleAtualizarAluno = async (dados: AlunoFormData) => {
     if (!alunoEmEdicao) return;
+    const alunoId = alunoEmEdicao.id;
     
     try {
-      await alunoService.atualizarAluno(alunoEmEdicao.id, dados);
+      await alunoService.atualizarAluno(alunoId, dados);
+      toast({ title: 'Sucesso', description: `Aluno ${dados.nome} atualizado com sucesso.` });
+      await logAction('UPDATE', 'ALUNOS', `Aluno ${dados.nome} (${dados.matricula}) atualizado.`, { alunoId, dados });
       setAlunoEmEdicao(null);
       carregarAlunos();
-    } catch (error) {
+    } catch (error: any) {
       setError('Erro ao atualizar aluno');
+      toast({ title: 'Erro', description: error?.message || 'Falha ao atualizar aluno.', variant: 'destructive' });
+      await logAction('ERROR', 'ALUNOS', `Falha ao atualizar aluno ${dados.nome} (ID: ${alunoId})`, { error: error?.message, dados });
       console.error(error);
     }
   };
 
   // Excluir aluno
-  const handleExcluirAluno = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este aluno?')) return;
+  const handleExcluirAluno = async (aluno: Aluno) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o aluno ${aluno.nome}?`)) return;
+    const { id: alunoId, nome, matricula } = aluno;
     
     try {
-      await alunoService.excluirAluno(id);
+      await alunoService.excluirAluno(alunoId);
+      toast({ title: 'Sucesso', description: `Aluno ${nome} excluído com sucesso.` });
+      await logAction('DELETE', 'ALUNOS', `Aluno ${nome} (${matricula}) excluído.`, { alunoId });
       carregarAlunos();
-    } catch (error) {
+    } catch (error: any) {
       setError('Erro ao excluir aluno');
+      toast({ title: 'Erro', description: error?.message || 'Falha ao excluir aluno.', variant: 'destructive' });
+      await logAction('ERROR', 'ALUNOS', `Falha ao excluir aluno ${nome} (ID: ${alunoId})`, { error: error?.message });
       console.error(error);
     }
   };
@@ -232,7 +250,7 @@ export default function AlunosPage() {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleExcluirAluno(aluno.id)}
+                      onClick={() => handleExcluirAluno(aluno)}
                       className="text-red-600 hover:text-red-800"
                     >
                       Excluir

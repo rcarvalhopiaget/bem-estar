@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogContent, Grid, IconButton } from '@mui/material';
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
-import { TipoRefeicao } from '@/types/refeicao';
+import { TipoRefeicao, TIPOS_REFEICAO } from '@/types/refeicao';
 import { useToast } from "@/components/ui/use-toast";
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -12,6 +12,7 @@ import CakeIcon from '@mui/icons-material/Cake';
 import SoupKitchenIcon from '@mui/icons-material/SoupKitchen';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLogService } from '@/services/logService';
 
 interface Props {
   alunos: Aluno[];
@@ -97,13 +98,14 @@ const TODOS_TIPOS_REFEICAO = [
 
 export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Props) {
   const { toast } = useToast();
-  const [busca, setBusca] = useState('');
-  const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
-  const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
+  const { user } = useAuth();
+  const { canWrite } = usePermissions();
+  const { logAction } = useLogService();
+  const [filtro, setFiltro] = useState('');
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
-  const { perfil, isAdmin } = usePermissions();
-  const { user } = useAuth();
+  const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
+  const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
   const [isRestauranteUser, setIsRestauranteUser] = useState(false);
   
   useEffect(() => {
@@ -208,7 +210,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   }, [data, alunos]);
 
   const alunosFiltrados = alunos.filter(aluno => {
-    const termoBusca = busca.toLowerCase();
+    const termoBusca = filtro.toLowerCase();
     return (
       aluno.nome.toLowerCase().includes(termoBusca) ||
       aluno.turma.toLowerCase().includes(termoBusca)
@@ -243,11 +245,17 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     setDialogoAberto(true);
   };
 
-  const handleTipoRefeicaoClick = async (tipoRefeicao: TipoRefeicao) => {
-    if (!alunoSelecionado) return;
+  const handleMarcarRefeicao = async (tipoRefeicao: TipoRefeicao) => {
+    const alunoParaMarcar = alunoSelecionado;
+    
+    if (!canWrite) {
+      toast({ title: 'Erro de Permissão', description: 'Você não tem permissão para registrar refeições.', variant: 'destructive' });
+      return;
+    }
+    if (!alunoParaMarcar) return;
 
-    const refeicoesHoje = alunosComeram[alunoSelecionado.id] || {};
-    if (refeicoesHoje[tipoRefeicao]) {
+    const refeicoesHoje = alunosComeram[alunoParaMarcar.id] || {};
+    if (refeicoesHoje?.[tipoRefeicao]) {
       toast({
         title: "Info",
         description: "Esta refeição já foi registrada hoje",
@@ -257,13 +265,13 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     }
 
     try {
-      const refeicoesPorTipo = refeicoesSemanais[alunoSelecionado.id] || {
+      const refeicoesPorTipo = refeicoesSemanais[alunoParaMarcar.id] || {
         LANCHE_MANHA: 0,
         ALMOCO: 0,
         LANCHE_TARDE: 0,
         SOPA: 0
       };
-      const limitesPorTipo = LIMITE_REFEICOES[alunoSelecionado.tipo] || {
+      const limitesPorTipo = LIMITE_REFEICOES[alunoParaMarcar.tipo] || {
         LANCHE_MANHA: 0,
         ALMOCO: 0,
         LANCHE_TARDE: 0,
@@ -272,13 +280,13 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
       // Verifica se excedeu a cota para este tipo específico de refeição
       const refeicoesAtuais = refeicoesPorTipo[tipoRefeicao] || 0;
-      const tipoAluno = alunoSelecionado.tipo?.toUpperCase() || 'AVULSO';
+      const tipoAluno = alunoParaMarcar.tipo?.toUpperCase() || 'AVULSO';
       const limiteTipo = LIMITE_REFEICOES[tipoAluno]?.[tipoRefeicao] || 999;
       
       if (refeicoesAtuais >= limiteTipo) {
         toast({
           title: "Atenção",
-          description: `Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida para ${alunoSelecionado.nome}`,
+          description: `Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida para ${alunoParaMarcar.nome}`,
           variant: "destructive",
         });
         setDialogoAberto(false);
@@ -288,36 +296,51 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       // Atualiza o estado das refeições do aluno primeiro
       setAlunosComeram(prev => ({
         ...prev,
-        [alunoSelecionado.id]: {
-          ...prev[alunoSelecionado.id],
+        [alunoParaMarcar.id]: {
+          ...prev[alunoParaMarcar.id],
           [tipoRefeicao]: true
         }
       }));
 
-      await refeicaoService.registrarRefeicao({
-        alunoId: alunoSelecionado.id,
-        nomeAluno: alunoSelecionado.nome,
-        turma: alunoSelecionado.turma,
+      const refeicaoInfo = {
+        alunoId: alunoParaMarcar.id,
+        nomeAluno: alunoParaMarcar.nome,
+        turma: alunoParaMarcar.turma,
         data: new Date(data),
         tipo: tipoRefeicao,
         presente: true
-      });
+      };
+      
+      const refeicaoId = await refeicaoService.registrarRefeicao(refeicaoInfo);
 
       onRefeicaoMarcada();
+      const nomeRefeicao = TIPOS_REFEICAO[tipoRefeicao as keyof typeof TIPOS_REFEICAO] || tipoRefeicao;
       toast({
         title: "Sucesso",
-        description: `Refeição (${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome}) marcada para ${alunoSelecionado.nome}.`,
+        description: `Refeição (${nomeRefeicao}) marcada para ${alunoParaMarcar.nome}.`,
       });
-    } catch (error) {
-      console.error('Erro ao marcar refeição:', error);
+      await logAction('CREATE', 'REFEICOES', `Refeição Rápida (${tipoRefeicao}) registrada para ${alunoParaMarcar.nome}`, { refeicaoId, alunoId: alunoParaMarcar.id });
+
+    } catch (error: any) {
+      console.error('Erro ao registrar refeição rápida:', error);
+      // Reverter estado otimista em caso de erro
+      if (alunoParaMarcar) {
+         setAlunosComeram(prev => ({
+          ...prev,
+          [alunoParaMarcar.id]: {
+            ...prev[alunoParaMarcar.id],
+            [tipoRefeicao]: false
+          }
+        }));
+      }
       toast({
         title: "Erro",
-        description: "Falha ao marcar refeição.",
+        description: `Falha ao registrar refeição para ${alunoParaMarcar?.nome || 'aluno selecionado'}: ${error.message}`,
         variant: "destructive",
       });
+      await logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição Rápida (${tipoRefeicao}) para ${alunoParaMarcar?.nome || 'ID: ' + alunoParaMarcar?.id}`, { error: error?.message, alunoId: alunoParaMarcar?.id });
     } finally {
       setDialogoAberto(false);
-      setAlunoSelecionado(null);
     }
   };
 
@@ -350,8 +373,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         fullWidth
         variant="outlined"
         placeholder="Buscar por nome ou turma do aluno..."
-        value={busca}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBusca(e.target.value)}
+        value={filtro}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFiltro(e.target.value)}
         sx={{ 
           mb: 2,
           '& .MuiOutlinedInput-root': {
@@ -545,7 +568,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
               return (
                 <Grid item xs={12} key={tipo.id}>
                   <Box
-                    onClick={() => !jaComeu && handleTipoRefeicaoClick(tipo.id)}
+                    onClick={() => !jaComeu && handleMarcarRefeicao(tipo.id)}
                     sx={{
                       p: { xs: 1.5, sm: 2 },
                       borderRadius: 2,
