@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'; // Ajuste o caminho se necessári
 import { ScrollArea } from '@/components/ui/scroll-area'; // Ajuste o caminho se necessário
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext'; // Ajuste o caminho se necessário
-import { getUnreadNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationData } from '@/app/actions/notificationActions'; // Ajuste o caminho se necessário
+import { getUnreadNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationData } from '@/actions/notificationActions';
 import { useToast } from '@/components/ui/use-toast'; // Ajuste o caminho se necessário
 import { cn } from '@/lib/utils'; // Ajuste o caminho se necessário
 
