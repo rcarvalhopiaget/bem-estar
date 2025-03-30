@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { logService, SystemLog, LogModule, LogAction } from '@/services/logService';
+import { logService, SystemLog, LogModule, LogAction, useLogService } from '@/services/logService';
 import { Card, Typography, Box, TextField, MenuItem, Select, FormControl, InputLabel, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,7 @@ export default function LogsPage() {
   const [isSimulatedData, setIsSimulatedData] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
+  const { logAction } = useLogService();
 
   // Verificar se o usuário é administrador
   const isAdmin = user?.email && [
@@ -29,21 +30,23 @@ export default function LogsPage() {
     'rodrigo.carvalho@jpiaget.com.br'
   ].includes(user.email);
 
-  // Log para depuração
+  // useEffect para buscar logs e verificar isAdmin
   useEffect(() => {
-    console.log('LogsPage - Verificando permissões:', {
-      isAdmin,
-      userEmail: user?.email
-    });
-  }, [isAdmin, user]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, []);
+    console.log('[LogsPage Effect User Check] User:', user);
+    if (user) {
+      // Logar o valor de isAdmin ASSIM que o user estiver disponível
+      console.log('[LogsPage Effect User Check] isAdmin calculado:', isAdmin, '(Email:', user.email, ')'); 
+      console.log('[LogsPage Effect User Check] Chamando fetchLogs.');
+      fetchLogs();
+    } else {
+      console.log('[LogsPage Effect User Check] Usuário ainda não carregado.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Depende apenas de user agora
 
   const fetchLogs = async () => {
     try {
-      console.log('Iniciando busca de logs...');
+      console.log('[fetchLogs] Iniciando busca de logs...');
       setLoading(true);
       setError(null);
       setIsSimulatedData(false);
@@ -75,7 +78,7 @@ export default function LogsPage() {
       // Remover verificação de dados simulados pois agora só exibimos dados reais
       setLogs(fetchedLogs);
     } catch (error: any) {
-      console.error('Erro ao buscar logs:', error);
+      console.error('[fetchLogs] Erro ao buscar logs:', error);
       let mensagemErro = 'Não foi possível carregar os logs.';
       
       if (error?.code === 'permission-denied') {
@@ -88,6 +91,30 @@ export default function LogsPage() {
       setLogs([]);
     } finally {
       setLoading(false);
+      console.log('[fetchLogs] Busca de logs finalizada.');
+    }
+  };
+  
+  // Handler para o botão de teste
+  const handleTestLogClick = async () => {
+    console.log('[handleTestLogClick] Botão clicado. Tentando registrar log de teste...');
+    if (isAdmin && user) {
+      try {
+        await logAction(
+          'CREATE', // Usar uma ação diferente para distinguir
+          'SISTEMA', 
+          'Log de Teste Manual via Botão'
+        );
+        console.log('[handleTestLogClick] Chamada logAction concluída. Verifique a lista ou Firestore.');
+        // Opcional: chamar fetchLogs() aqui para atualizar a lista imediatamente
+        // fetchLogs(); 
+      } catch (error) {
+        console.error('[handleTestLogClick] Erro ao chamar logAction:', error);
+        setError('Falha ao registrar log de teste manual. Verifique o console.');
+      }
+    } else {
+      console.warn('[handleTestLogClick] Tentativa de log de teste sem ser admin ou sem usuário.');
+      setError('Apenas administradores podem registrar logs de teste.');
     }
   };
 
@@ -178,6 +205,19 @@ export default function LogsPage() {
             <Typography variant="body1" color="error">
               {error}
             </Typography>
+          </Box>
+        )}
+        
+        {/* Botão de Teste */} 
+        {isAdmin && (
+          <Box sx={{ mb: 2 }}>
+            <Button 
+              variant="contained" 
+              color="secondary" 
+              onClick={handleTestLogClick}
+            >
+              Registrar Log de Teste Manual
+            </Button>
           </Box>
         )}
         
