@@ -24,7 +24,8 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CakeIcon from '@mui/icons-material/Cake';
 import { useToast } from '@/components/ui/use-toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning } from 'lucide-react';
+import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning, Mail } from 'lucide-react';
+import Link from 'next/link';
 
 interface NotificacaoConfig {
   tipo: 'erro' | 'aviso' | 'sucesso';
@@ -532,12 +533,20 @@ export default function RelatoriosPage() {
             <Button onClick={exportarCSV} variant="secondary" disabled={refeicoes.length === 0}>
               Exportar CSV
             </Button>
-             {podeGerenciarConfiguracoes && (
-                 <Button onClick={() => setMostrarDialogoTeste(true)} variant="secondary">
-                    <MailWarning className="mr-2 h-4 w-4" />
-                    Enviar Email Teste
-                 </Button>
-             )}
+            {podeGerenciarConfiguracoes && (
+              <>
+                <Button onClick={() => setMostrarDialogoTeste(true)} variant="secondary">
+                  <MailWarning className="mr-2 h-4 w-4" />
+                  Enviar Email Teste
+                </Button>
+                <Link href="/dashboard/relatorios/emails">
+                  <Button variant="outline">
+                    <Mail className="mr-2 h-4 w-4" />
+                    Gerenciar Destinatários
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
