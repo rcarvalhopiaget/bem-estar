@@ -19,18 +19,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // useEffect para redirecionar quando o usuário estiver logado e o contexto carregado
+  // useEffect removido ou simplificado para não fazer mais o redirecionamento daqui
+  // A lógica de redirecionamento se o usuário já estiver logado será tratada pelo middleware.
   useEffect(() => {
-    // Se o carregamento inicial do contexto terminou E o usuário está definido (logado)
+    // Pode manter logs ou outras lógicas aqui se necessário, mas sem router.push
     if (!authLoading && user) {
-      console.log('Usuário autenticado no contexto, redirecionando para /dashboard...');
-      try {
-        router.push('/dashboard');
-      } catch (error) {
-        console.error('Erro ao redirecionar para /dashboard:', error);
-      }
+      console.log('Usuário já está autenticado no contexto (verificado no useEffect). Middleware deve redirecionar se necessário.');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]); // Removido router da dependência
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +46,7 @@ export default function LoginPage() {
       
       // Força o redirecionamento explicitamente após o login bem-sucedido
       console.log('Redirecionando para /dashboard após login bem-sucedido...');
-      router.push('/dashboard');
+      router.push('/dashboard'); // Mantém o redirecionamento aqui
     } catch (err: any) {
       console.error('Erro detalhado ao fazer login:', err);
       
