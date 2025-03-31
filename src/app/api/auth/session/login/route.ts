@@ -26,15 +26,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Token inválido.' }, { status: 401 });
     }
 
+    console.log('[API Session Login] Token verificado com sucesso, criando cookie de sessão para:', decodedToken.uid);
+
     // Cria o cookie de sessão
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
 
     // Define o cookie na resposta - criamos uma nova resposta com cookie
     const response = NextResponse.json(
-      { success: true, message: 'Sessão iniciada.' }, 
+      { success: true, message: 'Sessão iniciada.', redirectTo: '/dashboard' }, 
       { status: 200 }
     );
     
+    // Configurar o cookie com opções adequadas para garantir que seja persistido
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: sessionCookie,
@@ -46,6 +49,10 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('[API Session Login] Cookie de sessão criado com sucesso para:', decodedToken.uid);
+    // Log adicional para verificar se o cookie foi configurado corretamente
+    console.log('[API Session Login] Cookie configurado:',
+      `nome=${SESSION_COOKIE_NAME}, expiração=${expiresIn/1000}s, httpOnly=true, secure=${process.env.NODE_ENV === 'production'}`);
+    
     return response;
 
   } catch (error: any) {

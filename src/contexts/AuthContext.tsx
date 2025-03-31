@@ -73,26 +73,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        const idToken = await currentUser.getIdToken();
+        console.log('[manageSession] Iniciando processo de criação do cookie de sessão...');
+        const idToken = await currentUser.getIdToken(true); // Forçar atualização do token
+        console.log('[manageSession] Token ID obtido, enviando para API...');
+        
         const response = await fetch('/api/auth/session/login', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ idToken }),
+          credentials: 'include' // Importante para garantir que os cookies sejam enviados/recebidos
         });
+        
         const result = await response.json();
         if (!response.ok || !result.success) {
           console.error('[manageSession] Falha ao criar cookie de sessão:', result.error || response.statusText);
           // Opcional: Deslogar usuário Firebase se a criação da sessão falhar?
         } else {
-          console.log('[manageSession] Cookie de sessão criado com sucesso.');
+          console.log('[manageSession] Cookie de sessão criado com sucesso. Redirecionamento sugerido para:', result.redirectTo);
         }
       } catch (error) {
         console.error('[manageSession] Erro ao chamar API de login da sessão:', error);
       }
     } else if (action === 'logout') {
       try {
+        console.log('[manageSession] Iniciando processo de logout e remoção do cookie de sessão...');
         const response = await fetch('/api/auth/session/logout', {
           method: 'POST',
+          credentials: 'include' // Importante para garantir que os cookies sejam enviados/recebidos
         });
         const result = await response.json();
         if (!response.ok || !result.success) {

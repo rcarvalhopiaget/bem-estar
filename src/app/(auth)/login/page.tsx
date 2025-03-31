@@ -24,11 +24,12 @@ export default function LoginPage() {
     // Se o carregamento inicial do contexto terminou E o usuário está definido (logado)
     if (!authLoading && user) {
       console.log('Usuário autenticado no contexto, redirecionando para /dashboard...');
-      router.push('/dashboard');
+      try {
+        router.push('/dashboard');
+      } catch (error) {
+        console.error('Erro ao redirecionar para /dashboard:', error);
+      }
     }
-    // O redirecionamento SÓ deve acontecer quando o usuário LOGAR,
-    // não queremos redirecionar se ele já estiver logado ao visitar /login.
-    // As dependências garantem que isso só roda quando user ou authLoading mudam.
   }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +47,10 @@ export default function LoginPage() {
       console.log('Tentando fazer login...');
       await signIn(email, password);
       console.log('Login bem-sucedido (signIn concluído)!');
+      
+      // Força o redirecionamento explicitamente após o login bem-sucedido
+      console.log('Redirecionando para /dashboard após login bem-sucedido...');
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Erro detalhado ao fazer login:', err);
       
