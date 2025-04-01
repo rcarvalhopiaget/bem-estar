@@ -172,7 +172,7 @@ export default function AlunosPage() {
 
         {(mostrarFormulario || alunoEmEdicao) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               <h2 className="text-xl font-bold mb-4">
                 {alunoEmEdicao ? 'Editar Aluno' : 'Novo Aluno'}
               </h2>
@@ -188,9 +188,10 @@ export default function AlunosPage() {
           </div>
         )}
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        {/* Tabela Principal */}
+        <div style={{ background: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: '#f9fafb' }}>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Nome
@@ -210,62 +211,58 @@ export default function AlunosPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {alunos.map((aluno) => (
-                <tr key={aluno.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {aluno.nome}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {aluno.matricula}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {aluno.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {aluno.tipo}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {aluno.turma}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      aluno.ativo
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {aluno.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex justify-center space-x-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
+            <tbody style={{ background: 'white' }}>
+              {alunos.map((aluno: Aluno) => {
+                return (
+                  <tr key={aluno.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                    <td className="px-6 py-4">
+                      {aluno.nome}
+                    </td>
+                    <td className="px-6 py-4">
+                      {aluno.matricula}
+                    </td>
+                    <td className="px-6 py-4">
+                      {aluno.email}
+                    </td>
+                    <td className="px-6 py-4">
+                      {aluno.tipo}
+                    </td>
+                    <td className="px-6 py-4">
+                      {aluno.turma}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        aluno.ativo
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {aluno.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center" style={{ position: 'relative' }}>
+                      <button 
                         onClick={() => setAlunoEmEdicao(aluno)}
-                        className="flex items-center"
+                        style={{ 
+                          padding: '6px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          fontWeight: '500',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer'
+                        }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExcluirAluno(aluno)}
-                        className="flex items-center text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        Excluir
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
