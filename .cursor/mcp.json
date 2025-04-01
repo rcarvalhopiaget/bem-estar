@@ -1,0 +1,26 @@
+{
+    "mcpServers": {
+      "puppeteer": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@smithery/cli@latest",
+          "run",
+          "@smithery-ai/puppeteer",
+          "--config",
+          "{}"
+        ]
+      },
+      "playwright-mcp-server": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@smithery/cli@latest",
+          "run",
+          "@showfive/playwright-mcp-server",
+          "--key",
+          "64edcaed-7b55-433c-b91d-de38dba47db6"
+        ]
+      }
+    }
+  }

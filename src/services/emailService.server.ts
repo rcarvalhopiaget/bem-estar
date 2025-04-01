@@ -18,7 +18,7 @@ interface EmailConfigServer {
 }
 
 // Interface para os dados do relatório (usada internamente)
-interface RelatorioData {
+export interface RelatorioData {
   data: string;
   totalAlunos: number;
   totalComeram: number;
