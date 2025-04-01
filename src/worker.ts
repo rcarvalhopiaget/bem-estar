@@ -1,29 +1,27 @@
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
-import { iniciarAgendadorRelatorios } from '@/lib/scheduler/reportScheduler';
+// Vamos renomear a função do scheduler para clareza
+import { executarEnvioRelatorioUnico } from '@/lib/scheduler/reportScheduler'; // Precisamos criar/renomear esta função
 
-async function startWorker() {
-  console.log('[Worker] Iniciando processo worker...');
+async function runReportTask() {
+  console.log('[CronJob] Iniciando tarefa de envio de relatório...');
   try {
-    // Inicializar o Firebase Admin uma vez para o worker
-    // A função initializeFirebaseAdmin já deve lidar com múltiplas inicializações
+    // Inicializar Firebase Admin
     initializeFirebaseAdmin(); 
-    console.log('[Worker] Firebase Admin inicializado.');
+    console.log('[CronJob] Firebase Admin inicializado.');
 
-    // Iniciar o agendador de relatórios
-    iniciarAgendadorRelatorios();
-    console.log('[Worker] Agendador de relatórios iniciado.');
-
-    // Manter o worker rodando (pode ser necessário em algumas configurações)
-    console.log('[Worker] Processo worker iniciado e aguardando tarefas agendadas...');
-    // Se o processo terminar imediatamente, pode ser necessário mantê-lo vivo.
-    // Uma forma simples é uma promessa que nunca resolve:
-    // await new Promise(() => {}); 
-    // Ou verificar se o node-cron mantém o processo vivo por si só.
+    // Executar a lógica de envio do relatório diretamente
+    await executarEnvioRelatorioUnico(); // Chama a função que contém a lógica
+    console.log('[CronJob] Tarefa de envio de relatório concluída com sucesso.');
+    
+    // O processo deve encerrar automaticamente aqui se não houver mais operações pendentes
+    // Se necessário, podemos forçar a saída (mas geralmente não é preciso se o async/await for gerenciado corretamente)
+    // process.exit(0); 
 
   } catch (error) {
-    console.error('[Worker] Erro fatal ao iniciar o worker:', error);
-    process.exit(1); // Terminar com erro se a inicialização falhar
+    console.error('[CronJob] Erro fatal durante a execução da tarefa de relatório:', error);
+    process.exit(1); // Terminar com erro
   }
 }
 
-startWorker(); 
+// Executa a tarefa imediatamente quando o script é chamado
+runReportTask(); 

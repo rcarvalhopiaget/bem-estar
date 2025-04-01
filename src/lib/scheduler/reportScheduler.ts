@@ -1,4 +1,3 @@
-import cron from 'node-cron';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
 import { enviarRelatorioDiario, RelatorioData } from '@/services/emailService.server';
@@ -21,8 +20,7 @@ function formatarTipoRefeicao(tipo: string): string {
   }
 }
 
-async function executarEnvioRelatorio() {
-  console.log('[Scheduler] Iniciando tarefa de envio de relatório diário...');
+export async function executarEnvioRelatorioUnico() {
   try {
     const adminApp = initializeFirebaseAdmin();
     const adminDb = admin.firestore(adminApp);
@@ -68,23 +66,17 @@ async function executarEnvioRelatorio() {
     }
     // --- Fim Buscar Configuração ---
 
-    const agora = new Date();
-    const horaAtualFormatada = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-
-    if (horaAtualFormatada !== horarioConfigurado) {
-        return;
-    }
-    console.log(`[Scheduler] Horário (${horaAtualFormatada}) corresponde ao configurado (${horarioConfigurado}). Iniciando geração...`);
+    console.log('[CronTask] Iniciando geração de relatório...');
 
     const dataRelatorio = new Date();
     dataRelatorio.setDate(dataRelatorio.getDate() - 1);
     const dataFormatada = dataRelatorio.toISOString().split('T')[0];
     const usarSimulacao = MODO_SIMULACAO;
 
-    console.log(`[Scheduler] Gerando relatório para ${dataFormatada}. Modo Simulação: ${usarSimulacao}`);
+    console.log(`[CronTask] Gerando relatório para ${dataFormatada}. Modo Simulação: ${usarSimulacao}`);
 
     if (usarSimulacao) {
-      console.log('[Scheduler] [SIMULAÇÃO] Gerando relatório simulado...');
+      console.log('[CronTask] [SIMULAÇÃO] Gerando relatório simulado...');
       const dadosSimulados: RelatorioData = {
         data: dataFormatada,
         totalAlunos: 5,
@@ -110,10 +102,10 @@ async function executarEnvioRelatorio() {
         ]
       };
       await enviarRelatorioDiario(dadosSimulados, emailsDestino);
-      console.log('[Scheduler] [SIMULAÇÃO] Relatório simulado enviado.');
+      console.log('[CronTask] [SIMULAÇÃO] Relatório simulado enviado.');
 
     } else {
-       console.log('[Scheduler] Buscando dados reais do Firestore...');
+       console.log('[CronTask] Buscando dados reais do Firestore...');
        const inicioDiaAnterior = new Date(dataFormatada + 'T00:00:00.000-03:00');
        const fimDiaAnterior = new Date(dataFormatada + 'T23:59:59.999-03:00');
        const inicioTimestamp = Timestamp.fromDate(inicioDiaAnterior);
@@ -140,7 +132,7 @@ async function executarEnvioRelatorio() {
           };
        });
 
-       console.log(`[Scheduler] Encontrados ${alunos.length} alunos ativos e ${refeicoes.length} refeições para ${dataFormatada}.`);
+       console.log(`[CronTask] Encontrados ${alunos.length} alunos ativos e ${refeicoes.length} refeições para ${dataFormatada}.`);
 
        const alunosComeramIds = new Set(refeicoes.map(r => r.alunoId));
        const alunosComeram = alunos
@@ -176,31 +168,11 @@ async function executarEnvioRelatorio() {
        };
 
        await enviarRelatorioDiario(dadosRelatorio, emailsDestino);
-       console.log(`[Scheduler] Relatório real para ${dataFormatada} enviado para ${emailsDestino.join(', ')}.`);
+       console.log(`[CronTask] Relatório real para ${dataFormatada} enviado para ${emailsDestino.join(', ')}.`);
     }
 
   } catch (error) {
-    console.error('[Scheduler] Erro ao executar a tarefa de envio de relatório:', error);
-  } finally {
-    console.log('[Scheduler] Tarefa de envio de relatório concluída.');
+    console.error('[CronTask] Erro ao executar a tarefa de envio de relatório:', error);
+    throw error;
   }
-}
-
-export function iniciarAgendadorRelatorios() {
-  console.log('[Scheduler] Iniciando verificação de agendamento de relatórios (a cada minuto).');
-  if (cron.getTasks().size === 0) { 
-      cron.schedule('* * * * *', () => {
-        executarEnvioRelatorio();
-      }, {
-        scheduled: true,
-        timezone: "America/Sao_Paulo"
-      });
-      console.log('[Scheduler] Agendamento configurado para rodar a cada minuto.');
-  } else {
-      console.warn('[Scheduler] Agendador já iniciado anteriormente.');
-  }
-
-  // Opcional: Executar uma vez ao iniciar para teste (remova em produção se não necessário)
-  // console.log('[Scheduler] Executando envio de relatório imediatamente ao iniciar (para teste)...');
-  // executarEnvioRelatorio();
 } 
