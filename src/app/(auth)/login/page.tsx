@@ -45,8 +45,9 @@ export default function LoginPage() {
       console.log('Login bem-sucedido (signIn concluído)!');
       
       // Força o redirecionamento explicitamente após o login bem-sucedido
-      console.log('Redirecionando para /dashboard após login bem-sucedido...');
-      router.push('/dashboard'); // Mantém o redirecionamento aqui
+      // REMOVER esta linha, deixar o middleware/listener cuidar disso
+      // console.log('Redirecionando para /dashboard após login bem-sucedido...');
+      // router.push('/dashboard'); 
     } catch (err: any) {
       console.error('Erro detalhado ao fazer login:', err);
       
