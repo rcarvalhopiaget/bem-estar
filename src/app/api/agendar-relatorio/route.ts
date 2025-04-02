@@ -55,14 +55,21 @@ export async function GET(request: Request) {
     }
     // --- Fim Buscar Configuração ---
 
-    const dataRelatorio = new Date(); 
-    const dataFormatada = dataRelatorio.toISOString().split('T')[0];
-    const usarSimulacao = MODO_SIMULACAO; // Apenas via config central
+    // CALCULAR A DATA DO DIA ANTERIOR
+    const hoje = new Date();
+    const dataRelatorio = new Date(hoje); 
+    dataRelatorio.setDate(hoje.getDate() - 1); // Subtrai 1 dia
+    
+    // Formatar a data do dia anterior como YYYY-MM-DD
+    const dataFormatada = dataRelatorio.toISOString().split('T')[0]; 
+    console.log(`[API /agendar-relatorio] Iniciando geração para data: ${dataFormatada}`);
+
+    const usarSimulacao = MODO_SIMULACAO; 
     
     if (usarSimulacao) {
-      console.log('[SIMULAÇÃO] Gerando relatório simulado para', dataFormatada);
+      console.log(`[API /agendar-relatorio] [SIMULAÇÃO] Gerando relatório simulado para ${dataFormatada}`);
       const dadosSimulados = {
-        data: dataFormatada,
+        data: dataFormatada, // <-- Usa data do dia anterior
         totalAlunos: 50,
         totalComeram: 35,
         totalNaoComeram: 15,
@@ -83,25 +90,24 @@ export async function GET(request: Request) {
           const tiposRefeicao = ['Almoço', 'Lanche da Manhã', 'Lanche da Tarde'];
           const tipo = tiposRefeicao[Math.floor(Math.random() * tiposRefeicao.length)];
           const hora = tipo === 'Almoço' ? 12 : (tipo === 'Lanche da Manhã' ? 9 : 15);
-          const dataRefeicao = new Date(dataFormatada);
-          dataRefeicao.setHours(hora, Math.floor(Math.random() * 59));
+          const dataRefeicaoSimulada = new Date(dataFormatada); // Baseia na data do relatório
+          dataRefeicaoSimulada.setHours(hora, Math.floor(Math.random() * 59));
           
           return {
             alunoId: `aluno-${i+1}`,
             nomeAluno: `Aluno Simulado ${i+1}`,
             turma: `Turma ${Math.floor(i/10) + 1}`,
             tipo: tipo,
-            data: dataRefeicao
+            data: dataRefeicaoSimulada
           };
         })
       };
       
-      // Enviar relatório simulado (passando emails de config, mesmo em simulação)
       await enviarRelatorioDiario(dadosSimulados, emailsDestino); 
       
       return NextResponse.json({
         success: true,
-        message: '[SIMULAÇÃO] Relatório simulado enviado com sucesso',
+        message: `[SIMULAÇÃO] Relatório simulado para ${dataFormatada} enviado com sucesso`,
         data: {
           dataRelatorio: dataFormatada,
           totalAlunos: dadosSimulados.totalAlunos,
@@ -119,12 +125,23 @@ export async function GET(request: Request) {
       const alunos = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Array<{id: string, nome?: string, turma?: string}>;
       
       const refeicoesRef = adminDb.collection('refeicoes');
-      const dataInicio = new Date(dataFormatada); dataInicio.setHours(0, 0, 0, 0);
-      const dataFim = new Date(dataFormatada); dataFim.setHours(23, 59, 59, 999);
       
+      // ----> USA dataFormatada (DIA ANTERIOR) PARA DEFINIR INTERVALO <----
+      // Usar UTC para evitar problemas de fuso horário na query do Firestore
+      const inicioDiaAnteriorUTC = new Date(dataFormatada + 'T00:00:00.000Z');
+      const fimDiaAnteriorUTC = new Date(dataFormatada + 'T23:59:59.999Z');
+      const dataInicio = Timestamp.fromDate(inicioDiaAnteriorUTC);
+      const dataFim = Timestamp.fromDate(fimDiaAnteriorUTC);
+      // const dataInicio = new Date(dataFormatada); dataInicio.setHours(0, 0, 0, 0);
+      // const dataFim = new Date(dataFormatada); dataFim.setHours(23, 59, 59, 999);
+      
+      console.log(`[API /agendar-relatorio] Buscando refeições entre ${inicioDiaAnteriorUTC.toISOString()} e ${fimDiaAnteriorUTC.toISOString()}`);
+
       const refeicoesQuery = refeicoesRef
-        .where('data', '>=', Timestamp.fromDate(dataInicio))
-        .where('data', '<', Timestamp.fromDate(dataFim)); 
+        // .where('data', '>=', Timestamp.fromDate(dataInicio)) // Versão antiga
+        // .where('data', '<', Timestamp.fromDate(dataFim)); // Versão antiga
+        .where('data', '>=', dataInicio) // Usando Timestamps UTC
+        .where('data', '<=', dataFim); // Usando Timestamps UTC (<= fim do dia)
       
       const refeicoesSnapshot = await refeicoesQuery.get();
       const refeicoes = refeicoesSnapshot.docs.map(doc => {
@@ -164,7 +181,7 @@ export async function GET(request: Request) {
       }));
       
       const dadosRelatorio = {
-        data: dataFormatada,
+        data: dataFormatada, // <-- Usa data do dia anterior
         totalAlunos: alunos.length,
         totalComeram: alunosComeram.length,
         totalNaoComeram: alunosNaoComeram.length,
@@ -174,12 +191,11 @@ export async function GET(request: Request) {
         refeicoes: refeicoesFormatadas
       };
       
-      // Enviar o relatório por email, passando os emails de destino
-      await enviarRelatorioDiario(dadosRelatorio, emailsDestino); // <--- PASSAR emailsDestino
+      await enviarRelatorioDiario(dadosRelatorio, emailsDestino); 
       
       return NextResponse.json({
         success: true,
-        message: 'Relatório enviado com sucesso',
+        message: `Relatório para ${dataFormatada} enviado com sucesso`,
         data: {
           dataRelatorio: dataFormatada,
           totalAlunos: alunos.length,
