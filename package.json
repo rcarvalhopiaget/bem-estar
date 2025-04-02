@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsc --project tsconfig.worker.json",
+    "build": "next build && tsc --project tsconfig.worker.json && tsc-alias -p tsconfig.worker.json",
     "start": "next start",
     "lint": "next lint",
     "limpar-duplicados": "ts-node src/scripts/executarLimpeza.ts",
@@ -12,7 +12,7 @@
     "vercel:prepare": "node prepare-vercel-deploy.js",
     "vercel:deploy": "node vercel-deploy.js",
     "deploy": "npm run vercel:prepare && npm run vercel:deploy",
-    "start-worker": "node -r tsconfig-paths/register dist/worker.js"
+    "start-worker": "node dist/worker.js"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -70,6 +70,7 @@
     "@types/react-dom": "^18.3.5",
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.13",
     "tsconfig-paths": "^4.2.0",
     "typescript": "5.8.2"
   }
