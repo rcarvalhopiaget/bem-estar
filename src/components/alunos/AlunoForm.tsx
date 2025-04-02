@@ -6,9 +6,11 @@ import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Aluno, AlunoFormData } from '@/types/aluno';
-import { Checkbox, CheckedState } from '@/components/ui/checkbox';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckedState } from '@radix-ui/react-checkbox';
 import { useEffect } from 'react';
 import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/use-toast';
 
 const DIAS_POR_TIPO: Record<string, number | null> = {
   MENSALISTA: null,
