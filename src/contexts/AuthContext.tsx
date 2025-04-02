@@ -124,13 +124,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
       if (currentUser) {
         await fetchUserData(currentUser.uid);
-        // **IMPORTANTE:** Criar/Validar sessão quando o estado muda para logado
         await manageSession('login');
+        
+        // Verifica se a página atual é login ou register APÓS a sessão ser gerenciada
+        const currentPath = window.location.pathname;
+        if (currentPath === '/login' || currentPath === '/register') {
+          console.log(`[AuthContext] Usuário logado em ${currentPath}. Redirecionando para /dashboard...`);
+          window.location.href = '/dashboard'; // Força o redirecionamento
+        }
       } else {
         setUserData(null);
-        // **IMPORTANTE:** Limpar sessão quando o estado muda para deslogado
-        // Não precisa chamar se o logout já faz isso, mas garante limpeza em outros casos (ex: token expirado)
         await manageSession('logout');
+        // Opcional: redirecionar para login se deslogar fora da página de login/registro?
+        // const currentPath = window.location.pathname;
+        // if (currentPath !== '/login' && currentPath !== '/register') {
+        //   window.location.href = '/login';
+        // }
       }
       setLoading(false);
     });
