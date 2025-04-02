@@ -4,15 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsc --project tsconfig.worker.json && tsc-alias -p tsconfig.worker.json",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "limpar-duplicados": "ts-node src/scripts/executarLimpeza.ts",
     "sendDailyReport": "node scripts/sendDailyReport.js",
     "vercel:prepare": "node prepare-vercel-deploy.js",
     "vercel:deploy": "node vercel-deploy.js",
-    "deploy": "npm run vercel:prepare && npm run vercel:deploy",
-    "start-worker": "node dist/worker.js"
+    "deploy": "npm run vercel:prepare && npm run vercel:deploy"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -37,7 +36,6 @@
     "@radix-ui/react-toast": "^1.2.6",
     "@tanstack/react-query": "^5.24.1",
     "@types/date-fns": "^2.5.3",
-    "@types/node-cron": "^3.0.11",
     "autoprefixer": "^10.4.14",
     "caniuse-lite": "^1.0.30001707",
     "class-variance-authority": "^0.7.1",
@@ -50,7 +48,6 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.344.0",
     "next": "^15.2.4",
-    "node-cron": "^3.0.3",
     "nodemailer": "^6.9.10",
     "postcss": "^8.4.23",
     "react": "^18.3.1",
@@ -70,8 +67,6 @@
     "@types/react-dom": "^18.3.5",
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
-    "tsc-alias": "^1.8.13",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "5.8.2"
   }
 }
