@@ -1,11 +1,23 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "ES2017",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
     "noEmit": false,
-    "module": "CommonJS",
-    "moduleResolution": "node"
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "lib": ["esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/worker.ts"
@@ -14,14 +26,6 @@
     "node_modules",
     ".next",
     "dist",
-    "src/**/*.test.ts",
-    "src/app",
-    "src/components",
-    "src/hooks",
-    "src/lib",
-    "src/services",
-    "src/styles",
-    "src/types",
-    "src/utils"
+    "**/*.test.ts"
   ]
 } 
