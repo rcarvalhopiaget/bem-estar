@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, Typography, Box, TextField, Alert, Dialog, DialogTitle, DialogContent, Grid, IconButton } from '@mui/material';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, Typography, Box, Alert, Dialog, DialogTitle, DialogContent, Grid, IconButton, Button } from '@mui/material';
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
-import { TipoRefeicao, TIPOS_REFEICAO } from '@/types/refeicao';
+import { TipoRefeicao } from '@/types/refeicao';
 import { useToast } from "@/components/ui/use-toast";
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -13,6 +13,15 @@ import SoupKitchenIcon from '@mui/icons-material/SoupKitchen';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLogService } from '@/services/logService';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 interface Props {
   alunos: Aluno[];
@@ -101,199 +110,158 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   const { user } = useAuth();
   const { canWrite } = usePermissions();
   const { logAction } = useLogService();
-  const [filtro, setFiltro] = useState('');
+  const [filtroNome, setFiltroNome] = useState('');
+  const [turmaFiltro, setTurmaFiltro] = useState('');
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
   const [isRestauranteUser, setIsRestauranteUser] = useState(false);
   
+  // Obter turmas únicas e ordenadas
+  const turmasUnicas = useMemo(() => {
+    const turmas = new Set(alunos.map(a => a.turma).filter(Boolean));
+    return Array.from(turmas).sort((a, b) => a.localeCompare(b));
+  }, [alunos]);
+  
   useEffect(() => {
-    // Verificar se o email do usuário contém "restaurante"
     if (user?.email && user.email.includes('restaurante')) {
       setIsRestauranteUser(true);
       console.log('RefeicaoRapida: É usuário do restaurante!');
     }
   }, [user]);
   
-  // Filtrar tipos de refeição com base no perfil do usuário
-  // Operadores (incluindo usuário do restaurante) veem todas as opções
   const TIPOS_REFEICAO = TODOS_TIPOS_REFEICAO;
 
-  // Formata a data de forma simplificada
-  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+  const dataFormatada = useMemo(() => new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
-  }).format(data);
+  }).format(data), [data]);
 
-  // Função para verificar se duas datas são o mesmo dia
   const isMesmoDia = (data1: Date, data2: Date): boolean => {
     return (
-      data1.getDate() === data2.getDate() &&
+      data1.getFullYear() === data2.getFullYear() &&
       data1.getMonth() === data2.getMonth() &&
-      data1.getFullYear() === data2.getFullYear()
+      data1.getDate() === data2.getDate()
     );
   };
 
-  // Carregar refeições do dia atual e da semana
   useEffect(() => {
     const carregarRefeicoes = async () => {
       try {
-        // Limpa o estado anterior quando a data muda
         setAlunosComeram({});
-        
-        // Calcula o início e fim do dia selecionado
+        setRefeicoesSemanais({});
+
         const dataInicio = new Date(data);
         dataInicio.setHours(0, 0, 0, 0);
         const dataFim = new Date(data);
         dataFim.setHours(23, 59, 59, 999);
-        
-        // Carrega refeições do dia selecionado apenas com filtro de data
-        // Evita usar múltiplos filtros que exigiriam índices compostos
-        const refeicoes = await refeicaoService.listarRefeicoes({ 
-          dataInicio, 
-          dataFim
-        });
-        
-        // Filtra as refeições com presente=true no lado do cliente
-        const refeicoesPresentes = refeicoes.filter(refeicao => refeicao.presente === true);
-        
+
+        const [refeicoesDoDia, ...refeicoesSemanaisRaw] = await Promise.all([
+           refeicaoService.listarRefeicoes({ dataInicio, dataFim, presente: true }),
+           ...alunos.map(aluno => refeicaoService.buscarRefeicoesSemana(aluno.id, data))
+        ]);
+
         const comeram: Record<string, Partial<Record<TipoRefeicao, boolean>>> = {};
-        
-        // Apenas processa refeições se a data selecionada for a data atual
         const hoje = new Date();
         if (isMesmoDia(data, hoje)) {
-          refeicoesPresentes.forEach(refeicao => {
-            if (!comeram[refeicao.alunoId]) {
-              comeram[refeicao.alunoId] = {};
-            }
+          refeicoesDoDia.forEach(refeicao => {
+            if (!comeram[refeicao.alunoId]) comeram[refeicao.alunoId] = {};
             comeram[refeicao.alunoId][refeicao.tipo] = true;
           });
         }
         setAlunosComeram(comeram);
 
-        // Carrega refeições da semana para cada aluno
         const refeicoesSemanaisPorAluno: Record<string, Record<TipoRefeicao, number>> = {};
-        await Promise.all(
-          alunos.map(async (aluno) => {
-            const refeicoesAluno = await refeicaoService.buscarRefeicoesSemana(aluno.id, data);
-            
-            // Inicializa contadores para cada tipo de refeição
-            const contadores: Record<TipoRefeicao, number> = {
-              LANCHE_MANHA: 0,
-              ALMOCO: 0,
-              LANCHE_TARDE: 0,
-              SOPA: 0
-            };
-
-            // Conta refeições por tipo
-            refeicoesAluno.forEach(refeicao => {
+        alunos.forEach((aluno, index) => {
+          const contadores: Record<TipoRefeicao, number> = { LANCHE_MANHA: 0, ALMOCO: 0, LANCHE_TARDE: 0, SOPA: 0 };
+          const refeicoesDoAlunoNaSemana = refeicoesSemanaisRaw[index] || [];
+          refeicoesDoAlunoNaSemana.forEach(refeicao => {
+            if (refeicao.isAvulso !== true && contadores[refeicao.tipo] !== undefined) {
               contadores[refeicao.tipo]++;
-            });
-
-            refeicoesSemanaisPorAluno[aluno.id] = contadores;
-          })
-        );
+            }
+          });
+          refeicoesSemanaisPorAluno[aluno.id] = contadores;
+        });
         setRefeicoesSemanais(refeicoesSemanaisPorAluno);
+
       } catch (error) {
         console.error('Erro ao carregar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar refeições do dia",
-          variant: "destructive",
-        });
+        toast({ title: "Erro", description: "Erro ao carregar dados das refeições", variant: "destructive" });
       }
     };
 
     carregarRefeicoes();
-  }, [data, alunos]);
+  }, [data, alunos, toast]);
 
-  const alunosFiltrados = alunos.filter(aluno => {
-    const termoBusca = filtro.toLowerCase();
-    return (
-      aluno.nome.toLowerCase().includes(termoBusca) ||
-      aluno.turma.toLowerCase().includes(termoBusca)
-    );
-  });
+  const alunosFiltrados = useMemo(() => {
+    return alunos.filter(aluno => {
+      const termoBuscaNome = filtroNome.toLowerCase();
+      const matchNome = aluno.nome.toLowerCase().includes(termoBuscaNome);
+      const matchTurma = !turmaFiltro || aluno.turma === turmaFiltro;
+      return matchNome && matchTurma;
+    });
+  }, [alunos, filtroNome, turmaFiltro]);
 
   const handleCardClick = (aluno: Aluno) => {
-    // Verifica se a data selecionada é a data atual
     const hoje = new Date();
     if (!isMesmoDia(data, hoje)) {
-      toast({
-        title: "Info",
-        description: "Só é possível registrar refeições para o dia atual",
-        variant: "default",
-      });
+      toast({ title: "Info", description: "Só é possível registrar refeições para o dia atual." });
       return;
     }
-
-    const refeicoesHoje = alunosComeram[aluno.id] || {};
-    const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
-
-    if (todasRefeicoesFeitas) {
-      toast({
-        title: "Info",
-        description: "O aluno já realizou todas as refeições de hoje",
-        variant: "default",
-      });
+    if (!aluno.ativo) {
+      toast({ title: "Atenção", description: `Aluno ${aluno.nome} está inativo.` });
       return;
     }
-
+    if (!canWrite) {
+      toast({ title: "Permissão Negada", description: "Você não tem permissão para registrar refeições.", variant: "destructive" });
+      return;
+    }
     setAlunoSelecionado(aluno);
     setDialogoAberto(true);
   };
 
   const handleMarcarRefeicao = async (tipoRefeicao: TipoRefeicao) => {
     const alunoParaMarcar = alunoSelecionado;
-    
-    if (!canWrite) {
-      toast({ title: 'Erro de Permissão', description: 'Você não tem permissão para registrar refeições.', variant: 'destructive' });
-      return;
-    }
-    if (!alunoParaMarcar) return;
+    if (!alunoParaMarcar || !canWrite) return;
 
-    const refeicoesHoje = alunosComeram[alunoParaMarcar.id] || {};
-    if (refeicoesHoje?.[tipoRefeicao]) {
-      toast({
-        title: "Info",
-        description: "Esta refeição já foi registrada hoje",
-        variant: "default",
-      });
-      return;
+    const tipoAluno = alunoParaMarcar.tipo;
+    const limiteSemanalConfig = LIMITE_REFEICOES[tipoAluno];
+    const limiteTipoEspecifico = limiteSemanalConfig?.[tipoRefeicao] ?? 999;
+    const refeicoesAtuaisSemana = refeicoesSemanais[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0;
+    const diaDaSemanaAtual = data.getDay();
+    const diasPermitidos = alunoParaMarcar.diasRefeicaoPermitidos || [];
+
+    let isAvulso = false;
+    const ehTipoComLimiteDias = tipoAluno.startsWith('INTEGRAL');
+
+    if (tipoAluno === 'AVULSO') {
+      isAvulso = true;
+    } else if (ehTipoComLimiteDias && diasPermitidos.length > 0 && !diasPermitidos.includes(diaDaSemanaAtual)) {
+      isAvulso = true;
+    } else if (ehTipoComLimiteDias && refeicoesAtuaisSemana >= limiteTipoEspecifico) {
+      isAvulso = true;
     }
+
+    const nomeTipoRefeicao = TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
+    const acao = `Marcar ${isAvulso ? '(Avulso)' : ''} ${nomeTipoRefeicao}`;
 
     try {
-      const refeicoesPorTipo = refeicoesSemanais[alunoParaMarcar.id] || {
-        LANCHE_MANHA: 0,
-        ALMOCO: 0,
-        LANCHE_TARDE: 0,
-        SOPA: 0
-      };
-      const limitesPorTipo = LIMITE_REFEICOES[alunoParaMarcar.tipo] || {
-        LANCHE_MANHA: 0,
-        ALMOCO: 0,
-        LANCHE_TARDE: 0,
-        SOPA: 0
+      setDialogoAberto(false);
+      toast({ title: "Processando...", description: `${acao} para ${alunoParaMarcar.nome}` });
+
+      const refeicaoData = {
+        alunoId: alunoParaMarcar.id,
+        nomeAluno: alunoParaMarcar.nome,
+        turma: alunoParaMarcar.turma,
+        data: data,
+        tipo: tipoRefeicao,
+        presente: true,
       };
 
-      // Verifica se excedeu a cota para este tipo específico de refeição
-      const refeicoesAtuais = refeicoesPorTipo[tipoRefeicao] || 0;
-      const tipoAluno = alunoParaMarcar.tipo?.toUpperCase() || 'AVULSO';
-      const limiteTipo = LIMITE_REFEICOES[tipoAluno]?.[tipoRefeicao] || 999;
+      const refeicaoId = await refeicaoService.registrarRefeicao(refeicaoData);
       
-      if (refeicoesAtuais >= limiteTipo) {
-        toast({
-          title: "Atenção",
-          description: `Cota semanal de ${TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome} excedida para ${alunoParaMarcar.nome}`,
-          variant: "destructive",
-        });
-        setDialogoAberto(false);
-        return;
-      }
-
-      // Atualiza o estado das refeições do aluno primeiro
       setAlunosComeram(prev => ({
         ...prev,
         [alunoParaMarcar.id]: {
@@ -302,340 +270,238 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         }
       }));
 
-      const refeicaoInfo = {
-        alunoId: alunoParaMarcar.id,
-        nomeAluno: alunoParaMarcar.nome,
-        turma: alunoParaMarcar.turma,
-        data: new Date(data),
-        tipo: tipoRefeicao,
-        presente: true
-      };
-      
-      const refeicaoId = await refeicaoService.registrarRefeicao(refeicaoInfo);
-
-      onRefeicaoMarcada();
-      const nomeRefeicao = TIPOS_REFEICAO[tipoRefeicao as keyof typeof TIPOS_REFEICAO] || tipoRefeicao;
-      toast({
-        title: "Sucesso",
-        description: `Refeição (${nomeRefeicao}) marcada para ${alunoParaMarcar.nome}.`,
-      });
-      await logAction('CREATE', 'REFEICOES', `Refeição Rápida (${tipoRefeicao}) registrada para ${alunoParaMarcar.nome}`, { refeicaoId, alunoId: alunoParaMarcar.id });
-
-    } catch (error: any) {
-      console.error('Erro ao registrar refeição rápida:', error);
-      // Reverter estado otimista em caso de erro
-      if (alunoParaMarcar) {
-         setAlunosComeram(prev => ({
+      if (!isAvulso) {
+        setRefeicoesSemanais(prev => ({
           ...prev,
           [alunoParaMarcar.id]: {
             ...prev[alunoParaMarcar.id],
-            [tipoRefeicao]: false
+            [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0) + 1
           }
         }));
       }
+
+      toast({
+        title: "Sucesso!",
+        description: `${acao} registrado com sucesso!`,
+      });
+
+      logAction('CREATE', 'REFEICOES', `Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao}) registrada`, {
+        alunoId: alunoParaMarcar.id,
+        alunoNome: alunoParaMarcar.nome,
+        refeicaoId: refeicaoId,
+        avulso: isAvulso
+      });
+
+      onRefeicaoMarcada();
+
+    } catch (error: any) {
+      console.error(`Erro ao ${acao}:`, error);
       toast({
         title: "Erro",
-        description: `Falha ao registrar refeição para ${alunoParaMarcar?.nome || 'aluno selecionado'}: ${error.message}`,
+        description: `Falha ao ${acao}. ${error.message}`,
         variant: "destructive",
       });
-      await logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição Rápida (${tipoRefeicao}) para ${alunoParaMarcar?.nome || 'ID: ' + alunoParaMarcar?.id}`, { error: error?.message, alunoId: alunoParaMarcar?.id });
+      
+      setAlunosComeram(prev => ({
+        ...prev,
+        [alunoParaMarcar.id]: { ...prev[alunoParaMarcar.id], [tipoRefeicao]: false }
+      }));
+
+      if (!isAvulso) {
+        setRefeicoesSemanais(prev => ({
+          ...prev,
+          [alunoParaMarcar.id]: {
+            ...prev[alunoParaMarcar.id],
+            [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 1) - 1
+          }
+        }));
+      }
+
+      logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao})`, {
+        alunoId: alunoParaMarcar?.id,
+        alunoNome: alunoParaMarcar?.nome,
+        tipoRefeicao: tipoRefeicao,
+        erro: error.message
+      });
     } finally {
-      setDialogoAberto(false);
+      setAlunoSelecionado(null);
     }
   };
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2 } }}>
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        gutterBottom 
-        sx={{ 
-          textTransform: 'capitalize',
-          fontSize: { xs: '1.5rem', sm: '2rem' }
-        }}
-      >
-        {dataFormatada}
-        {!isMesmoDia(data, new Date()) && (
-          <Alert 
-            severity="info" 
-            sx={{ 
-              mt: 2, 
-              mb: 1 
-            }}
-          >
-            Visualizando dados históricos. Apenas o dia atual permite registrar refeições.
-          </Alert>
-        )}
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Registro Rápido de Refeições - {dataFormatada}
       </Typography>
+      
+      {/* Filtros */} 
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <Label htmlFor="filtro-nome">Buscar por Nome</Label>
+          <Input 
+            id="filtro-nome"
+            placeholder="Digite nome do aluno..." 
+            value={filtroNome}
+            onChange={(e) => setFiltroNome(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="filtro-turma">Filtrar por Turma</Label>
+          <Select 
+            value={turmaFiltro}
+            onValueChange={setTurmaFiltro}
+          >
+            <SelectTrigger id="filtro-turma" className="w-full">
+              <SelectValue placeholder="Todas as Turmas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas as Turmas</SelectItem>
+              {turmasUnicas.map(turma => (
+                <SelectItem key={turma} value={turma}>
+                  {turma}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Buscar por nome ou turma do aluno..."
-        value={filtro}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFiltro(e.target.value)}
-        sx={{ 
-          mb: 2,
-          '& .MuiOutlinedInput-root': {
-            fontSize: { xs: '1rem', sm: '1.1rem' }
-          }
-        }}
-      />
+      {/* Lista de Alunos */} 
+      <Grid container spacing={2}>
+        {alunosFiltrados.length > 0 ? (
+          alunosFiltrados.map(aluno => {
+            const refeicoesHoje = alunosComeram[aluno.id] || {};
+            const limiteSemanalConfig = LIMITE_REFEICOES[aluno.tipo];
+            const contagemSemanal = refeicoesSemanais[aluno.id] || {};
+            const tipoAluno = aluno.tipo;
+            const diasPermitidos = aluno.diasRefeicaoPermitidos || [];
+            const diaDaSemanaAtual = data.getDay();
+            const ehDiaPermitido = !tipoAluno.startsWith('INTEGRAL') || diasPermitidos.length === 0 || diasPermitidos.includes(diaDaSemanaAtual);
+            
+            let statusAluno = `Tipo: ${tipoAluno}`;
+            if (tipoAluno.startsWith('INTEGRAL') && diasPermitidos.length > 0) {
+               const nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+               statusAluno += ` (${diasPermitidos.map(d => nomesDias[d]).join(', ')})`;
+            }
 
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: {
-          xs: '1fr',
-          sm: 'repeat(auto-fill, minmax(250px, 1fr))'
-        },
-        gap: { xs: 1, sm: 2 }
-      }}>
-        {alunosFiltrados.map((aluno) => {
-          const refeicoesHoje = alunosComeram[aluno.id] || {};
-          const refeicoesPorTipo = refeicoesSemanais[aluno.id] || {
-            LANCHE_MANHA: 0,
-            ALMOCO: 0,
-            LANCHE_TARDE: 0,
-            SOPA: 0
-          };
-          const limitesPorTipo = LIMITE_REFEICOES[aluno.tipo] || {
-            LANCHE_MANHA: 0,
-            ALMOCO: 0,
-            LANCHE_TARDE: 0,
-            SOPA: 0
-          };
-          
-          // Calcula o total de refeições restantes somando todos os tipos
-          const refeicaoRestante = Object.entries(limitesPorTipo).reduce((total, [tipo, limite]) => {
-            return total + (limite - (refeicoesPorTipo[tipo as TipoRefeicao] || 0));
-          }, 0);
-          
-          // Verifica se excedeu a cota em qualquer tipo de refeição
-          const excedeuCota = Object.entries(limitesPorTipo).some(([tipo, limite]) => 
-            (refeicoesPorTipo[tipo as TipoRefeicao] || 0) >= limite
-          );
-          
-          // Verifica se está na última refeição em qualquer tipo
-          const ultimaRefeicao = Object.entries(limitesPorTipo).some(([tipo, limite]) => 
-            (refeicoesPorTipo[tipo as TipoRefeicao] || 0) === limite - 1
-          );
-          const todasRefeicoesFeitas = TIPOS_REFEICAO.every(tipo => refeicoesHoje[tipo.id]);
-
-          return (
-            <Card
-              key={aluno.id}
-              onClick={() => !todasRefeicoesFeitas && handleCardClick(aluno)}
-              sx={{
-                p: { xs: 1.5, sm: 2 },
-                cursor: todasRefeicoesFeitas ? 'default' : 'pointer',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  transform: todasRefeicoesFeitas ? 'none' : 'scale(1.02)',
-                  boxShadow: todasRefeicoesFeitas ? 1 : 3
-                },
-                '&:active': {
-                  transform: todasRefeicoesFeitas ? 'none' : 'scale(0.98)'
-                },
-                minHeight: { xs: '100px', sm: '120px' },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                bgcolor: Object.values(refeicoesHoje).some(Boolean) ? '#e8f5e9' : 'white',
-                borderColor: todasRefeicoesFeitas ? 'success.main' : excedeuCota ? 'warning.main' : ultimaRefeicao ? 'warning.light' : 'grey.300',
-                borderWidth: 1,
-                borderStyle: 'solid'
-              }}
-            >
-              <Box>
-                <Typography 
-                  variant="h6" 
-                  component="div" 
+            return (
+              <Grid item xs={12} sm={6} md={4} key={aluno.id}>
+                <Card 
                   sx={{ 
-                    mb: 1,
-                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                    p: 2, 
+                    cursor: canWrite && aluno.ativo ? 'pointer' : 'default', 
+                    opacity: aluno.ativo ? 1 : 0.6,
+                    border: !ehDiaPermitido ? '2px solid orange' : undefined
                   }}
+                  onClick={() => handleCardClick(aluno)}
                 >
-                  {aluno.nome}
-                </Typography>
-                <Typography 
-                  color="textSecondary" 
-                  sx={{ 
-                    mb: 1,
-                    fontSize: { xs: '0.875rem', sm: '1rem' }
-                  }}
-                >
-                  {aluno.turma}
-                </Typography>
-              </Box>
+                  <Typography variant="subtitle1" component="div">
+                    {aluno.nome}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {aluno.turma}
+                  </Typography>
+                  <Typography variant="caption" display="block" gutterBottom sx={{ fontSize: '0.75rem' }}>
+                    {statusAluno}
+                    {!aluno.ativo && ' (INATIVO)'} 
+                    {!ehDiaPermitido && ' (Dia não permitido)'}
+                  </Typography>
+                  
+                  {/* Mostrar ícones das refeições do dia */}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    {TIPOS_REFEICAO.map(tipo => {
+                      const comeu = !!refeicoesHoje[tipo.id];
+                      const Icone = tipo.icon;
+                      const limiteTipo = limiteSemanalConfig?.[tipo.id] ?? 999;
+                      const contagemTipo = contagemSemanal?.[tipo.id] ?? 0;
+                      const atingiuLimite = tipoAluno !== 'MENSALISTA' && tipoAluno !== 'AVULSO' && contagemTipo >= limiteTipo;
 
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                {TIPOS_REFEICAO.map((tipo) => {
-                  const Icon = tipo.icon;
-                  const refeicaoMarcada = refeicoesHoje[tipo.id];
-                  return (
-                    <Box
-                      key={tipo.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '50%',
-                        width: window.innerWidth < 600 ? 32 : 40,
-                        height: window.innerWidth < 600 ? 32 : 40,
-                        backgroundColor: refeicaoMarcada ? tipo.color : 'transparent',
-                        color: refeicaoMarcada ? 'white' : 'grey.400',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
-                    </Box>
-                  );
-                })}
-              </Box>
+                      let tooltip = `${tipo.nome}${atingiuLimite ? ' (Limite semanal atingido)' : ''}`;
+                      if (comeu) {
+                        tooltip += ` - Já comeu hoje`;
+                      }
+                      
+                      return (
+                        <IconButton 
+                          key={tipo.id} 
+                          size="small" 
+                          disabled 
+                          title={tooltip}
+                          sx={{ 
+                            color: comeu ? tipo.color : 'grey', 
+                            opacity: comeu ? 1 : 0.5, 
+                            border: atingiuLimite ? '2px solid red' : undefined,
+                            padding: '4px'
+                          }}
+                        >
+                          <Icone fontSize="small" />
+                        </IconButton>
+                      );
+                    })}
+                  </Box>
+                </Card>
+              </Grid>
+            );
+          })
+        ) : (
+          <Grid item xs={12}>
+            <Alert severity="info">Nenhum aluno encontrado com os filtros aplicados.</Alert>
+          </Grid>
+        )}
+      </Grid>
 
-              {todasRefeicoesFeitas ? (
-                <Alert 
-                  severity="success" 
-                  sx={{ 
-                    mt: 1,
-                    py: { xs: 0.5, sm: 1 },
-                    '& .MuiAlert-message': {
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                    }
-                  }}
-                >
-                  Todas as refeições foram registradas
-                </Alert>
-              ) : excedeuCota ? (
-                <Alert 
-                  severity="warning" 
-                  sx={{ 
-                    mt: 1,
-                    py: { xs: 0.5, sm: 1 },
-                    '& .MuiAlert-message': {
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                    }
-                  }}
-                >
-                  Cota semanal de refeições excedida
-                </Alert>
-              ) : (
-                <Typography 
-                  color="textSecondary" 
-                  sx={{ 
-                    mt: 1, 
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                  }}
-                >
-                  {refeicaoRestante} {refeicaoRestante === 1 ? 'refeição restante' : 'refeições restantes'}
-                </Typography>
-              )}
-            </Card>
-          );
-        })}
-      </Box>
+      {/* Diálogo para Marcar Refeição */} 
+      <Dialog open={dialogoAberto} onClose={() => setDialogoAberto(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Marcar Refeição para {alunoSelecionado?.nome}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} justifyContent="center">
+            {TIPOS_REFEICAO.map(tipo => {
+              if (!alunoSelecionado) return null;
+              
+              const comeu = !!alunosComeram[alunoSelecionado.id]?.[tipo.id];
+              const limiteSemanalAluno = LIMITE_REFEICOES[alunoSelecionado.tipo];
+              const limiteTipoEspecifico = limiteSemanalAluno?.[tipo.id] ?? 999;
+              const contagemSemanalTipo = refeicoesSemanais[alunoSelecionado.id]?.[tipo.id] ?? 0;
+              const atingiuLimiteCalculado = alunoSelecionado.tipo !== 'MENSALISTA' && alunoSelecionado.tipo !== 'AVULSO' && contagemSemanalTipo >= limiteTipoEspecifico;
+              const diaDaSemanaAtual = data.getDay();
+              const diasPermitidosAluno = alunoSelecionado.diasRefeicaoPermitidos || [];
+              const tipoAlunoDialog = alunoSelecionado.tipo;
+              const ehTipoComLimiteDialog = tipoAlunoDialog?.startsWith('INTEGRAL');
+              const ehDiaNaoPermitidoDialog = ehTipoComLimiteDialog && diasPermitidosAluno.length > 0 && !diasPermitidosAluno.includes(diaDaSemanaAtual);
 
-      <Dialog 
-        open={dialogoAberto} 
-        onClose={() => setDialogoAberto(false)}
-        PaperProps={{
-          sx: {
-            width: '100%',
-            maxWidth: { xs: '95%', sm: '400px' },
-            borderRadius: 2,
-            overflow: 'hidden',
-            m: { xs: 1, sm: 2 }
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          textAlign: 'center', 
-          pb: 1, 
-          bgcolor: 'primary.main',
-          color: 'white',
-          fontSize: { xs: '1.25rem', sm: '1.5rem' }
-        }}>
-          Selecione a refeição
-        </DialogTitle>
-        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
-          <Grid container spacing={2}>
-            {TIPOS_REFEICAO.map((tipo) => {
-              const refeicoesHoje = alunoSelecionado ? (alunosComeram[alunoSelecionado.id] || {}) : {};
-              const jaComeu = refeicoesHoje[tipo.id];
-              const Icon = tipo.icon;
+              const isDisabled = comeu || !canWrite;
+              const isAvulsoPrevisto = ehDiaNaoPermitidoDialog || atingiuLimiteCalculado || tipoAlunoDialog === 'AVULSO';
 
               return (
-                <Grid item xs={12} key={tipo.id}>
-                  <Box
-                    onClick={() => !jaComeu && handleMarcarRefeicao(tipo.id)}
+                <Grid item xs={6} key={tipo.id}>
+                  <Button 
+                    variant="contained" 
+                    startIcon={<tipo.icon />} 
+                    fullWidth
+                    onClick={() => handleMarcarRefeicao(tipo.id)}
+                    disabled={isDisabled}
                     sx={{
-                      p: { xs: 1.5, sm: 2 },
-                      borderRadius: 2,
-                      cursor: jaComeu ? 'default' : 'pointer',
-                      bgcolor: jaComeu ? 'grey.100' : 'white',
-                      border: 1,
-                      borderColor: jaComeu ? 'grey.300' : 'primary.main',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        transform: jaComeu ? 'none' : 'scale(1.02)',
-                        bgcolor: jaComeu ? 'grey.100' : 'primary.50',
-                      },
-                      '&:active': {
-                        transform: jaComeu ? 'none' : 'scale(0.98)'
-                      },
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2
+                      backgroundColor: isDisabled ? 'grey' : tipo.color,
+                      color: 'white',
+                      opacity: isDisabled ? 0.6 : 1,
+                      position: 'relative'
                     }}
                   >
-                    <IconButton 
-                      sx={{ 
-                        bgcolor: jaComeu ? 'grey.300' : 'primary.main',
-                        color: 'white',
-                        '&:hover': {
-                          bgcolor: jaComeu ? 'grey.300' : 'primary.dark',
-                        },
-                        p: { xs: 1, sm: 1.5 }
-                      }}
-                      disabled={jaComeu}
-                    >
-                      <Icon fontSize={window.innerWidth < 600 ? "small" : "medium"} />
-                    </IconButton>
-                    <Box>
-                      <Typography 
-                        variant="subtitle1" 
-                        sx={{ 
-                          fontWeight: 'medium',
-                          color: jaComeu ? 'grey.500' : 'inherit',
-                          fontSize: { xs: '0.875rem', sm: '1rem' }
-                        }}
-                      >
-                        {tipo.nome}
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: jaComeu ? 'grey.500' : 'text.secondary',
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }}
-                      >
-                        Horário: {tipo.horario}
-                      </Typography>
-                    </Box>
-                    {jaComeu && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          ml: 'auto',
-                          color: 'grey.500',
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }}
-                      >
-                        Registrado
-                      </Typography>
+                    {tipo.nome}
+                    {isAvulsoPrevisto && !isDisabled && (
+                       <span style={{
+                         position: 'absolute', 
+                         top: 2, 
+                         right: 2, 
+                         background: 'orange', 
+                         color: 'white', 
+                         borderRadius: '4px', 
+                         padding: '1px 3px', 
+                         fontSize: '0.6rem'
+                       }}>AVULSO</span>
                     )}
-                  </Box>
+                  </Button>
                 </Grid>
               );
             })}
