@@ -6,6 +6,7 @@ export interface Aluno {
   tipo: 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'AVULSO';
   turma: string;
   ativo: boolean;
+  diasRefeicaoPermitidos?: number[];
   createdAt: Date;
   updatedAt: Date;
 }

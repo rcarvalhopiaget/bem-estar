@@ -30,8 +30,9 @@ function formatMealReport(meals) {
 async function fetchDailyReportDetails() {
   try {
     const admin = require('firebase-admin');
+    const { Timestamp } = require('firebase-admin/firestore');
+
     if (!admin.apps.length) {
-      // Usar o arquivo de configuração do Firebase para inicializar o app
       const serviceAccount = require('../serviceAccountKey.json');
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
@@ -39,46 +40,73 @@ async function fetchDailyReportDetails() {
     }
     const db = admin.firestore();
 
-    // Fetch all alunos from Firestore
-    const alunosSnap = await db.collection('alunos').get();
+    // Fetch all alunos ativos from Firestore
+    const alunosSnap = await db.collection('alunos').where('ativo', '==', true).get();
     const alunos = [];
     alunosSnap.forEach(doc => {
       alunos.push({ id: doc.id, ...doc.data() });
     });
     const totalStudents = alunos.length;
 
-    // Get today's date in yyyy-mm-dd format
+    // Get today's date and calculate start/end Timestamps
     const today = new Date();
-    const todayStr = today.toISOString().substring(0, 10);
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    const startOfDayTimestamp = Timestamp.fromDate(startOfDay);
+    const endOfDayTimestamp = Timestamp.fromDate(endOfDay);
 
-    // Fetch refeicoes (meals) for today from Firestore
-    const refeicoesSnap = await db.collection('refeicoes').where('date', '==', todayStr).get();
+    // Fetch refeicoes (meals) for today from Firestore using a date range query
+    const refeicoesSnap = await db.collection('refeicoes')
+                                  .where('data', '>=', startOfDayTimestamp)
+                                  .where('data', '<=', endOfDayTimestamp)
+                                  .get();
     const refeicoes = [];
     refeicoesSnap.forEach(doc => {
-      refeicoes.push(doc.data());
+      const docData = doc.data();
+      if (docData.data && docData.data.toDate) {
+        refeicoes.push({ ...docData, id: doc.id }); 
+      } else {
+        console.warn(`Documento ${doc.id} na coleção 'refeicoes' não possui campo 'data' válido.`);
+      }
     });
+    
+    console.log(`[sendDailyReport] Buscando refeições entre ${startOfDay.toISOString()} e ${endOfDay.toISOString()}`);
+    console.log(`[sendDailyReport] Encontradas ${refeicoes.length} refeições.`);
 
-    // Determine which students have ate and count meals by type
+    // Determine which students have ate, count meals by type, and count avulsos
     const ateStudentIds = new Set();
+    let avulsoCount = 0;
     const mealsByType = {
       'Almoço': 0,
       'Lanche da Manhã': 0,
-      'Lanche da Tarde': 0
+      'Lanche da Tarde': 0,
+      'Sopa': 0
     };
+    
     refeicoes.forEach(r => {
-      if (r.studentId) {
-        ateStudentIds.add(r.studentId);
-      }
-      if (r.type in mealsByType) {
-        mealsByType[r.type]++;
+      if (r.presente === true) { 
+        if (r.alunoId) { 
+          ateStudentIds.add(r.alunoId);
+        }
+        const tipoRefeicaoFormatado = formatarTipoRefeicao(r.tipo);
+        if (tipoRefeicaoFormatado in mealsByType) {
+          mealsByType[tipoRefeicaoFormatado]++;
+        }
+        if (r.isAvulso === true) {
+          avulsoCount++;
+        }
       }
     });
+    
+    console.log(`[sendDailyReport] IDs de alunos que comeram: ${Array.from(ateStudentIds).join(', ')}`);
+    console.log(`[sendDailyReport] Refeições por tipo:`, mealsByType);
+    console.log(`[sendDailyReport] Refeições avulsas contadas: ${avulsoCount}`);
 
     // Ordenar alunos por turma e nome para melhor visualização
     const ateList = [];
     const notAteList = [];
     alunos.forEach(a => {
-      if (ateStudentIds.has(a.id)) {
+      if (ateStudentIds.has(a.id)) { 
         ateList.push({ studentName: a.nome, class: a.turma, tipo: a.tipo || 'Não especificado' });
       } else {
         notAteList.push({ studentName: a.nome, class: a.turma, tipo: a.tipo || 'Não especificado' });
@@ -86,11 +114,11 @@ async function fetchDailyReportDetails() {
     });
 
     // Ordenar por turma e depois por nome
-    ateList.sort((a, b) => a.class.localeCompare(b.class) || a.studentName.localeCompare(b.studentName));
-    notAteList.sort((a, b) => a.class.localeCompare(b.class) || a.studentName.localeCompare(b.studentName));
+    ateList.sort((a, b) => (a.class || '').localeCompare(b.class || '') || a.studentName.localeCompare(b.studentName));
+    notAteList.sort((a, b) => (a.class || '').localeCompare(b.class || '') || a.studentName.localeCompare(b.studentName));
 
-    const ateCount = ateList.length;
-    const notAteCount = notAteList.length;
+    const ateCount = ateStudentIds.size;
+    const notAteCount = totalStudents - ateCount;
 
     // Format today's date as dd/mm/yyyy
     const reportDate = today.getDate().toString().padStart(2, '0') + '/' +
@@ -107,7 +135,8 @@ async function fetchDailyReportDetails() {
       mealsByType,
       ateList,
       notAteList,
-      generationDateTime
+      generationDateTime,
+      avulsoCount
     };
   } catch (error) {
     console.error('Erro ao consultar Firestore:', error);
@@ -120,39 +149,55 @@ async function fetchDailyReportDetails() {
       mealsByType: {
         'Almoço': 0,
         'Lanche da Manhã': 0,
-        'Lanche da Tarde': 0
+        'Lanche da Tarde': 0,
+        'Sopa': 0
       },
       ateList: [],
       notAteList: [],
-      generationDateTime: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      generationDateTime: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      avulsoCount: 0
     };
+  }
+}
+
+// Adicionar função auxiliar se não existir em outro lugar
+function formatarTipoRefeicao(tipo) {
+  switch (tipo?.toUpperCase()) {
+    case 'ALMOCO':
+      return 'Almoço';
+    case 'LANCHE_MANHA':
+      return 'Lanche da Manhã';
+    case 'LANCHE_TARDE':
+      return 'Lanche da Tarde';
+    case 'SOPA':
+        return 'Sopa';
+    default:
+      // Retornar o tipo original ou um valor padrão se não reconhecido
+      return tipo || 'Desconhecido'; 
   }
 }
 
 // Function to generate CSV content based on report details
 function generateCSVReport(details) {
-  // Usar ponto e vírgula como separador para melhor compatibilidade com Excel brasileiro
   let csv = '';
   
-  // Cabeçalho do relatório
   csv += `Relatório de Refeições - ${details.reportDate}\r\n`;
   csv += `Gerado em: ${details.generationDateTime}\r\n\r\n`;
   
-  // Resumo
   csv += 'RESUMO\r\n';
   csv += `Total de alunos;${details.totalStudents}\r\n`;
-  const atePercentage = ((details.ateCount / details.totalStudents) * 100).toFixed(1);
-  const notAtePercentage = ((details.notAteCount / details.totalStudents) * 100).toFixed(1);
+  const atePercentage = details.totalStudents > 0 ? ((details.ateCount / details.totalStudents) * 100).toFixed(1) : '0.0';
+  const notAtePercentage = details.totalStudents > 0 ? ((details.notAteCount / details.totalStudents) * 100).toFixed(1) : '0.0';
   csv += `Alunos que comeram;${details.ateCount};${atePercentage}%\r\n`;
-  csv += `Alunos que não comeram;${details.notAteCount};${notAtePercentage}%\r\n\r\n`;
+  csv += `Alunos que não comeram;${details.notAteCount};${notAtePercentage}%\r\n`;
+  csv += `Refeições Avulsas Registradas;${details.avulsoCount}\r\n\r\n`;
   
-  // Refeições por tipo
   csv += 'REFEIÇÕES POR TIPO\r\n';
-  csv += `Almoço;${details.mealsByType['Almoço']}\r\n`;
-  csv += `Lanche da Manhã;${details.mealsByType['Lanche da Manhã']}\r\n`;
-  csv += `Lanche da Tarde;${details.mealsByType['Lanche da Tarde']}\r\n\r\n`;
+  csv += `Almoço;${details.mealsByType['Almoço'] || 0}\r\n`; 
+  csv += `Lanche da Manhã;${details.mealsByType['Lanche da Manhã'] || 0}\r\n`;
+  csv += `Lanche da Tarde;${details.mealsByType['Lanche da Tarde'] || 0}\r\n`;
+  csv += `Sopa;${details.mealsByType['Sopa'] || 0}\r\n\r\n`; 
   
-  // Lista de alunos que comeram
   csv += 'ALUNOS QUE COMERAM\r\n';
   csv += 'Nome;Turma;Tipo\r\n';
   details.ateList.forEach(item => {
@@ -160,7 +205,6 @@ function generateCSVReport(details) {
   });
   csv += '\r\n';
   
-  // Lista de alunos que não comeram
   csv += 'ALUNOS QUE NÃO COMERAM\r\n';
   csv += 'Nome;Turma;Tipo\r\n';
   details.notAteList.forEach(item => {
@@ -173,12 +217,10 @@ function generateCSVReport(details) {
 // Updated function to send detailed daily report email with CSV attachment
 async function sendDailyReportEmail() {
   try {
-    // Fetch today's report details
     const details = await fetchDailyReportDetails();
-    const atePercentage = ((details.ateCount / details.totalStudents) * 100).toFixed(1);
-    const notAtePercentage = ((details.notAteCount / details.totalStudents) * 100).toFixed(1);
+    const atePercentage = details.totalStudents > 0 ? ((details.ateCount / details.totalStudents) * 100).toFixed(1) : '0.0';
+    const notAtePercentage = details.totalStudents > 0 ? ((details.notAteCount / details.totalStudents) * 100).toFixed(1) : '0.0';
 
-    // Construct the email body with detailed report info and HTML formatting
     const reportBody = `
 <html>
 <head>
@@ -193,6 +235,7 @@ async function sendDailyReportEmail() {
     .footer { margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
     .ate { color: #27ae60; }
     .not-ate { color: #e74c3c; }
+    .avulso { color: #f39c12; }
   </style>
 </head>
 <body>
@@ -200,9 +243,10 @@ async function sendDailyReportEmail() {
   
   <div class="summary">
     <h2>Resumo</h2>
-    <p><strong>Total de alunos:</strong> ${details.totalStudents}</p>
+    <p><strong>Total de alunos ativos:</strong> ${details.totalStudents}</p>
     <p><strong>Alunos que comeram:</strong> <span class="ate">${details.ateCount} (${atePercentage}%)</span></p>
     <p><strong>Alunos que não comeram:</strong> <span class="not-ate">${details.notAteCount} (${notAtePercentage}%)</span></p>
+    <p><strong>Refeições Avulsas Registradas:</strong> <span class="avulso">${details.avulsoCount}</span></p>
   </div>
   
   <h2>Refeições por tipo</h2>
@@ -213,15 +257,19 @@ async function sendDailyReportEmail() {
     </tr>
     <tr>
       <td>Almoço</td>
-      <td>${details.mealsByType['Almoço']}</td>
+      <td>${details.mealsByType['Almoço'] || 0}</td>
     </tr>
     <tr>
       <td>Lanche da Manhã</td>
-      <td>${details.mealsByType['Lanche da Manhã']}</td>
+      <td>${details.mealsByType['Lanche da Manhã'] || 0}</td>
     </tr>
     <tr>
       <td>Lanche da Tarde</td>
-      <td>${details.mealsByType['Lanche da Tarde']}</td>
+      <td>${details.mealsByType['Lanche da Tarde'] || 0}</td>
+    </tr>
+    <tr>
+      <td>Sopa</td>
+      <td>${details.mealsByType['Sopa'] || 0}</td>
     </tr>
   </table>
   
@@ -234,10 +282,8 @@ async function sendDailyReportEmail() {
 </html>
 `;
 
-    // Generate CSV report content
     const csvContent = generateCSVReport(details);
 
-    // Create a transporter using SMTP details from .env
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_SMTP_HOST,
       port: parseInt(process.env.EMAIL_SMTP_PORT, 10),
@@ -248,11 +294,12 @@ async function sendDailyReportEmail() {
       }
     });
 
-    // Define email options with CSV attachment
+    const recipients = process.env.DAILY_REPORT_RECIPIENTS.split(',').map(email => email.trim());
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
-      to: 'rodrigo.carvalho@jpiaget.com.br, bemestar@jpiaget.com.br',
-      subject: `Relatório de Refeições - ${details.reportDate}`,
+      to: recipients.join(','),
+      subject: `Relatório Diário de Refeições - ${details.reportDate}`,
       html: reportBody,
       attachments: [
         {
@@ -263,17 +310,10 @@ async function sendDailyReportEmail() {
       ]
     };
 
-    // Check if test mode is enabled
-    if (process.env.EMAIL_TEST_MODE === 'true') {
-      console.log('Modo teste ativado. Email não será enviado.\nConteúdo do email:\n', mailOptions);
-      return;
-    }
-
-    // Send the email
-    let info = await transporter.sendMail(mailOptions);
-    console.log('Email enviado: ' + info.response);
+    await transporter.sendMail(mailOptions);
+    console.log(`Email do relatório diário enviado com sucesso para ${recipients.join(', ')}`);
   } catch (error) {
-    console.error('Erro ao enviar relatorio diario:', error);
+    console.error('Falha ao enviar email do relatório diário:', error);
   }
 }
 
@@ -281,4 +321,4 @@ if (require.main === module) {
   sendDailyReportEmail();
 }
 
-module.exports = { sendDailyReportEmail };
+module.exports = { sendDailyReportEmail, fetchDailyReportDetails };

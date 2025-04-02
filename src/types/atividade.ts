@@ -6,6 +6,7 @@ export interface Atividade {
   usuarioEmail: string;
   entidadeId?: string;
   entidadeTipo?: string;
+  detalhes?: Record<string, any>;
   createdAt: Date;
 }
 

@@ -9,6 +9,7 @@ export interface Refeicao {
   tipo: TipoRefeicao;
   presente: boolean;
   observacao?: string;
+  isAvulso?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +22,7 @@ export interface RefeicaoFormData {
   tipo: TipoRefeicao;
   presente: boolean;
   observacao?: string;
+  isAvulso?: boolean;
 }
 
 export interface RefeicaoFilter {
