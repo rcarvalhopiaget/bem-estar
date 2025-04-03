@@ -44,29 +44,13 @@ const converterParaRefeicao = (doc: DocumentData): Refeicao => {
   };
 };
 
-const verificarPermissoes = async () => {
-  // Aguarda a inicialização da autenticação
-  const currentUser = await new Promise<User | null>((resolve) => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
-
-  if (!currentUser) {
-    console.warn('Usuário não autenticado ao tentar acessar refeições');
-    throw new Error('Usuário não autenticado');
+const verificarPermissoes = async (idToken?: string) => {
+  if (!idToken) {
+    console.warn('Token não fornecido para verificarPermissoes');
+    throw new Error('Token de autenticação não fornecido');
   }
 
-  // Força a atualização do token para garantir que esteja válido
-  try {
-    await currentUser.getIdToken(true);
-  } catch (error) {
-    console.error('Erro ao atualizar token:', error);
-    throw new Error('Falha na autenticação');
-  }
-
-  return currentUser;
+  console.log('verificarPermissoes chamada com token.');
 };
 
 const dadosTeste: Refeicao[] = [
@@ -209,7 +193,10 @@ function getLimitesSemana(dataRefeicao: Date): { inicioSemana: Timestamp; fimSem
 export const refeicaoService = {
   async listarRefeicoes(filtro?: RefeicaoFilter): Promise<Refeicao[]> {
     try {
-      await verificarPermissoes();
+      const currentUser = await auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
+      await currentUser.getIdToken(true);
+
       console.log('Iniciando listagem de refeições com filtro:', filtro);
 
       const refeicoesRef = collection(db, COLLECTION_NAME);
@@ -279,15 +266,18 @@ export const refeicaoService = {
 
       console.log(`Encontradas ${refeicoes.length} refeições após filtros do cliente`);
       return refeicoes;
-    } catch (error) {
-      console.error('Erro ao listar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
+    } catch (error: any) {
+      console.error('Erro em listarRefeicoes:', error);
       throw error;
     }
   },
 
   async buscarRefeicao(id: string): Promise<Refeicao> {
     try {
-      await verificarPermissoes();
+      const currentUser = await auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
+      await currentUser.getIdToken(true);
+
       const docRef = doc(db, COLLECTION_NAME, id);
       const docSnap = await getDoc(docRef);
 
@@ -296,15 +286,18 @@ export const refeicaoService = {
       }
 
       return converterParaRefeicao(docSnap);
-    } catch (error) {
-      console.error('Erro ao buscar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
-      throw error;
+    } catch (error: any) {
+       console.error(`Erro ao buscar refeição ${id}:`, error);
+       throw error;
     }
   },
 
   async registrarRefeicao(dados: RefeicaoFormData): Promise<string> {
     try {
-      const user = await verificarPermissoes();
+      const currentUser = await auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
+      const idToken = await currentUser.getIdToken(true);
+
       console.log('[registrarRefeicao] Iniciando registro para:', dados);
 
       // 1. Buscar dados do aluno
@@ -373,8 +366,8 @@ export const refeicaoService = {
         isAvulso: isAvulso,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
-        registradoPor: user.uid,
-        registradoPorEmail: user.email
+        registradoPor: currentUser.uid,
+        registradoPorEmail: currentUser.email
       };
 
       // 6. Salvar no Firestore
@@ -383,25 +376,28 @@ export const refeicaoService = {
 
       // 7. Registrar Atividade com campo 'detalhes'
       await atividadeService.registrarAtividade({
-        usuarioId: user.uid,
+        usuarioId: currentUser.uid,
         tipo: 'REFEICAO',
         descricao: `Refeição (${dados.tipo}) registrada para ${dados.nomeAluno} (Avulso: ${isAvulso})`,
         detalhes: { alunoId: dados.alunoId, refeicaoId: docRef.id, tipoRefeicao: dados.tipo, foiAvulso: isAvulso },
-        usuarioEmail: user.email || '',
+        usuarioEmail: currentUser.email || '',
         entidadeId: docRef.id,
         entidadeTipo: 'refeicao'
       });
 
       return docRef.id;
-    } catch (error) {
-      console.error('Erro ao registrar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
+    } catch (error: any) {
+      console.error('Erro ao registrar refeição:', error);
       throw error;
     }
   },
 
   async atualizarRefeicao(id: string, dados: Partial<RefeicaoFormData>): Promise<void> {
     try {
-      const user = await verificarPermissoes();
+      const currentUser = await auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
+      const idToken = await currentUser.getIdToken(true);
+
       const docRef = doc(db, COLLECTION_NAME, id);
 
       // ATENÇÃO: Se a DATA ou TIPO da refeição for alterada, a lógica de 'isAvulso'
@@ -421,32 +417,35 @@ export const refeicaoService = {
       );
       
       dadosParaAtualizar.updatedAt = Timestamp.now();
-      dadosParaAtualizar.atualizadoPor = user.uid;
-      dadosParaAtualizar.atualizadoPorEmail = user.email;
+      dadosParaAtualizar.atualizadoPor = currentUser.uid;
+      dadosParaAtualizar.atualizadoPorEmail = currentUser.email;
 
       await updateDoc(docRef, dadosParaAtualizar);
       console.log(`[atualizarRefeicao] Refeição ${id} atualizada.`);
 
       // Registrar Atividade com campo 'detalhes'
       await atividadeService.registrarAtividade({
-        usuarioId: user.uid,
+        usuarioId: currentUser.uid,
         tipo: 'REFEICAO',
         descricao: `Refeição ID ${id} atualizada.`,
         detalhes: { refeicaoId: id, dadosAtualizados: Object.keys(dados) },
-        usuarioEmail: user.email || '',
+        usuarioEmail: currentUser.email || '',
         entidadeId: id,
         entidadeTipo: 'refeicao'
       });
 
-    } catch (error) {
-      console.error('Erro ao atualizar refeição:', error instanceof Error ? error.message : JSON.stringify(error));
+    } catch (error: any) {
+      console.error(`Erro ao atualizar refeição ${id}:`, error);
       throw error;
     }
   },
 
   async excluirRefeicao(id: string): Promise<void> {
     try {
-      const user = await verificarPermissoes();
+      const currentUser = await auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
+      const idToken = await currentUser.getIdToken(true);
+
       const docRef = doc(db, COLLECTION_NAME, id);
       
       // Opcional: Buscar nome do aluno antes de deletar para log
@@ -457,40 +456,38 @@ export const refeicaoService = {
 
       // Registrar Atividade com campo 'detalhes'
       await atividadeService.registrarAtividade({
-        usuarioId: user.uid,
+        usuarioId: currentUser.uid,
         tipo: 'REFEICAO',
         descricao: `Refeição de ${refeicao.nomeAluno} (ID: ${id}) excluída.`,
         detalhes: { refeicaoId: id, alunoId: refeicao.alunoId, tipoRefeicao: refeicao.tipo },
-        usuarioEmail: user.email || '',
+        usuarioEmail: currentUser.email || '',
         entidadeId: id,
         entidadeTipo: 'refeicao'
       });
 
-    } catch (error) {
-      console.error('Erro ao excluir refeição:', error instanceof Error ? error.message : JSON.stringify(error));
+    } catch (error: any) {
+      console.error(`Erro ao excluir refeição ${id}:`, error);
       throw error;
     }
   },
 
-  async buscarRefeicoesSemana(alunoId: string, data: Date = new Date()): Promise<Refeicao[]> {
+  async buscarRefeicoesSemana(alunoId: string, data: Date = new Date(), idToken: string): Promise<Refeicao[]> {
     try {
-      await verificarPermissoes();
+      await verificarPermissoes(idToken);
+
       const { inicioSemana, fimSemana } = getLimitesSemana(data);
 
       const q = query(
         collection(db, COLLECTION_NAME),
         where('alunoId', '==', alunoId),
         where('data', '>=', inicioSemana),
-        where('data', '<=', fimSemana),
-        orderBy('data', 'desc')
+        where('data', '<=', fimSemana)
       );
 
       const querySnapshot = await getDocs(q);
-      const refeicoes = querySnapshot.docs.map(converterParaRefeicao);
-      console.log(`[buscarRefeicoesSemana] Encontradas ${refeicoes.length} refeições para ${alunoId} na semana de ${data.toLocaleDateString()}`);
-      return refeicoes;
-    } catch (error) {
-      console.error('Erro ao buscar refeições da semana:', error instanceof Error ? error.message : JSON.stringify(error));
+      return querySnapshot.docs.map(converterParaRefeicao);
+    } catch (error: any) {
+      console.error(`Erro ao buscar refeições da semana para aluno ${alunoId}:`, error);
       throw error;
     }
   },
