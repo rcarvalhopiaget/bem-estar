@@ -166,13 +166,12 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         ]);
 
         const comeram: Record<string, Partial<Record<TipoRefeicao, boolean>>> = {};
-        const hoje = new Date();
-        if (isMesmoDia(data, hoje)) {
-          refeicoesDoDia.forEach(refeicao => {
-            if (!comeram[refeicao.alunoId]) comeram[refeicao.alunoId] = {};
-            comeram[refeicao.alunoId][refeicao.tipo] = true;
-          });
-        }
+        refeicoesDoDia.forEach(refeicao => {
+          if (!comeram[refeicao.alunoId]) comeram[refeicao.alunoId] = {};
+          if (Object.values(TODOS_TIPOS_REFEICAO).some(tr => tr.id === refeicao.tipo)) {
+             comeram[refeicao.alunoId][refeicao.tipo] = true;
+          }
+        });
         setAlunosComeram(comeram);
 
         const refeicoesSemanaisPorAluno: Record<string, Record<TipoRefeicao, number>> = {};
