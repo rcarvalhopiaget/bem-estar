@@ -38,7 +38,7 @@ const converterParaRefeicao = (doc: DocumentData): Refeicao => {
     tipo: data.tipo,
     presente: data.presente ?? false,
     observacao: data.observacao,
-    isAvulso: data.isAvulso ?? false,
+    tipoConsumo: data.tipoConsumo || data.tipo,
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date()
   };
@@ -62,7 +62,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'ALMOCO',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -74,7 +74,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'LANCHE_MANHA',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -86,7 +86,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: false,
-    isAvulso: false,
+    tipoConsumo: 'ALMOCO',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -98,7 +98,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'LANCHE_TARDE',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -110,7 +110,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-13T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'ALMOCO',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -122,7 +122,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'LANCHE_MANHA',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -134,7 +134,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    isAvulso: false,
+    tipoConsumo: 'ALMOCO',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -146,7 +146,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-13T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: false,
-    isAvulso: false,
+    tipoConsumo: 'LANCHE_TARDE',
     createdAt: new Date(),
     updatedAt: new Date()
   }
@@ -202,71 +202,62 @@ export const refeicaoService = {
       const refeicoesRef = collection(db, COLLECTION_NAME);
       let constraints: any[] = [];
 
-      // Filtro principal no Firestore (ex: por alunoId ou intervalo de data amplo)
+      // Filtros principais no Firestore
       if (filtro?.alunoId) {
         constraints.push(where('alunoId', '==', filtro.alunoId));
-      } else if (filtro?.dataInicio) {
-        const inicio = new Date(filtro.dataInicio);
-        inicio.setHours(0, 0, 0, 0);
-        constraints.push(where('data', '>=', Timestamp.fromDate(inicio)));
-      } else if (filtro?.dataFim) {
-        const fim = new Date(filtro.dataFim);
-        fim.setHours(23, 59, 59, 999);
-        constraints.push(where('data', '<=', Timestamp.fromDate(fim)));
-      } // Adicionar mais otimizações de query se necessário
+      } 
+      // Filtro de Data (obrigatório para filtrar tipoConsumo eficientemente)
+      const inicio = filtro?.dataInicio ? new Date(filtro.dataInicio) : new Date();
+      inicio.setHours(0, 0, 0, 0);
+      constraints.push(where('data', '>=', Timestamp.fromDate(inicio)));
+
+      const fim = filtro?.dataFim ? new Date(filtro.dataFim) : new Date();
+      fim.setHours(23, 59, 59, 999);
+      constraints.push(where('data', '<=', Timestamp.fromDate(fim)));
+      
+      // NOVO: Adicionar filtro por tipoConsumo se fornecido
+      if (filtro?.tipoConsumo) {
+        constraints.push(where('tipoConsumo', '==', filtro.tipoConsumo));
+        console.log(`Adicionando filtro Firestore: tipoConsumo == ${filtro.tipoConsumo}`);
+      }
+
+      // Adicionar ordenação padrão por data descendente
+      constraints.push(orderBy('data', 'desc'));
 
       const q = query(refeicoesRef, ...constraints);
       const querySnapshot = await getDocs(q);
+      console.log(`Consulta Firestore retornou ${querySnapshot.size} documentos.`);
       
-      let refeicoes = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          alunoId: data.alunoId,
-          nomeAluno: data.nomeAluno,
-          turma: data.turma,
-          data: data.data?.toDate() || new Date(),
-          tipo: data.tipo,
-          presente: data.presente ?? false,
-          observacao: data.observacao,
-          isAvulso: data.isAvulso ?? false,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date()
-        } as Refeicao;
-      });
+      // Mapeamento já deve usar tipoConsumo (da edição anterior)
+      let refeicoes = querySnapshot.docs.map(converterParaRefeicao);
 
-      // Aplicar filtros restantes no cliente
+      // Aplicar filtros restantes no cliente (menos necessários agora)
       if (filtro) {
-        // Filtro de intervalo de data mais preciso
-        if (filtro.dataInicio || filtro.dataFim) {
-          const inicioFiltro = filtro.dataInicio ? new Date(filtro.dataInicio).setHours(0,0,0,0) : -Infinity;
-          const fimFiltro = filtro.dataFim ? new Date(filtro.dataFim).setHours(23,59,59,999) : Infinity;
-          refeicoes = refeicoes.filter(r => {
-            const time = r.data.getTime();
-            return time >= inicioFiltro && time <= fimFiltro;
-          });
-        }
-        // Outros filtros
+         // Filtro por turma (se ainda necessário)
         if (filtro.turma) {
           refeicoes = refeicoes.filter(r => r.turma === filtro.turma);
         }
+        // Filtro por tipo de REFEIÇÃO (Lanche, Almoço) - diferente de tipoConsumo
         if (filtro.tipo) {
           refeicoes = refeicoes.filter(r => r.tipo === filtro.tipo);
         }
-        if (filtro.alunoId && !constraints.some(c => c._field === 'alunoId')) { // Aplicar se não foi filtro principal
-          refeicoes = refeicoes.filter(r => r.alunoId === filtro.alunoId);
-        }
+         // Filtro de presença
         if (filtro.presente !== undefined) {
           refeicoes = refeicoes.filter(r => r.presente === filtro.presente);
         }
       }
 
-      // Ordenação por data no cliente
-      refeicoes.sort((a, b) => b.data.getTime() - a.data.getTime());
-
-      console.log(`Encontradas ${refeicoes.length} refeições após filtros do cliente`);
+      console.log(`Encontradas ${refeicoes.length} refeições após filtros finais.`);
       return refeicoes;
     } catch (error: any) {
+      // Verificar se é erro de índice faltando
+      if (error.code === 'failed-precondition') {
+         console.error('Erro de pré-condição Firestore: Provavelmente falta um índice composto.', error);
+         // Tentar extrair URL do índice da mensagem de erro
+         const urlMatch = error.message.match(/(https?:\/\/[^\s]+)/);
+         const urlIndice = urlMatch ? urlMatch[0] : 'Verifique o Console do Firebase';
+         throw new Error(`Consulta requer um índice no Firestore. Crie-o aqui: ${urlIndice}`);
+      }
       console.error('Erro em listarRefeicoes:', error);
       throw error;
     }
@@ -285,7 +276,20 @@ export const refeicaoService = {
         throw new Error('Refeição não encontrada');
       }
 
-      return converterParaRefeicao(docSnap);
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        alunoId: data.alunoId,
+        nomeAluno: data.nomeAluno,
+        turma: data.turma,
+        data: data.data?.toDate() || new Date(),
+        tipo: data.tipo,
+        presente: data.presente ?? false,
+        observacao: data.observacao,
+        tipoConsumo: data.tipoConsumo || data.tipo,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date()
+      } as Refeicao;
     } catch (error: any) {
        console.error(`Erro ao buscar refeição ${id}:`, error);
        throw error;
@@ -293,102 +297,83 @@ export const refeicaoService = {
   },
 
   async registrarRefeicao(dados: RefeicaoFormData): Promise<string> {
+    const currentUser = await auth.currentUser;
+    if (!currentUser) throw new Error('Usuário não autenticado');
+    await currentUser.getIdToken(true);
+
+    console.log('Registrando refeição com dados recebidos:', dados);
+
+    // Validação básica (pode adicionar mais se necessário)
+    if (!dados.alunoId || !dados.nomeAluno || !dados.turma || !dados.tipo || !dados.tipoConsumo) {
+       throw new Error('Dados incompletos para registrar refeição.');
+    }
+
+    // --- INÍCIO DA VERIFICAÇÃO DE DUPLICIDADE ---
     try {
-      const currentUser = await auth.currentUser;
-      if (!currentUser) throw new Error('Usuário não autenticado');
-      const idToken = await currentUser.getIdToken(true);
+      const dataRefeicao = new Date(dados.data);
+      const inicioDoDia = new Date(dataRefeicao);
+      inicioDoDia.setHours(0, 0, 0, 0);
+      const fimDoDia = new Date(dataRefeicao);
+      fimDoDia.setHours(23, 59, 59, 999);
 
-      console.log('[registrarRefeicao] Iniciando registro para:', dados);
+      const q = query(
+        collection(db, COLLECTION_NAME),
+        where('alunoId', '==', dados.alunoId),
+        where('tipo', '==', dados.tipo),
+        where('data', '>=', Timestamp.fromDate(inicioDoDia)),
+        where('data', '<=', Timestamp.fromDate(fimDoDia)),
+        limit(1)
+      );
 
-      // 1. Buscar dados do aluno
-      const alunoRef = doc(db, 'alunos', dados.alunoId);
-      const alunoSnap = await getDoc(alunoRef);
-      if (!alunoSnap.exists()) {
-        throw new Error(`Aluno com ID ${dados.alunoId} não encontrado.`);
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        console.warn(`Tentativa de registro duplicado: Aluno ${dados.alunoId}, Refeição ${dados.tipo}, Data ${dataRefeicao.toLocaleDateString()}`);
+        throw new Error(`Este aluno (${dados.nomeAluno}) já realizou esta refeição (${dados.tipo}) hoje.`);
       }
-      const alunoData = alunoSnap.data() as Aluno;
-      console.log('[registrarRefeicao] Dados do aluno:', alunoData);
-
-      // Validar se aluno está ativo
-      if (!alunoData.ativo) {
-        throw new Error(`Aluno ${alunoData.nome} está inativo e não pode registrar refeições.`);
+    } catch (error) {
+      // Se o erro for o que lançamos, repassa ele.
+      // Se for outro erro da consulta, loga e lança.
+      if (error instanceof Error && error.message.includes('já realizou esta refeição')) {
+         throw error;
       }
+      console.error("Erro ao verificar duplicidade de refeição:", error);
+      // Considerar lançar um erro mais genérico ou o erro original?
+      throw new Error('Falha ao verificar refeição existente.'); 
+    }
+    // --- FIM DA VERIFICAÇÃO DE DUPLICIDADE ---
 
-      let isAvulso = false;
-      const dataRefeicao = dados.data instanceof Date ? dados.data : new Date();
-      const diaSemanaRefeicao = dataRefeicao.getDay(); // 0 = Dom, 1 = Seg, ...
-      const tipoAluno = alunoData.tipo;
-      const diasPermitidos = alunoData.diasRefeicaoPermitidos || [];
+    const novaRefeicao = {
+      alunoId: dados.alunoId,
+      nomeAluno: dados.nomeAluno,
+      turma: dados.turma,
+      data: Timestamp.fromDate(new Date(dados.data)), // Garantir que é Timestamp
+      tipo: dados.tipo, // Tipo da refeicao (Lanche, Almoço)
+      presente: dados.presente ?? true,
+      observacao: dados.observacao || '',
+      tipoConsumo: dados.tipoConsumo, // <<< USA O TIPO RECEBIDO
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
 
-      // 2. Verificar se é AVULSO por natureza
-      if (tipoAluno === 'AVULSO') {
-        isAvulso = true;
-        console.log('[registrarRefeicao] Marcado como avulso (tipo AVULSO).');
-      }
-      
-      // 3. Verificar se o DIA é permitido (para tipos INTEGRAL_XX)
-      const limiteDias = getLimiteSemanal(tipoAluno);
-      if (!isAvulso && limiteDias !== null) { // Apenas para tipos com limite de dias
-        if (!diasPermitidos.includes(diaSemanaRefeicao)) {
-          isAvulso = true;
-          console.log(`[registrarRefeicao] Marcado como avulso (dia ${diaSemanaRefeicao} não permitido para ${tipoAluno}). Dias permitidos: ${diasPermitidos.join(',')}`);
-        }
-      }
-
-      // 4. Verificar LIMITE SEMANAL (se ainda não for avulso e tiver limite)
-      if (!isAvulso && limiteDias !== null) {
-        const { inicioSemana, fimSemana } = getLimitesSemana(dataRefeicao);
-        
-        // Buscar refeições NÃO AVULSAS do MESMO TIPO na semana atual
-        const refeicoesSemanaQuery = query(
-          collection(db, COLLECTION_NAME),
-          where('alunoId', '==', dados.alunoId),
-          where('tipo', '==', dados.tipo),
-          where('data', '>=', inicioSemana),
-          where('data', '<=', fimSemana),
-          where('isAvulso', '==', false) // Contar apenas as não avulsas
-        );
-        
-        const refeicoesSemanaSnap = await getDocs(refeicoesSemanaQuery);
-        const countRefeicoesSemana = refeicoesSemanaSnap.size;
-        console.log(`[registrarRefeicao] Refeições não avulsas de ${dados.tipo} na semana: ${countRefeicoesSemana}. Limite: ${limiteDias}`);
-
-        if (countRefeicoesSemana >= limiteDias) {
-          isAvulso = true;
-          console.log(`[registrarRefeicao] Marcado como avulso (limite semanal de ${limiteDias} para ${dados.tipo} atingido).`);
-        }
-      }
-
-      // 5. Preparar dados para salvar
-      const dadosParaSalvar = {
-        ...dados,
-        data: Timestamp.fromDate(dataRefeicao),
-        isAvulso: isAvulso,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        registradoPor: currentUser.uid,
-        registradoPorEmail: currentUser.email
-      };
-
-      // 6. Salvar no Firestore
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), dadosParaSalvar);
-      console.log('[registrarRefeicao] Refeição registrada com ID:', docRef.id, 'isAvulso:', isAvulso);
-
-      // 7. Registrar Atividade com campo 'detalhes'
-      await atividadeService.registrarAtividade({
-        usuarioId: currentUser.uid,
-        tipo: 'REFEICAO',
-        descricao: `Refeição (${dados.tipo}) registrada para ${dados.nomeAluno} (Avulso: ${isAvulso})`,
-        detalhes: { alunoId: dados.alunoId, refeicaoId: docRef.id, tipoRefeicao: dados.tipo, foiAvulso: isAvulso },
-        usuarioEmail: currentUser.email || '',
-        entidadeId: docRef.id,
-        entidadeTipo: 'refeicao'
-      });
-
+    try {
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), novaRefeicao);
+      await atividadeService.registrarAtividade(
+        'CREATE',
+        'REFEICOES',
+        `Refeição (${novaRefeicao.tipo}) registrada como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
+        { refeicaoId: docRef.id, alunoId: novaRefeicao.alunoId, tipoConsumo: novaRefeicao.tipoConsumo }
+      );
       return docRef.id;
-    } catch (error: any) {
-      console.error('Erro ao registrar refeição:', error);
-      throw error;
+    } catch (error) {
+      console.error("Erro detalhado ao adicionar refeição:", error);
+      await atividadeService.registrarAtividade(
+        'ERROR',
+        'REFEICOES',
+        `Falha ao registrar Refeição (${novaRefeicao.tipo}) como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
+        { erro: (error as Error).message, dadosTentativa: novaRefeicao }
+      );
+      throw new Error(`Falha ao registrar refeição: ${(error as Error).message}`);
     }
   },
 
@@ -472,23 +457,30 @@ export const refeicaoService = {
   },
 
   async buscarRefeicoesSemana(alunoId: string, data: Date = new Date(), idToken: string): Promise<Refeicao[]> {
+    //await verificarPermissoes(idToken); // Descomentar se a verificação for necessária aqui
+    console.log(`buscarRefeicoesSemana para aluno ${alunoId} na data ${data.toISOString()}`);
+    
+    const { inicioSemana, fimSemana } = getLimitesSemana(data);
+
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('alunoId', '==', alunoId),
+      where('data', '>=', inicioSemana),
+      where('data', '<=', fimSemana),
+      // ATENÇÃO: Filtrar pelo tipo de consumo para contar corretamente?
+      // Depende se queremos contar refeições avulsas para o limite ou não.
+      // Se NÃO contamos avulsas: where('tipoConsumo', '!=', 'AVULSO'),
+      orderBy('data', 'desc')
+    );
+
     try {
-      await verificarPermissoes(idToken);
-
-      const { inicioSemana, fimSemana } = getLimitesSemana(data);
-
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        where('alunoId', '==', alunoId),
-        where('data', '>=', inicioSemana),
-        where('data', '<=', fimSemana)
-      );
-
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(converterParaRefeicao);
-    } catch (error: any) {
-      console.error(`Erro ao buscar refeições da semana para aluno ${alunoId}:`, error);
-      throw error;
+      const refeicoes = querySnapshot.docs.map(converterParaRefeicao);
+      console.log(`Encontradas ${refeicoes.length} refeições na semana para ${alunoId}`);
+      return refeicoes;
+    } catch (error) {
+      console.error(`Erro ao buscar refeições da semana para ${alunoId}:`, error);
+      throw error; // Propagar o erro
     }
   },
 };

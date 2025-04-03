@@ -12,7 +12,8 @@ import {
   Timestamp,
   DocumentData,
   QueryConstraint,
-  setDoc
+  setDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Aluno, AlunoFormData, AlunoFilter } from '@/types/aluno';
@@ -251,5 +252,48 @@ export const alunoService = {
       console.error('Erro ao listar turmas:', error instanceof Error ? error.message : JSON.stringify(error));
       throw new Error('Erro ao listar turmas');
     }
+  },
+
+  async apagarTodosAlunos(): Promise<{ excluidos: number; erros: number }> {
+    console.warn('Iniciando exclusão de TODOS os alunos...');
+    let excluidos = 0;
+    let erros = 0;
+
+    try {
+      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const batch = writeBatch(db);
+      
+      querySnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+        excluidos++;
+      });
+
+      if (excluidos > 0) {
+        await batch.commit();
+        console.log(`${excluidos} alunos excluídos com sucesso.`);
+        // Registrar atividade de exclusão em massa (opcional)
+        try {
+          await atividadeService.registrarAtividade({
+            tipo: 'ALUNO',
+            descricao: `Exclusão em massa de ${excluidos} alunos realizada.`,
+            usuarioId: 'SISTEMA', // Ou obter ID do usuário logado se possível
+            usuarioEmail: 'sistema@importacao', // Ou obter email do usuário logado
+            entidadeId: 'TODOS',
+            entidadeTipo: 'alunos'
+          });
+        } catch (logError) {
+          console.warn('Erro ao registrar atividade de exclusão em massa:', logError);
+        }
+      } else {
+        console.log('Nenhum aluno encontrado para excluir.');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir alunos em massa:', error);
+      erros = excluidos; // Assume que todos falharam se o batch falhar
+      excluidos = 0;
+    }
+
+    console.warn('Exclusão de alunos concluída.');
+    return { excluidos, erros };
   }
 };

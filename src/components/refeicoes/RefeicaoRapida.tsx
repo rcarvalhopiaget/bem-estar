@@ -264,26 +264,54 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     const alunoParaMarcar = alunoSelecionado;
     if (!alunoParaMarcar || !canWrite) return;
 
-    const tipoAluno = alunoParaMarcar.tipo;
-    const limiteSemanalConfig = LIMITE_REFEICOES[tipoAluno];
+    const tipoAlunoOriginal = alunoParaMarcar.tipo;
+    const limiteSemanalConfig = LIMITE_REFEICOES[tipoAlunoOriginal];
     const limiteTipoEspecifico = limiteSemanalConfig?.[tipoRefeicao] ?? 999;
     const refeicoesAtuaisSemana = refeicoesSemanais[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0;
-    const diaDaSemanaAtual = data.getDay();
+    const diaDaSemanaAtual = data.getDay(); // 0 = Domingo, ..., 6 = Sábado
     const diasPermitidos = alunoParaMarcar.diasRefeicaoPermitidos || [];
 
-    let isAvulso = false;
-    const ehTipoComLimiteDias = tipoAluno.startsWith('INTEGRAL');
+    // --- Calcular o Tipo Efetivo da Refeição ---
+    let tipoEfetivoParaSalvar: AlunoTipo = tipoAlunoOriginal; // Assume o tipo original por padrão
+    let motivoAvulso = '';
 
-    if (tipoAluno === 'AVULSO') {
-      isAvulso = true;
-    } else if (ehTipoComLimiteDias && diasPermitidos.length > 0 && !diasPermitidos.includes(diaDaSemanaAtual)) {
-      isAvulso = true;
-    } else if (ehTipoComLimiteDias && refeicoesAtuaisSemana >= limiteTipoEspecifico) {
-      isAvulso = true;
+    if (tipoAlunoOriginal === 'AVULSO') {
+      tipoEfetivoParaSalvar = 'AVULSO';
+      motivoAvulso = 'Aluno é Avulso.';
+    } else if (tipoAlunoOriginal.startsWith('INTEGRAL')) {
+      // Verifica dia permitido (Seg=1 a Sex=5)
+      if (diasPermitidos.length > 0 && (diaDaSemanaAtual < 1 || diaDaSemanaAtual > 5 || !diasPermitidos.includes(diaDaSemanaAtual))) {
+        tipoEfetivoParaSalvar = 'AVULSO';
+        motivoAvulso = 'Dia não permitido pelo plano.';
+      } 
+      // Verifica limite semanal (apenas se NÃO for avulso pelo dia)
+      else if (refeicoesAtuaisSemana >= limiteTipoEspecifico) {
+         tipoEfetivoParaSalvar = 'AVULSO';
+         motivoAvulso = 'Limite semanal de refeições atingido.';
+      }
+    } 
+    // Adicionar lógica para SEMI_INTEGRAL e ESTENDIDO se eles tiverem dias permitidos
+    else if ((tipoAlunoOriginal === 'SEMI_INTEGRAL' || tipoAlunoOriginal === 'ESTENDIDO') && diasPermitidos.length > 0) {
+        if (diaDaSemanaAtual < 1 || diaDaSemanaAtual > 5 || !diasPermitidos.includes(diaDaSemanaAtual)) {
+            tipoEfetivoParaSalvar = 'AVULSO';
+            motivoAvulso = 'Dia não permitido pelo plano.';
+        }
     }
+    // ----------------------------------------------
 
     const nomeTipoRefeicao = TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
-    const acao = `Marcar ${isAvulso ? '(Avulso)' : ''} ${nomeTipoRefeicao}`;
+    const acao = `Marcar ${tipoEfetivoParaSalvar !== tipoAlunoOriginal ? '(AVULSO)' : ''} ${nomeTipoRefeicao}`;
+
+    // --- Confirmação para Avulso Inesperado ---
+    if (tipoEfetivoParaSalvar === 'AVULSO' && tipoAlunoOriginal !== 'AVULSO') {
+      if (!window.confirm(`${alunoParaMarcar.nome} (${tipoAlunoOriginal})\n${motivoAvulso}\nDeseja registrar esta refeição (${nomeTipoRefeicao}) como AVULSO?`)) {
+        setDialogoAberto(false);
+        setAlunoSelecionado(null);
+        toast({ title: "Cancelado", description: "Registro de refeição avulsa cancelado.", variant: "default" });
+        return; // Interrompe a execução se o usuário cancelar
+      }
+    }
+    // -----------------------------------------
 
     let refeicaoId: string | null = null;
     let reverterContagemSemanal = false;
@@ -292,18 +320,19 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       setDialogoAberto(false);
       toast({ title: "Processando...", description: `${acao} para ${alunoParaMarcar.nome}` });
 
-      const refeicaoData = {
+      const refeicaoData: Omit<RefeicaoFormData, 'id'> = { // Ajustar tipo se RefeicaoFormData mudar
         alunoId: alunoParaMarcar.id,
         nomeAluno: alunoParaMarcar.nome,
         turma: alunoParaMarcar.turma,
         data: data,
-        tipo: tipoRefeicao,
+        tipo: tipoRefeicao, // Tipo da refeição (Almoço, Lanche)
         presente: true,
-        // isAvulso será determinado pelo service
+        tipoConsumo: tipoEfetivoParaSalvar // <<< NOVO: Passa o tipo calculado
+        // Remover isAvulso se ele não existir mais em RefeicaoFormData
       };
 
-      // Manter atualização otimista para contagem semanal (se relevante)
-      if (!isAvulso) {
+      // Atualização otimista da contagem semanal (APENAS se não for AVULSO)
+      if (tipoEfetivoParaSalvar !== 'AVULSO') {
          setRefeicoesSemanais(prev => ({
            ...prev,
            [alunoParaMarcar.id]: {
@@ -311,32 +340,32 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
              [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0) + 1
            }
          }));
-         reverterContagemSemanal = true; // Marcar para reverter em caso de erro
+         reverterContagemSemanal = true; 
       }
 
       // --- Chamada ao Serviço ---
       refeicaoId = await refeicaoService.registrarRefeicao(refeicaoData);
       // --------------------------
       
-      // Se chegou aqui, a operação foi bem-sucedida, não precisa reverter contagem semanal
       reverterContagemSemanal = false; 
 
       toast({ title: "Sucesso!", description: `${acao} registrado com sucesso!` });
-      logAction('CREATE', 'REFEICOES', `Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao}) registrada`, { 
+      logAction('CREATE', 'REFEICOES', `Refeição (${tipoRefeicao}) registrada como ${tipoEfetivoParaSalvar}`, { 
         alunoId: alunoParaMarcar.id,
         alunoNome: alunoParaMarcar.nome,
         refeicaoId: refeicaoId,
-        avulso: isAvulso // O service determina o valor final, mas logamos o que calculamos aqui
+        tipoOriginal: tipoAlunoOriginal,
+        tipoConsumo: tipoEfetivoParaSalvar
       });
 
-      onRefeicaoMarcada(); // Dispara atualização no componente pai
+      onRefeicaoMarcada();
 
     } catch (error: any) {
       console.error(`Erro ao ${acao}:`, error);
       toast({ title: "Erro", description: `Falha ao ${acao}. ${error.message}`, variant: "destructive" });
       
-      // Usar a flag para reverter contagem semanal
-      if (reverterContagemSemanal && !isAvulso) { 
+      // Reverter contagem se necessário
+      if (reverterContagemSemanal && tipoEfetivoParaSalvar !== 'AVULSO') { 
          setRefeicoesSemanais(prev => ({
            ...prev,
            [alunoParaMarcar.id]: {
@@ -346,11 +375,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
          }));
       }
 
-      logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao})`, { 
+      logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição (${tipoRefeicao}) como ${tipoEfetivoParaSalvar}`, { 
         alunoId: alunoParaMarcar?.id,
         alunoNome: alunoParaMarcar?.nome,
         tipoRefeicao: tipoRefeicao,
-        refeicaoIdTentativa: refeicaoId, // Logar ID se chegou a ser gerado antes do erro
+        refeicaoIdTentativa: refeicaoId, 
         erro: error.message
       });
     } finally {

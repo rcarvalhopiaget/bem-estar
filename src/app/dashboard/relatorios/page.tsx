@@ -26,6 +26,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { AlunoTipo } from '@/types/aluno';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface NotificacaoConfig {
   tipo: 'erro' | 'aviso' | 'sucesso';
@@ -38,7 +40,19 @@ interface RelatorioFiltro {
   turma?: string;
   alunoId?: string;
   tipo?: TipoRefeicao;
+  tipoConsumo?: AlunoTipo;
 }
+
+const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
+  AVULSO: 'Avulso',
+  INTEGRAL_5X: 'Integral 5x',
+  INTEGRAL_4X: 'Integral 4x',
+  INTEGRAL_3X: 'Integral 3x',
+  INTEGRAL_2X: 'Integral 2x',
+  MENSALISTA: 'Mensalista',
+  SEMI_INTEGRAL: 'Semi Integral',
+  ESTENDIDO: 'Estendido',
+};
 
 const TIPOS_REFEICAO: Record<TipoRefeicao, string> = {
   'LANCHE_MANHA': 'Lanche da Manhã',
@@ -82,6 +96,7 @@ export default function RelatoriosPage() {
   const [turmas, setTurmas] = useState<string[]>([]);
   const [turma, setTurma] = useState<string>('');
   const [tipoRefeicao, setTipoRefeicao] = useState<TipoRefeicao | ''>('');
+  const [tipoConsumoSelecionado, setTipoConsumoSelecionado] = useState<AlunoTipo | ''>('');
   const [nomeBusca, setNomeBusca] = useState<string>('');
   const [alunoSelecionado, setAlunoSelecionado] = useState<string>('');
   const [alunosFiltrados, setAlunosFiltrados] = useState<Aluno[]>([]);
@@ -187,7 +202,8 @@ export default function RelatoriosPage() {
         dataFim: endOfDay(filtro.dataFim),
         alunoId: alunoSelecionado || undefined,
         turma: turma || undefined,
-        tipo: tipoRefeicao || undefined
+        tipo: tipoRefeicao || undefined,
+        tipoConsumo: tipoConsumoSelecionado || undefined
       };
       
       console.log('Buscando refeições com filtro:', {
@@ -438,18 +454,18 @@ export default function RelatoriosPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-4 md:p-6 space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="container mx-auto p-4 space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Relatórios de Refeições</h1>
-           {podeGerenciarConfiguracoes && (
-              <Button onClick={() => setMostrarDialogoConfig(true)} variant="outline">
-                 <Settings className="mr-2 h-4 w-4" />
-                 Configurar Envio Automático
-              </Button>
-           )}
+          {podeGerenciarConfiguracoes && (
+            <Button onClick={() => setMostrarDialogoConfig(true)} variant="outline" size="sm">
+              <Settings className="mr-2 h-4 w-4" />
+              Configurar Envios
+            </Button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-lg">
           <div>
             <Label htmlFor="dataInicio">Data Início</Label>
             <Input
@@ -465,211 +481,282 @@ export default function RelatoriosPage() {
               id="dataFim"
               type="date"
               value={formatarData.dataISO(filtro.dataFim)}
-              onChange={(e) => setFiltro({ ...filtro, dataFim: new Date(e.target.value + 'T00:00:00') })}
+              onChange={(e) => setFiltro({ ...filtro, dataFim: new Date(e.target.value + 'T23:59:59') })}
             />
           </div>
           <div>
             <Label htmlFor="turma">Turma</Label>
-            <select
-              id="turma"
-              value={turma}
-              onChange={(e) => setTurma(e.target.value)}
-              className="w-full mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md border"
-            >
-              <option value="">Todas as Turmas</option>
-              {turmas.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <Select value={turma} onValueChange={setTurma}>
+              <SelectTrigger id="turma">
+                <SelectValue placeholder="Todas as turmas" />
+              </SelectTrigger>
+              <SelectContent>
+                {turmas.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <Label htmlFor="tipoRefeicao">Tipo Refeição</Label>
-            <select
-              id="tipoRefeicao"
-              value={tipoRefeicao}
-              onChange={(e) => setTipoRefeicao(e.target.value as TipoRefeicao | '')}
-              className="w-full mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md border"
-            >
-              <option value="">Todos os Tipos</option>
-              {(Object.keys(TIPOS_REFEICAO) as TipoRefeicao[]).map(tipo => (
-                <option key={tipo} value={tipo}>{TIPOS_REFEICAO[tipo]}</option>
-              ))}
-            </select>
+            <Label htmlFor="tipoRefeicao">Tipo de Refeição</Label>
+            <Select value={tipoRefeicao} onValueChange={(value) => setTipoRefeicao(value as TipoRefeicao | '')}>
+              <SelectTrigger id="tipoRefeicao">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TIPOS_REFEICAO).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="relative md:col-span-2 lg:col-span-4">
-             <Label htmlFor="buscaAluno">Buscar Aluno (Nome ou Turma)</Label>
-             <Input
-               id="buscaAluno"
-               type="text"
-               placeholder="Digite nome ou turma (mín. 3 caracteres)"
-               value={nomeBusca}
-               onChange={(e) => {
-                  setNomeBusca(e.target.value);
-                  setAlunoSelecionado('');
-               }}
-             />
-             {mostrarListaAlunos && (
-               <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 max-h-60 overflow-auto rounded-md shadow-lg">
-                 {alunosFiltrados.length > 0 ? (
-                   alunosFiltrados.map(aluno => (
-                     <li
-                       key={aluno.id}
-                       className="p-2 hover:bg-gray-100 cursor-pointer"
-                       onClick={() => selecionarAluno(aluno)}
-                     >
-                       {aluno.nome} ({aluno.turma})
-                     </li>
-                   ))
-                 ) : (
-                   <li className="p-2 text-gray-500">Nenhum aluno encontrado</li>
-                 )}
-               </ul>
-             )}
-           </div>
-
-          <div className="flex flex-wrap gap-2 md:col-span-2 lg:col-span-4 justify-start">
-            <Button onClick={buscarRefeicoes} disabled={carregando}>
+          <div>
+            <Label htmlFor="tipoConsumo">Tipo de Consumo</Label>
+            <Select value={tipoConsumoSelecionado} onValueChange={(value) => setTipoConsumoSelecionado(value as AlunoTipo | '')}>
+              <SelectTrigger id="tipoConsumo">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TIPOS_ALUNO_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="lg:col-span-2 relative">
+            <Label htmlFor="buscaAluno">Buscar Aluno por Nome/Turma</Label>
+            <div className="flex items-center">
+                <Input
+                  id="buscaAluno"
+                  type="text"
+                  placeholder="Digite o nome ou turma..."
+                  value={nomeBusca}
+                  onChange={(e) => {
+                      setNomeBusca(e.target.value);
+                      if (!e.target.value) {
+                          setAlunoSelecionado('');
+                      }
+                  }}
+                />
+                {alunoSelecionado && (
+                    <Button variant="ghost" size="sm" onClick={() => {
+                        setAlunoSelecionado('');
+                        setNomeBusca('');
+                    }} className="ml-1">
+                        <X className="h-4 w-4"/>
+                    </Button>
+                )}
+            </div>
+            {mostrarListaAlunos && alunosFiltrados.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                {alunosFiltrados.map((aluno) => (
+                  <div
+                    key={aluno.id}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    onClick={() => selecionarAluno(aluno)}
+                  >
+                    {aluno.nome} ({aluno.turma})
+                  </div>
+                ))}
+              </div>
+            )}
+            {mostrarListaAlunos && alunosFiltrados.length === 0 && nomeBusca.length >= 3 && (
+                 <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg px-4 py-2 text-sm text-gray-500">
+                   Nenhum aluno encontrado.
+                 </div>
+            )}
+          </div>
+          <div className="flex items-end">
+            <Button onClick={buscarRefeicoes} disabled={carregando} className="w-full">
               {carregando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Buscar Refeições
             </Button>
-            <Button onClick={exportarCSV} variant="secondary" disabled={refeicoes.length === 0}>
-              Exportar CSV
-            </Button>
-            {podeGerenciarConfiguracoes && (
-              <>
-                <Button onClick={() => setMostrarDialogoTeste(true)} variant="secondary">
-                  <MailWarning className="mr-2 h-4 w-4" />
-                  Enviar Email Teste
-                </Button>
-                <Link href="/dashboard/relatorios/emails">
-                  <Button variant="outline">
-                    <Mail className="mr-2 h-4 w-4" />
-                    Gerenciar Destinatários
-                  </Button>
-                </Link>
-              </>
-            )}
           </div>
         </div>
 
-        {carregando ? (
-          <div className="text-center py-10">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-            <p className="mt-2 text-gray-500">Carregando...</p>
+        {notificacoes.length > 0 && (
+          <div className="space-y-2">
+            {notificacoes.map((not, index) => (
+              <div key={index} className={`p-3 rounded-md text-sm ${not.tipo === 'erro' ? 'bg-red-100 text-red-700' : not.tipo === 'aviso' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                <strong>{not.tipo.toUpperCase()}:</strong> {not.mensagem}
+              </div>
+            ))}
           </div>
-        ) : (
-          <RelatorioPorTurma />
         )}
 
-         {podeGerenciarConfiguracoes && (
+        {refeicoes.length > 0 && !carregando && (
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
+               <h2 className="text-lg font-semibold">Resultados</h2>
+               <Button onClick={exportarCSV} variant="outline" size="sm">
+                   Exportar CSV
+               </Button>
+           </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                    <tr>
+                    <th className="px-4 py-2 text-left font-medium">Data</th>
+                    <th className="px-4 py-2 text-left font-medium">Aluno</th>
+                    <th className="px-4 py-2 text-left font-medium">Turma</th>
+                    <th className="px-4 py-2 text-left font-medium">Tipo Refeição</th>
+                    <th className="px-4 py-2 text-left font-medium">Tipo Consumo</th>
+                    <th className="px-4 py-2 text-left font-medium">Presente</th>
+                    <th className="px-4 py-2 text-left font-medium">Observação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {refeicoes.map((refeicao) => (
+                    <tr key={refeicao.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap">{formatarData.dataSimples(refeicao.data)}</td>
+                        <td className="px-4 py-2">{refeicao.nomeAluno}</td>
+                        <td className="px-4 py-2">{refeicao.turma}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                            <span className="flex items-center">
+                                {React.createElement(ICONES_REFEICAO[refeicao.tipo] || 'span', { style: { color: CORES_REFEICAO[refeicao.tipo], marginRight: '4px' } })}
+                                {TIPOS_REFEICAO[refeicao.tipo]}
+                            </span>
+                        </td>
+                         <td className="px-4 py-2">{refeicao.tipoConsumo ? TIPOS_ALUNO_LABELS[refeicao.tipoConsumo as AlunoTipo] : '-'}</td>
+                        <td className="px-4 py-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${refeicao.presente ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {refeicao.presente ? 'Sim' : 'Não'}
+                            </span>
+                        </td>
+                        <td className="px-4 py-2">{refeicao.observacao || '-'}</td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+          </div>
+        )}
+        {refeicoes.length === 0 && !carregando && (
+             <div className="text-center p-4 text-gray-500">
+                 Nenhuma refeição encontrada para os filtros selecionados.
+             </div>
+        )}
+
+        {mostrarDialogoConfig && podeGerenciarConfiguracoes && (
             <Dialog open={mostrarDialogoConfig} onOpenChange={setMostrarDialogoConfig}>
-               <DialogContent className="sm:max-w-[600px]">
-               <DialogHeader>
-                  <DialogTitle>Configurar Envio Automático de Relatório</DialogTitle>
-                  <DialogDescription>
-                     Configure os emails que receberão o relatório diário e o horário do envio.
-                  </DialogDescription>
-               </DialogHeader>
-               {carregandoConfig ? (
-                   <div className="flex justify-center items-center p-10">
-                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                   </div>
-               ) : (
-                   <div className="grid gap-4 py-4">
-                       <div className="space-y-2">
-                          <Label>Emails Destinatários</Label>
-                          {configuracaoRelatorio.emails.map((email, index) => (
-                             <div key={index} className="flex items-center gap-2">
-                                <Input value={email} readOnly className="flex-1" />
-                                <Button onClick={() => removerEmail(index)} variant="destructive" size="icon" disabled={salvandoConfig}>
-                                   <Trash2 className="h-4 w-4" />
+                 <DialogContent className="sm:max-w-[525px]">
+                     <DialogHeader>
+                         <DialogTitle>Configurar Envios Automáticos</DialogTitle>
+                         <DialogDescription>
+                            Configure os emails e o horário para envio automático do relatório diário de refeições.
+                         </DialogDescription>
+                     </DialogHeader>
+                     {carregandoConfig ? (
+                         <div className="flex justify-center items-center h-40">
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                         </div>
+                     ) : (
+                         <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Emails para Envio</Label>
+                                {configuracaoRelatorio.emails.map((email, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                        <Input value={email} readOnly className="flex-1" />
+                                        <Button variant="outline" size="icon" onClick={() => removerEmail(index)} disabled={salvandoConfig}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                {configuracaoRelatorio.emails.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">Nenhum email configurado.</p>
+                                )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Input 
+                                    type="email"
+                                    placeholder="Adicionar novo email..."
+                                    value={novoEmail}
+                                    onChange={(e) => setNovoEmail(e.target.value)}
+                                    disabled={salvandoConfig}
+                                />
+                                <Button onClick={adicionarEmail} disabled={!novoEmail || salvandoConfig} variant="secondary">
+                                    <Plus className="h-4 w-4 mr-1"/> Adicionar
                                 </Button>
-                             </div>
-                          ))}
-                           {errosConfig?.emails && <p className="text-sm text-red-500">{errosConfig.emails[0]}</p>}
-                          <div className="flex items-center gap-2">
-                             <Input
-                                type="email"
-                                placeholder="Adicionar novo email"
-                                value={novoEmail}
-                                onChange={(e) => setNovoEmail(e.target.value)}
-                                className="flex-1"
-                                disabled={salvandoConfig}
-                             />
-                             <Button onClick={adicionarEmail} variant="outline" size="icon" disabled={salvandoConfig}>
-                                <Plus className="h-4 w-4" />
-                             </Button>
-                          </div>
-                       </div>
-
-                       <div className="space-y-2">
-                          <Label htmlFor="horario">Horário Envio (HH:MM)</Label>
-                          <Input
-                             id="horario"
-                             type="time"
-                             value={configuracaoRelatorio.horario}
-                             onChange={(e) => handleConfigChange('horario', e.target.value)}
-                             disabled={salvandoConfig}
-                          />
-                           {errosConfig?.horario && <p className="text-sm text-red-500">{errosConfig.horario[0]}</p>}
-                       </div>
-
-                       <div className="flex items-center space-x-2">
-                          <Switch
-                             id="ativo"
-                             checked={configuracaoRelatorio.ativo}
-                             onCheckedChange={(checked) => handleConfigChange('ativo', checked)}
-                             disabled={salvandoConfig}
-                          />
-                          <Label htmlFor="ativo">Envio Automático Ativo</Label>
-                       </div>
-                        {errosConfig?.ativo && <p className="text-sm text-red-500">{errosConfig.ativo[0]}</p>}
-                   </div>
-               )}
-               <DialogFooter>
-                  <Button variant="outline" onClick={() => setMostrarDialogoConfig(false)} disabled={salvandoConfig}>
-                     Cancelar
-                  </Button>
-                  <Button onClick={salvarConfigEmail} disabled={salvandoConfig || carregandoConfig}>
-                      {salvandoConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Salvar Configuração
-                  </Button>
-               </DialogFooter>
-               </DialogContent>
-            </Dialog>
-         )}
-
-          {podeGerenciarConfiguracoes && (
-              <Dialog open={mostrarDialogoTeste} onOpenChange={setMostrarDialogoTeste}>
-                 <DialogContent className="sm:max-w-[425px]">
-                 <DialogHeader>
-                    <DialogTitle>Enviar Email de Teste</DialogTitle>
-                    <DialogDescription>
-                       Insira um email para enviar uma mensagem de teste com as configurações atuais do servidor.
-                    </DialogDescription>
-                 </DialogHeader>
-                 <div className="grid gap-4 py-4">
-                    <Label htmlFor="emailTeste">Email Destinatário</Label>
-                    <Input
-                       id="emailTeste"
-                       type="email"
-                       placeholder="email@exemplo.com"
-                       value={emailParaTeste}
-                       onChange={(e) => setEmailParaTeste(e.target.value)}
-                       disabled={enviandoEmailTeste}
-                    />
-                 </div>
-                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setMostrarDialogoTeste(false)} disabled={enviandoEmailTeste}>
-                       Cancelar
-                    </Button>
-                    <Button onClick={enviarTesteEmail} disabled={enviandoEmailTeste}>
-                       {enviandoEmailTeste ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                       Enviar Teste
-                    </Button>
-                 </DialogFooter>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="horario" className="text-right col-span-1">Horário</Label>
+                                <Input 
+                                    id="horario"
+                                    type="time"
+                                    value={configuracaoRelatorio.horario}
+                                    onChange={(e) => handleConfigChange('horario', e.target.value)}
+                                    className="col-span-3"
+                                    disabled={salvandoConfig}
+                                />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Switch 
+                                    id="ativo"
+                                    checked={configuracaoRelatorio.ativo}
+                                    onCheckedChange={(checked) => handleConfigChange('ativo', checked)}
+                                    disabled={salvandoConfig}
+                                />
+                                <Label htmlFor="ativo">Envio Automático Ativo</Label>
+                            </div>
+                         </div>
+                     )}
+                     <DialogFooter>
+                        <Button 
+                            variant="outline"
+                            onClick={() => setMostrarDialogoTeste(true)} 
+                            disabled={salvandoConfig || carregandoConfig || configuracaoRelatorio.emails.length === 0}
+                        >
+                             <Send className="mr-2 h-4 w-4"/>
+                             Enviar Teste
+                         </Button>
+                         <Button 
+                            onClick={salvarConfigEmail} 
+                            disabled={salvandoConfig || carregandoConfig}
+                         >
+                             {salvandoConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                             Salvar Configurações
+                         </Button>
+                     </DialogFooter>
                  </DialogContent>
-              </Dialog>
-           )}
+             </Dialog>
+        )}
 
+         {mostrarDialogoTeste && (
+             <Dialog open={mostrarDialogoTeste} onOpenChange={setMostrarDialogoTeste}>
+                 <DialogContent className="sm:max-w-md">
+                     <DialogHeader>
+                         <DialogTitle>Enviar Email de Teste</DialogTitle>
+                         <DialogDescription>
+                            Digite um email para enviar um relatório de teste com os dados de hoje.
+                         </DialogDescription>
+                     </DialogHeader>
+                     <div className="py-4">
+                        <Label htmlFor="emailTeste">Email</Label>
+                        <Input 
+                            id="emailTeste"
+                            type="email"
+                            placeholder="exemplo@email.com"
+                            value={emailParaTeste}
+                            onChange={(e) => setEmailParaTeste(e.target.value)}
+                            disabled={enviandoEmailTeste}
+                        />
+                        {errosConfig?.testEmail && (
+                            <p className="text-sm text-red-500 mt-1">{errosConfig.testEmail.join(', ')}</p>
+                        )}
+                     </div>
+                     <DialogFooter>
+                         <Button variant="outline" onClick={() => setMostrarDialogoTeste(false)} disabled={enviandoEmailTeste}>Cancelar</Button>
+                         <Button 
+                            onClick={enviarTesteEmail}
+                            disabled={enviandoEmailTeste || !emailParaTeste}
+                         >
+                            {enviandoEmailTeste ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4"/>}
+                            Enviar
+                         </Button>
+                     </DialogFooter>
+                 </DialogContent>
+             </Dialog>
+         )}
       </div>
     </ProtectedRoute>
   );

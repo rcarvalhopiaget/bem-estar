@@ -19,6 +19,8 @@ const DIAS_POR_TIPO: Record<string, number | null> = {
   INTEGRAL_3X: 3,
   INTEGRAL_2X: 2,
   AVULSO: null,
+  SEMI_INTEGRAL: null,
+  ESTENDIDO: null
 };
 
 const DIAS_SEMANA = [
@@ -35,7 +37,7 @@ const alunoSchema = z.object({
   nome: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
   matricula: z.string().min(4, 'A matrícula deve ter pelo menos 4 caracteres'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  tipo: z.enum(['MENSALISTA', 'INTEGRAL_5X', 'INTEGRAL_4X', 'INTEGRAL_3X', 'INTEGRAL_2X', 'AVULSO']),
+  tipo: z.enum(['MENSALISTA', 'INTEGRAL_5X', 'INTEGRAL_4X', 'INTEGRAL_3X', 'INTEGRAL_2X', 'AVULSO', 'SEMI_INTEGRAL', 'ESTENDIDO']),
   turma: z.string().min(1, 'A turma é obrigatória'),
   ativo: z.boolean(),
   diasRefeicaoPermitidos: z.array(z.number()).optional(),
@@ -51,12 +53,14 @@ const alunoSchema = z.object({
 });
 
 const TIPOS_ALUNO = {
-  'MENSALISTA': 'Mensalista (sem limite)',
-  'INTEGRAL_5X': 'Integral (5 refeições/semana)',
-  'INTEGRAL_4X': 'Integral (4 refeições/semana)',
-  'INTEGRAL_3X': 'Integral (3 refeições/semana)',
-  'INTEGRAL_2X': 'Integral (2 refeições/semana)',
-  'AVULSO': 'Avulso (pagamento por refeição)',
+  'MENSALISTA': 'Mensalista',
+  'INTEGRAL_5X': 'Integral (5x/semana)',
+  'INTEGRAL_4X': 'Integral (4x/semana)',
+  'INTEGRAL_3X': 'Integral (3x/semana)',
+  'INTEGRAL_2X': 'Integral (2x/semana)',
+  'SEMI_INTEGRAL': 'Semi-Integral',
+  'ESTENDIDO': 'Estendido',
+  'AVULSO': 'Avulso',
 };
 
 interface AlunoFormProps {
@@ -91,12 +95,10 @@ export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
   const diasExigidos = DIAS_POR_TIPO[tipoAluno];
 
   useEffect(() => {
-    if (diasExigidos === null && diasSelecionados.length > 0) {
-      setValue('diasRefeicaoPermitidos', [], { shouldValidate: true });
-    } else if (diasExigidos !== null) {
+    if (diasExigidos !== null) {
       trigger('diasRefeicaoPermitidos');
     }
-  }, [tipoAluno, diasExigidos, setValue, trigger, diasSelecionados.length]);
+  }, [tipoAluno, diasExigidos, setValue, trigger]);
 
   const handleDiaChange = (diaId: number, checked: boolean) => {
     const currentDias = getValues('diasRefeicaoPermitidos') || [];
@@ -177,10 +179,11 @@ export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
         </p>
       </div>
 
-      {diasExigidos !== null && (
+      {!['AVULSO'].includes(tipoAluno) && (
         <div>
           <Label className="block text-lg font-medium text-gray-700 mb-2">
-            Dias Permitidos ({diasSelecionados.length} de {diasExigidos} selecionados)
+            Dias Permitidos 
+            {diasExigidos !== null ? `(${diasSelecionados.length} de ${diasExigidos} selecionados)` : '(Opcional)'}
           </Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 border rounded-lg">
             {DIAS_SEMANA.map((dia) => (

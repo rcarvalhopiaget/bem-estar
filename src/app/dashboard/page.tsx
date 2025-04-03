@@ -11,6 +11,19 @@ import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
 import { Aluno } from '@/types/aluno';
 import { Refeicao } from '@/types/refeicao';
+import { AlunoTipo } from '@/types/aluno';
+
+// Definir labels localmente
+const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
+  AVULSO: 'Avulso',
+  INTEGRAL_5X: 'Integral 5x',
+  INTEGRAL_4X: 'Integral 4x',
+  INTEGRAL_3X: 'Integral 3x',
+  INTEGRAL_2X: 'Integral 2x',
+  MENSALISTA: 'Mensalista',
+  SEMI_INTEGRAL: 'Semi Integral',
+  ESTENDIDO: 'Estendido',
+};
 
 export default function DashboardPage() {
   const { user, userData } = useAuth();
@@ -20,6 +33,7 @@ export default function DashboardPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
   const [refeicoesHoje, setRefeicoesHoje] = useState<Refeicao[]>([]);
+  const [refeicoesAvulsasHojeCount, setRefeicoesAvulsasHojeCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [refeicaoSelecionada, setRefeicaoSelecionada] = useState<Refeicao | null>(null);
   const [dialogoAberto, setDialogoAberto] = useState(false);
@@ -48,6 +62,7 @@ export default function DashboardPage() {
     }
 
     const carregarDados = async () => {
+      setLoading(true);
       try {
         // Carregar dados reais do sistema
         const alunosData = await alunoService.listarAlunos();
@@ -55,10 +70,11 @@ export default function DashboardPage() {
         // Buscar refeições recentes (últimos 30 dias)
         const hoje = new Date();
         const dataInicio = new Date();
-        dataInicio.setDate(hoje.getDate() - 30);
+        dataInicio.setHours(0, 0, 0, 0);
+        hoje.setHours(23, 59, 59, 999);
         
         const refeicoesData = await refeicaoService.listarRefeicoes({ 
-          dataInicio,
+          dataInicio: dataInicio,
           dataFim: hoje
         });
         
@@ -70,6 +86,10 @@ export default function DashboardPage() {
           const dataRefeicao = new Date(ref.data);
           return dataRefeicao >= inicioHoje;
         });
+        
+        // Calcular refeições avulsas de hoje
+        const avulsasHoje = refeicoesHojeData.filter(ref => ref.tipoConsumo === 'AVULSO').length;
+        setRefeicoesAvulsasHojeCount(avulsasHoje);
         
         setAlunos(alunosData);
         setRefeicoes(refeicoesData);
@@ -171,6 +191,25 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* NOVO CARD: Refeições Avulsas Hoje */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Refeições Avulsas Hoje
+            </CardTitle>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
+              <line x1="12" x2="12" y1="2" y2="22"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{refeicoesAvulsasHojeCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Refeições registradas como Avulso hoje
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Lista de refeições de hoje */}
@@ -259,6 +298,14 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm font-medium text-gray-500">Tipo de Refeição</p>
                       <p className="mt-1">{refeicaoSelecionada.tipo}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Tipo de Consumo</p>
+                      <p className="mt-1">
+                        {refeicaoSelecionada.tipoConsumo
+                          ? TIPOS_ALUNO_LABELS[refeicaoSelecionada.tipoConsumo]
+                          : '-'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Data e Hora</p>
