@@ -285,7 +285,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     const nomeTipoRefeicao = TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
     const acao = `Marcar ${isAvulso ? '(Avulso)' : ''} ${nomeTipoRefeicao}`;
 
-    let refeicaoId: string | null = null; // Para usar no log de erro
+    let refeicaoId: string | null = null;
+    let reverterContagemSemanal = false;
 
     try {
       setDialogoAberto(false);
@@ -302,7 +303,6 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       };
 
       // Manter atualização otimista para contagem semanal (se relevante)
-      let reverterContagemSemanal = false; // Flag para controlar reversão
       if (!isAvulso) {
          setRefeicoesSemanais(prev => ({
            ...prev,
@@ -335,13 +335,13 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       console.error(`Erro ao ${acao}:`, error);
       toast({ title: "Erro", description: `Falha ao ${acao}. ${error.message}`, variant: "destructive" });
       
-      // Reverter contagem semanal apenas se a atualização otimista foi feita
+      // Usar a flag para reverter contagem semanal
       if (reverterContagemSemanal && !isAvulso) { 
          setRefeicoesSemanais(prev => ({
            ...prev,
            [alunoParaMarcar.id]: {
              ...prev[alunoParaMarcar.id],
-             [tipoRefeicao]: Math.max(0, (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 1) - 1) // Evitar contagem negativa
+             [tipoRefeicao]: Math.max(0, (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 1) - 1)
            }
          }));
       }
@@ -456,16 +456,17 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                         <IconButton 
                           key={tipo.id} 
                           size="small" 
-                          disabled 
-                          title={tooltip}
+                          title={tooltip} 
                           sx={{ 
-                            color: comeu ? tipo.color : 'grey', 
-                            opacity: comeu ? 1 : 0.5, 
+                            opacity: comeu ? 1 : 0.5,
                             border: atingiuLimite ? '2px solid red' : undefined,
-                            padding: '4px'
+                            padding: '4px' 
                           }}
                         >
-                          <Icone fontSize="small" />
+                          <Icone 
+                            fontSize="small" 
+                            sx={{ color: comeu ? tipo.color : 'grey' }} 
+                          />
                         </IconButton>
                       );
                     })}
