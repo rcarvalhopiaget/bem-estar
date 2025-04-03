@@ -151,20 +151,48 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
   useEffect(() => {
     const carregarRefeicoes = async () => {
+      // Resetar estados independentemente do erro/sucesso
+      setAlunosComeram({});
+      setRefeicoesSemanais({});
       try {
-        setAlunosComeram({});
-        setRefeicoesSemanais({});
+        if (!user) {
+          // Não fazer nada se o usuário não estiver logado ainda
+          console.warn('Usuário não autenticado, aguardando...');
+          return;
+        }
+
+        // Obter token UMA VEZ
+        let idToken = '';
+        try {
+           idToken = await user.getIdToken();
+        } catch (tokenError: any) {
+            console.error('Erro ao obter idToken:', tokenError);
+             // Tratar erro específico de quota aqui também, se ocorrer ao obter token
+            if (tokenError?.code === 'auth/quota-exceeded') {
+                 toast({ title: "Quota Excedida", description: "Limite de autenticação atingido ao obter token. Tente recarregar.", variant: "destructive" });
+            } else {
+                 toast({ title: "Erro de Autenticação", description: "Não foi possível obter o token do usuário.", variant: "destructive" });
+            }
+            return; // Não continuar sem token
+        }
 
         const dataInicio = new Date(data);
         dataInicio.setHours(0, 0, 0, 0);
         const dataFim = new Date(data);
         dataFim.setHours(23, 59, 59, 999);
 
+        // Preparar chamadas passando o token
+        const refeicoesSemanaisPromises = alunos.map(aluno =>
+          refeicaoService.buscarRefeicoesSemana(aluno.id, data, idToken) // Passar token
+        );
+
+        // Executar chamadas em paralelo
         const [refeicoesDoDia, ...refeicoesSemanaisRaw] = await Promise.all([
-           refeicaoService.listarRefeicoes({ dataInicio, dataFim, presente: true }),
-           ...alunos.map(aluno => refeicaoService.buscarRefeicoesSemana(aluno.id, data))
+           refeicaoService.listarRefeicoes({ dataInicio, dataFim, presente: true }), // Assumindo que esta não precisa de token ou já o obtém internamente de forma segura
+           ...refeicoesSemanaisPromises
         ]);
 
+        // Processar refeicoesDoDia
         const comeram: Record<string, Partial<Record<TipoRefeicao, boolean>>> = {};
         refeicoesDoDia.forEach(refeicao => {
           if (!comeram[refeicao.alunoId]) comeram[refeicao.alunoId] = {};
@@ -174,6 +202,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         });
         setAlunosComeram(comeram);
 
+        // Processar refeicoesSemanaisRaw
         const refeicoesSemanaisPorAluno: Record<string, Record<TipoRefeicao, number>> = {};
         alunos.forEach((aluno, index) => {
           const contadores: Record<TipoRefeicao, number> = { LANCHE_MANHA: 0, ALMOCO: 0, LANCHE_TARDE: 0, SOPA: 0 };
@@ -187,20 +216,28 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         });
         setRefeicoesSemanais(refeicoesSemanaisPorAluno);
 
-      } catch (error) {
-        console.error('Erro ao carregar refeições:', error instanceof Error ? error.message : JSON.stringify(error));
-        toast({ title: "Erro", description: "Erro ao carregar dados das refeições", variant: "destructive" });
+      } catch (error: any) {
+        // Tratar erros das chamadas de serviço
+        console.error('Erro ao carregar refeições:', error);
+        if (error?.code === 'auth/quota-exceeded') {
+             toast({ title: "Quota Excedida", description: "Limite de autenticação atingido durante busca de dados. Tente novamente mais tarde.", variant: "destructive" });
+        } else if (error instanceof Error) {
+             toast({ title: "Erro", description: `Erro ao carregar dados: ${error.message}`, variant: "destructive" });
+        } else {
+            toast({ title: "Erro Desconhecido", description: "Ocorreu um erro inesperado ao carregar os dados.", variant: "destructive" });
+        }
+        // Estados já foram resetados no início do try
       }
     };
 
     carregarRefeicoes();
-  }, [data, alunos, toast]);
+  }, [data, alunos, toast, user]); // Adicionar user às dependências
 
   const alunosFiltrados = useMemo(() => {
     return alunos.filter(aluno => {
       const termoBuscaNome = filtroNome.toLowerCase();
       const matchNome = aluno.nome.toLowerCase().includes(termoBuscaNome);
-      const matchTurma = !turmaFiltro || aluno.turma === turmaFiltro;
+      const matchTurma = !turmaFiltro || turmaFiltro === 'all' || aluno.turma === turmaFiltro;
       return matchNome && matchTurma;
     });
   }, [alunos, filtroNome, turmaFiltro]);
@@ -248,6 +285,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     const nomeTipoRefeicao = TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
     const acao = `Marcar ${isAvulso ? '(Avulso)' : ''} ${nomeTipoRefeicao}`;
 
+    let refeicaoId: string | null = null; // Para usar no log de erro
+
     try {
       setDialogoAberto(false);
       toast({ title: "Processando...", description: `${acao} para ${alunoParaMarcar.nome}` });
@@ -259,69 +298,59 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         data: data,
         tipo: tipoRefeicao,
         presente: true,
+        // isAvulso será determinado pelo service
       };
 
-      const refeicaoId = await refeicaoService.registrarRefeicao(refeicaoData);
-      
-      setAlunosComeram(prev => ({
-        ...prev,
-        [alunoParaMarcar.id]: {
-          ...prev[alunoParaMarcar.id],
-          [tipoRefeicao]: true
-        }
-      }));
-
+      // Manter atualização otimista para contagem semanal (se relevante)
+      let reverterContagemSemanal = false; // Flag para controlar reversão
       if (!isAvulso) {
-        setRefeicoesSemanais(prev => ({
-          ...prev,
-          [alunoParaMarcar.id]: {
-            ...prev[alunoParaMarcar.id],
-            [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0) + 1
-          }
-        }));
+         setRefeicoesSemanais(prev => ({
+           ...prev,
+           [alunoParaMarcar.id]: {
+             ...prev[alunoParaMarcar.id],
+             [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 0) + 1
+           }
+         }));
+         reverterContagemSemanal = true; // Marcar para reverter em caso de erro
       }
 
-      toast({
-        title: "Sucesso!",
-        description: `${acao} registrado com sucesso!`,
-      });
+      // --- Chamada ao Serviço ---
+      refeicaoId = await refeicaoService.registrarRefeicao(refeicaoData);
+      // --------------------------
+      
+      // Se chegou aqui, a operação foi bem-sucedida, não precisa reverter contagem semanal
+      reverterContagemSemanal = false; 
 
-      logAction('CREATE', 'REFEICOES', `Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao}) registrada`, {
+      toast({ title: "Sucesso!", description: `${acao} registrado com sucesso!` });
+      logAction('CREATE', 'REFEICOES', `Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao}) registrada`, { 
         alunoId: alunoParaMarcar.id,
         alunoNome: alunoParaMarcar.nome,
         refeicaoId: refeicaoId,
-        avulso: isAvulso
+        avulso: isAvulso // O service determina o valor final, mas logamos o que calculamos aqui
       });
 
-      onRefeicaoMarcada();
+      onRefeicaoMarcada(); // Dispara atualização no componente pai
 
     } catch (error: any) {
       console.error(`Erro ao ${acao}:`, error);
-      toast({
-        title: "Erro",
-        description: `Falha ao ${acao}. ${error.message}`,
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: `Falha ao ${acao}. ${error.message}`, variant: "destructive" });
       
-      setAlunosComeram(prev => ({
-        ...prev,
-        [alunoParaMarcar.id]: { ...prev[alunoParaMarcar.id], [tipoRefeicao]: false }
-      }));
-
-      if (!isAvulso) {
-        setRefeicoesSemanais(prev => ({
-          ...prev,
-          [alunoParaMarcar.id]: {
-            ...prev[alunoParaMarcar.id],
-            [tipoRefeicao]: (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 1) - 1
-          }
-        }));
+      // Reverter contagem semanal apenas se a atualização otimista foi feita
+      if (reverterContagemSemanal && !isAvulso) { 
+         setRefeicoesSemanais(prev => ({
+           ...prev,
+           [alunoParaMarcar.id]: {
+             ...prev[alunoParaMarcar.id],
+             [tipoRefeicao]: Math.max(0, (prev[alunoParaMarcar.id]?.[tipoRefeicao] ?? 1) - 1) // Evitar contagem negativa
+           }
+         }));
       }
 
-      logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao})`, {
+      logAction('ERROR', 'REFEICOES', `Falha ao registrar Refeição ${isAvulso ? 'Avulsa' : 'Regular'} (${tipoRefeicao})`, { 
         alunoId: alunoParaMarcar?.id,
         alunoNome: alunoParaMarcar?.nome,
         tipoRefeicao: tipoRefeicao,
+        refeicaoIdTentativa: refeicaoId, // Logar ID se chegou a ser gerado antes do erro
         erro: error.message
       });
     } finally {
@@ -357,7 +386,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
               <SelectValue placeholder="Todas as Turmas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as Turmas</SelectItem>
+              <SelectItem value="all">Todas as Turmas</SelectItem>
               {turmasUnicas.map(turma => (
                 <SelectItem key={turma} value={turma}>
                   {turma}
