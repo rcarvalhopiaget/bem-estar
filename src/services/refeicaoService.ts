@@ -1,7 +1,7 @@
 import { db, auth } from '@/lib/firebase';
 import { Refeicao, RefeicaoFilter, RefeicaoFormData, TipoRefeicao } from '@/types/refeicao';
 import { User } from 'firebase/auth';
-import { Aluno } from '@/types/aluno';
+import { Aluno, AlunoTipo } from '@/types/aluno';
 import {
   collection,
   doc,
@@ -62,7 +62,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    tipoConsumo: 'ALMOCO',
+    tipoConsumo: 'MENSALISTA',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -74,7 +74,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
-    tipoConsumo: 'LANCHE_MANHA',
+    tipoConsumo: 'MENSALISTA',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -86,7 +86,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: false,
-    tipoConsumo: 'ALMOCO',
+    tipoConsumo: 'AVULSO',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -98,7 +98,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: true,
-    tipoConsumo: 'LANCHE_TARDE',
+    tipoConsumo: 'INTEGRAL_5X',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -110,7 +110,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-13T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    tipoConsumo: 'ALMOCO',
+    tipoConsumo: 'MENSALISTA',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -122,7 +122,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T09:30:00'),
     tipo: 'LANCHE_MANHA',
     presente: true,
-    tipoConsumo: 'LANCHE_MANHA',
+    tipoConsumo: 'INTEGRAL_3X',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -134,7 +134,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-14T12:00:00'),
     tipo: 'ALMOCO',
     presente: true,
-    tipoConsumo: 'ALMOCO',
+    tipoConsumo: 'INTEGRAL_5X',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -146,7 +146,7 @@ const dadosTeste: Refeicao[] = [
     data: new Date('2025-03-13T15:30:00'),
     tipo: 'LANCHE_TARDE',
     presente: false,
-    tipoConsumo: 'LANCHE_TARDE',
+    tipoConsumo: 'INTEGRAL_5X',
     createdAt: new Date(),
     updatedAt: new Date()
   }
@@ -358,21 +358,26 @@ export const refeicaoService = {
 
     try {
       const docRef = await addDoc(collection(db, COLLECTION_NAME), novaRefeicao);
-      await atividadeService.registrarAtividade(
-        'CREATE',
-        'REFEICOES',
-        `Refeição (${novaRefeicao.tipo}) registrada como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
-        { refeicaoId: docRef.id, alunoId: novaRefeicao.alunoId, tipoConsumo: novaRefeicao.tipoConsumo }
-      );
+      await atividadeService.registrarAtividade({
+        tipo: 'REFEICAO',
+        entidadeTipo: 'REFEICOES',
+        descricao: `Refeição (${novaRefeicao.tipo}) registrada como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
+        entidadeId: docRef.id,
+        detalhes: { refeicaoId: docRef.id, alunoId: novaRefeicao.alunoId, tipoConsumo: novaRefeicao.tipoConsumo },
+        usuarioId: currentUser.uid,
+        usuarioEmail: currentUser.email || 'email-desconhecido'
+      });
       return docRef.id;
     } catch (error) {
       console.error("Erro detalhado ao adicionar refeição:", error);
-      await atividadeService.registrarAtividade(
-        'ERROR',
-        'REFEICOES',
-        `Falha ao registrar Refeição (${novaRefeicao.tipo}) como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
-        { erro: (error as Error).message, dadosTentativa: novaRefeicao }
-      );
+      await atividadeService.registrarAtividade({
+        tipo: 'REFEICAO',
+        entidadeTipo: 'REFEICOES',
+        descricao: `Falha ao registrar Refeição (${novaRefeicao.tipo}) como ${novaRefeicao.tipoConsumo} para ${novaRefeicao.nomeAluno}`,
+        detalhes: { erro: (error as Error).message, dadosTentativa: novaRefeicao },
+        usuarioId: currentUser.uid,
+        usuarioEmail: currentUser.email || 'email-desconhecido'
+      });
       throw new Error(`Falha ao registrar refeição: ${(error as Error).message}`);
     }
   },

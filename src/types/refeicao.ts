@@ -1,3 +1,5 @@
+import { AlunoTipo } from './aluno'
+
 export type TipoRefeicao = 'ALMOCO' | 'LANCHE_MANHA' | 'LANCHE_TARDE' | 'SOPA';
 
 export interface Refeicao {
@@ -7,6 +9,7 @@ export interface Refeicao {
   turma: string;
   data: Date;
   tipo: TipoRefeicao;
+  tipoConsumo?: AlunoTipo;
   presente: boolean;
   observacao?: string;
   isAvulso?: boolean;
@@ -20,6 +23,7 @@ export interface RefeicaoFormData {
   turma: string;
   data: Date;
   tipo: TipoRefeicao;
+  tipoConsumo: AlunoTipo;
   presente: boolean;
   observacao?: string;
   isAvulso?: boolean;
@@ -31,6 +35,7 @@ export interface RefeicaoFilter {
   dataFim?: Date;
   turma?: string;
   tipo?: TipoRefeicao;
+  tipoConsumo?: AlunoTipo;
   alunoId?: string;
   presente?: boolean;
 }

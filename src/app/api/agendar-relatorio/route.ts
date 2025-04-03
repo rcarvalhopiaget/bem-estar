@@ -55,12 +55,11 @@ export async function GET(request: Request) {
     }
     // --- Fim Buscar Configuração ---
 
-    // CALCULAR A DATA DO DIA ANTERIOR
+    // CALCULAR A DATA DO DIA ATUAL (em vez de anterior)
     const hoje = new Date();
     const dataRelatorio = new Date(hoje); 
-    dataRelatorio.setDate(hoje.getDate() - 1); // Subtrai 1 dia
     
-    // Formatar a data do dia anterior como YYYY-MM-DD
+    // Formatar a data do dia atual como YYYY-MM-DD
     const dataFormatada = dataRelatorio.toISOString().split('T')[0]; 
     console.log(`[API /agendar-relatorio] Iniciando geração para data: ${dataFormatada}`);
 
@@ -126,22 +125,18 @@ export async function GET(request: Request) {
       
       const refeicoesRef = adminDb.collection('refeicoes');
       
-      // ----> USA dataFormatada (DIA ANTERIOR) PARA DEFINIR INTERVALO <----
+      // ----> USA dataFormatada (DIA ATUAL) PARA DEFINIR INTERVALO <----
       // Usar UTC para evitar problemas de fuso horário na query do Firestore
-      const inicioDiaAnteriorUTC = new Date(dataFormatada + 'T00:00:00.000Z');
-      const fimDiaAnteriorUTC = new Date(dataFormatada + 'T23:59:59.999Z');
-      const dataInicio = Timestamp.fromDate(inicioDiaAnteriorUTC);
-      const dataFim = Timestamp.fromDate(fimDiaAnteriorUTC);
-      // const dataInicio = new Date(dataFormatada); dataInicio.setHours(0, 0, 0, 0);
-      // const dataFim = new Date(dataFormatada); dataFim.setHours(23, 59, 59, 999);
+      const inicioDiaAtualUTC = new Date(dataFormatada + 'T00:00:00.000Z'); // Renomeado para clareza
+      const fimDiaAtualUTC = new Date(dataFormatada + 'T23:59:59.999Z'); // Renomeado para clareza
+      const dataInicio = Timestamp.fromDate(inicioDiaAtualUTC);
+      const dataFim = Timestamp.fromDate(fimDiaAtualUTC);
       
-      console.log(`[API /agendar-relatorio] Buscando refeições entre ${inicioDiaAnteriorUTC.toISOString()} e ${fimDiaAnteriorUTC.toISOString()}`);
+      console.log(`[API /agendar-relatorio] Buscando refeições entre ${inicioDiaAtualUTC.toISOString()} e ${fimDiaAtualUTC.toISOString()}`);
 
       const refeicoesQuery = refeicoesRef
-        // .where('data', '>=', Timestamp.fromDate(dataInicio)) // Versão antiga
-        // .where('data', '<', Timestamp.fromDate(dataFim)); // Versão antiga
-        .where('data', '>=', dataInicio) // Usando Timestamps UTC
-        .where('data', '<=', dataFim); // Usando Timestamps UTC (<= fim do dia)
+        .where('data', '>=', dataInicio) 
+        .where('data', '<=', dataFim); 
       
       const refeicoesSnapshot = await refeicoesQuery.get();
       const refeicoes = refeicoesSnapshot.docs.map(doc => {
@@ -181,7 +176,7 @@ export async function GET(request: Request) {
       }));
       
       const dadosRelatorio = {
-        data: dataFormatada, // <-- Usa data do dia anterior
+        data: dataFormatada, // <-- Usa data do dia atual
         totalAlunos: alunos.length,
         totalComeram: alunosComeram.length,
         totalNaoComeram: alunosNaoComeram.length,

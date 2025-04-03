@@ -16,7 +16,7 @@ import {
   enviarEmailTesteAction,
   ConfiguracaoRelatorio
 } from '@/actions/configRelatorioActions';
-import { Aluno } from '@/types/aluno';
+import { Aluno, AlunoTipo } from '@/types/aluno';
 import { Refeicao, TipoRefeicao } from '@/types/refeicao';
 import { IconButton } from '@mui/material';
 import CoffeeIcon from '@mui/icons-material/Coffee';
@@ -26,7 +26,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { AlunoTipo } from '@/types/aluno';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface NotificacaoConfig {
