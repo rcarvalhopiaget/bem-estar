@@ -125,9 +125,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   }, [alunos]);
   
   useEffect(() => {
-    if (user?.email && user.email.includes('restaurante')) {
+    if (user?.email?.includes('restaurante')) {
       setIsRestauranteUser(true);
       console.log('RefeicaoRapida: É usuário do restaurante!');
+    } else {
+      setIsRestauranteUser(false);
     }
   }, [user]);
   
