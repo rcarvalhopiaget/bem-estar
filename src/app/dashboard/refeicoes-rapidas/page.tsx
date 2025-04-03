@@ -62,8 +62,13 @@ export default function RefeicoesRapidasPage() {
   }, []);
 
   const handleRefeicaoMarcada = () => {
-    // Recarrega os dados após marcar uma refeição
-    carregarAlunos();
+    // Correção: Forçar a atualização da data para disparar
+    // o useEffect de recarga no componente filho (RefeicaoRapida)
+    setDataAtual(new Date()); 
+    // Opcionalmente, poderia chamar carregarAlunos TAMBÉM, 
+    // mas a atualização da data é o gatilho principal para RefeicaoRapida.
+    // carregarAlunos();
+    toast({ title: "Info", description: "Atualizando dados..." }); // Feedback opcional
   };
 
   if (loading) {
