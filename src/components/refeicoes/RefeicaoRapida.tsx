@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, Typography, Box, Alert, Dialog, DialogTitle, DialogContent, Grid, IconButton, Button } from '@mui/material';
 import { Aluno } from '@/types/aluno';
 import { refeicaoService } from '@/services/refeicaoService';
-import { TipoRefeicao } from '@/types/refeicao';
+import { TipoRefeicao, Refeicao, RefeicaoFormData } from '@/types/refeicao';
 import { useToast } from "@/components/ui/use-toast";
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { AlunoTipo } from '@/types/aluno';
 
 interface Props {
   alunos: Aluno[];

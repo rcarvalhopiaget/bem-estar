@@ -11,8 +11,6 @@ export interface Aluno {
   updatedAt: Date;
 }
 
-export type AlunoFormData = Omit<Aluno, 'id' | 'createdAt' | 'updatedAt'>;
-
 export interface AlunoFilter {
   nome?: string;
   matricula?: string;
