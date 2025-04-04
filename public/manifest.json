@@ -1,0 +1,55 @@
+{
+  "name": "Bem Estar App",
+  "short_name": "Bem Estar",
+  "description": "Aplicação para gerenciamento escolar Bem Estar.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#317EFB",
+  "icons": [
+    {
+      "src": "/icons/72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
