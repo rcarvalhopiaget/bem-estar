@@ -20,11 +20,20 @@ const nextConfig = {
     };
     return config;
   },
-  // Configuração simples para o build
+  // Configuração para o build standalone
   output: 'standalone',
+  // Aumentar timeout para páginas estáticas
   staticPageGenerationTimeout: 180,
+  // Desativar header 'x-powered-by'
   poweredByHeader: false,
+  // Comprimir respostas
   compress: true,
+  // Desativar strict mode para obter melhor performance
+  experimental: {
+    // Desativar React strict mode em produção
+    strictMode: false
+  },
+  swcMinify: true,
 }
 
 module.exports = nextConfig;
