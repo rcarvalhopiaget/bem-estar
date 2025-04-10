@@ -10,9 +10,10 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useToast } from '@/components/ui/use-toast';
 import { CorrecaoRefeicaoModal } from '@/components/refeicoes/CorrecaoRefeicaoModal';
 import { useLogService } from '@/services/logService';
-import { Edit2, AlertTriangle, Filter, CalendarIcon } from 'lucide-react';
+import { Edit2, AlertTriangle, Filter, CalendarIcon, ShieldAlert } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 import {
   Select,
   SelectContent,
@@ -37,9 +38,10 @@ import {
 } from '@/components/ui/table';
 
 export default function CorrecaoRefeicoesPaginaAdmin() {
-  const { isAdmin } = usePermissions();
+  const { isAdmin, canWrite } = usePermissions();
   const { toast } = useToast();
   const { logAction } = useLogService();
+  const router = useRouter();
   
   const [refeicoes, setRefeicoes] = useState<Refeicao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,7 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
   const [nomeAluno, setNomeAluno] = useState<string>('');
   const [filtrando, setFiltrando] = useState(false);
 
+  // Verificar permissões no carregamento da página
   useEffect(() => {
     if (!isAdmin) {
       toast({
@@ -63,11 +66,20 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
         description: "Esta página é restrita a administradores.",
         variant: "destructive"
       });
+      
+      // Redirecionar para o dashboard após um pequeno atraso
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
+      
       return;
     }
 
+    // Registrar acesso no log
+    logAction('ACCESS', 'CORRECAO_REFEICOES', 'Acesso à página de correção de refeições');
+    
     carregarRefeicoes();
-  }, [isAdmin]);
+  }, [isAdmin, router]);
 
   const carregarRefeicoes = async () => {
     if (!isAdmin) return;
@@ -189,26 +201,48 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
   };
 
   const handleOpenCorrecaoModal = (refeicao: Refeicao) => {
+    // Verificar permissão novamente antes de abrir o modal
+    if (!isAdmin) {
+      toast({
+        title: "Permissão Negada",
+        description: "Apenas administradores podem corrigir refeições.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setRefeicaoParaCorrigir(refeicao);
     setIsCorrecaoModalOpen(true);
   };
 
   const handleSaveCorrecao = async (refeicaoCorrigida: Refeicao) => {
+    // Verificação estrita de permissão de administrador
     if (!isAdmin) {
+      toast({
+        title: "Permissão Negada",
+        description: "Apenas administradores podem corrigir refeições.",
+        variant: "destructive"
+      });
       throw new Error("Apenas administradores podem corrigir refeições.");
     }
 
     try {
       const { id, data, tipo, tipoConsumo, presente, observacao } = refeicaoCorrigida;
       
+      // Adicionar informações sobre quem fez a correção
+      const notaCorrecao = observacao 
+        ? `${observacao} [CORRIGIDO POR ADMIN]` 
+        : '[CORRIGIDO POR ADMIN]';
+      
       await refeicaoService.atualizarRefeicao(id, {
         data,
         tipo,
         tipoConsumo,
         presente,
-        observacao: observacao ? `${observacao} [CORRIGIDO POR ADMIN]` : '[CORRIGIDO POR ADMIN]'
+        observacao: notaCorrecao
       });
       
+      // Registrar a ação no log do sistema
       await logAction(
         'CORRECTION', 
         'REFEICOES', 
@@ -232,6 +266,13 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
       });
     } catch (error) {
       console.error('Erro ao corrigir refeição:', error);
+      
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao salvar correção",
+        variant: "destructive"
+      });
+      
       throw error;
     }
   };
@@ -320,13 +361,23 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
 
   if (!isAdmin) {
     return (
-      <Alert variant="destructive" className="my-8">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Acesso Restrito</AlertTitle>
-        <AlertDescription>
-          Esta página é exclusiva para administradores do sistema.
-        </AlertDescription>
-      </Alert>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <Alert variant="destructive" className="max-w-lg">
+          <ShieldAlert className="h-5 w-5" />
+          <AlertTitle>Acesso Restrito</AlertTitle>
+          <AlertDescription>
+            Esta página é exclusiva para administradores do sistema.
+            Você será redirecionado para o dashboard em instantes.
+          </AlertDescription>
+        </Alert>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => router.push('/dashboard')}
+        >
+          Voltar ao Dashboard
+        </Button>
+      </div>
     );
   }
 

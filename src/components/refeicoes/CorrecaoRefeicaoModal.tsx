@@ -25,6 +25,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Refeicao, TipoRefeicao, TIPOS_REFEICAO } from '@/types/refeicao';
 import { AlunoTipo } from '@/types/aluno';
 import { useToast } from '@/components/ui/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 // Mapeia os tipos de aluno para rótulos legíveis
 const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
@@ -33,15 +36,9 @@ const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   INTEGRAL_4X: 'Integral 4x',
   INTEGRAL_3X: 'Integral 3x',
   INTEGRAL_2X: 'Integral 2x',
-  INTEGRAL_1X: 'Integral 1x',
   MENSALISTA: 'Mensalista',
-  MENSALISTA_GRATUIDADE: 'Mensalista gratuidade',
   SEMI_INTEGRAL: 'Semi Integral',
-  ESTENDIDO_5X: 'Estendido 5x',
-  ESTENDIDO_4X: 'Estendido 4x',
-  ESTENDIDO_3X: 'Estendido 3x',
-  ESTENDIDO_2X: 'Estendido 2x',
-  ESTENDIDO_1X: 'Estendido 1x',
+  ESTENDIDO: 'Estendido'
 };
 
 interface CorrecaoRefeicaoModalProps {
@@ -58,6 +55,7 @@ export function CorrecaoRefeicaoModal({
   onSave,
 }: CorrecaoRefeicaoModalProps) {
   const { toast } = useToast();
+  const { isAdmin } = usePermissions();
   const [formData, setFormData] = useState<Refeicao | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -70,7 +68,39 @@ export function CorrecaoRefeicaoModal({
     }
   }, [refeicao]);
 
+  // Verificar se o usuário é um administrador
+  useEffect(() => {
+    if (isOpen && !isAdmin) {
+      toast({
+        title: "Acesso Negado",
+        description: "Apenas administradores podem corrigir refeições.",
+        variant: "destructive",
+      });
+      onClose();
+    }
+  }, [isOpen, isAdmin, onClose, toast]);
+
   if (!formData) return null;
+
+  // Verificação adicional de permissão
+  if (!isAdmin) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Acesso Negado</AlertTitle>
+            <AlertDescription>
+              Apenas administradores podem corrigir refeições.
+            </AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button onClick={onClose}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleFormChange = (
     field: keyof Refeicao,
@@ -84,6 +114,16 @@ export function CorrecaoRefeicaoModal({
 
   const handleSubmit = async () => {
     if (!formData) return;
+
+    // Verificação final de permissão antes de salvar
+    if (!isAdmin) {
+      toast({
+        title: "Permissão Negada",
+        description: "Apenas administradores podem corrigir refeições.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setIsLoading(true);
