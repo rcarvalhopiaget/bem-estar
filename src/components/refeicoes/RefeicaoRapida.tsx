@@ -70,6 +70,14 @@ const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; L
   }
 };
 
+// Lista de turmas que só podem ter almoço
+const TURMAS_APENAS_ALMOCO = [
+  "2 ano A", "2 ano B", "2 ano C", "2 ano D",
+  "3 ano A", "3 ano B", "3 ano C", "3 ano D",
+  "4 ano A", "4 ano B", "4 ano C", "4 ano D",
+  "5 ano A", "5 ano B", "5 ano C"
+];
+
 // Tipos de refeição disponíveis
 const TODOS_TIPOS_REFEICAO = [
   { 
@@ -134,7 +142,19 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     }
   }, [user]);
   
-  const TIPOS_REFEICAO = TODOS_TIPOS_REFEICAO;
+  // Função para obter os tipos de refeição disponíveis para um aluno específico
+  const getTiposRefeicaoParaAluno = (aluno: Aluno | null) => {
+    if (!aluno) return TODOS_TIPOS_REFEICAO;
+    
+    // Se o aluno pertence a uma das turmas que só podem almoçar
+    if (TURMAS_APENAS_ALMOCO.includes(aluno.turma)) {
+      // Retornar apenas a opção de almoço
+      return TODOS_TIPOS_REFEICAO.filter(tipo => tipo.id === 'ALMOCO');
+    }
+    
+    // Para outros alunos, retornar todas as opções
+    return TODOS_TIPOS_REFEICAO;
+  };
 
   const dataFormatada = useMemo(() => new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
@@ -300,7 +320,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     }
     // ----------------------------------------------
 
-    const nomeTipoRefeicao = TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
+    const nomeTipoRefeicao = TODOS_TIPOS_REFEICAO.find(t => t.id === tipoRefeicao)?.nome || tipoRefeicao;
     const acao = `Marcar ${tipoEfetivoParaSalvar !== tipoAlunoOriginal ? '(AVULSO)' : ''} ${nomeTipoRefeicao}`;
 
     // --- Confirmação para Avulso Inesperado ---
@@ -445,6 +465,12 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                statusAluno += ` (${diasPermitidos.map(d => nomesDias[d]).join(', ')})`;
             }
 
+            // Verificar se o aluno tem restrição de refeição (apenas almoço)
+            const apenasAlmoco = TURMAS_APENAS_ALMOCO.includes(aluno.turma);
+            if (apenasAlmoco) {
+              statusAluno += ' - Apenas Almoço';
+            }
+
             return (
               <Grid item xs={12} sm={6} md={4} key={aluno.id}>
                 <Card 
@@ -452,7 +478,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                     p: 2, 
                     cursor: canWrite && aluno.ativo ? 'pointer' : 'default', 
                     opacity: aluno.ativo ? 1 : 0.6,
-                    border: !ehDiaPermitido ? '2px solid orange' : undefined
+                    border: !ehDiaPermitido ? '2px solid orange' : apenasAlmoco ? '2px solid #2e7d32' : undefined
                   }}
                   onClick={() => handleCardClick(aluno)}
                 >
@@ -470,7 +496,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
                   
                   {/* Mostrar ícones das refeições do dia */}
                   <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                    {TIPOS_REFEICAO.map(tipo => {
+                    {/* Filtar tipos de refeição conforme restrição da turma */}
+                    {getTiposRefeicaoParaAluno(aluno).map(tipo => {
                       const comeu = !!refeicoesHoje[tipo.id];
                       const Icone = tipo.icon;
                       const limiteTipo = limiteSemanalConfig?.[tipo.id] ?? 999;
@@ -517,7 +544,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         <DialogTitle>Marcar Refeição para {alunoSelecionado?.nome}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} justifyContent="center">
-            {TIPOS_REFEICAO.map(tipo => {
+            {/* Apenas mostrar as opções de refeição permitidas para o aluno */}
+            {getTiposRefeicaoParaAluno(alunoSelecionado).map(tipo => {
               if (!alunoSelecionado) return null;
               
               const comeu = !!alunosComeram[alunoSelecionado.id]?.[tipo.id];
