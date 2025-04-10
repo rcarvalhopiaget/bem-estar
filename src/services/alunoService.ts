@@ -13,7 +13,8 @@ import {
   DocumentData,
   QueryConstraint,
   setDoc,
-  writeBatch
+  writeBatch,
+  QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Aluno, AlunoFormData, AlunoFilter } from '@/types/aluno';
@@ -31,6 +32,7 @@ const converterParaAluno = (doc: DocumentData): Aluno => {
     tipo: data.tipo,
     turma: data.turma,
     ativo: data.ativo ?? true,
+    diasRefeicaoPermitidos: data.diasRefeicaoPermitidos || [],
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date()
   };
@@ -55,15 +57,15 @@ export const alunoService = {
       // Aplicar filtros em memória para evitar necessidade de índices compostos
       if (filtro) {
         if (filtro.turma) {
-          alunos = alunos.filter(a => a.turma === filtro.turma);
+          alunos = alunos.filter((a: Aluno) => a.turma === filtro.turma);
         }
         if (filtro.tipo) {
-          alunos = alunos.filter(a => a.tipo === filtro.tipo);
+          alunos = alunos.filter((a: Aluno) => a.tipo === filtro.tipo);
         }
       }
 
       // Ordenar em memória
-      alunos.sort((a, b) => a.nome.localeCompare(b.nome));
+      alunos.sort((a: Aluno, b: Aluno) => a.nome.localeCompare(b.nome));
       
       console.log(`Encontrados ${alunos.length} alunos`);
       return alunos;
@@ -240,7 +242,7 @@ export const alunoService = {
       const querySnapshot = await getDocs(alunosRef);
       const turmas = new Set<string>();
       
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         const aluno = doc.data() as Aluno;
         if (aluno.turma) {
           turmas.add(aluno.turma);
@@ -263,7 +265,7 @@ export const alunoService = {
       const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
       const batch = writeBatch(db);
       
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         batch.delete(doc.ref);
         excluidos++;
       });
