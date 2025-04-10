@@ -1,16 +1,3 @@
-// Carregar configuração PWA
-const withPWAInit = require("@ducanh2912/next-pwa").default;
-
-// Configuração PWA simplificada
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  cacheOnFrontEndNav: true,
-  workboxOptions: {
-    disableDevLogs: true,
-  },
-});
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
@@ -40,4 +27,4 @@ const nextConfig = {
   compress: true,
 }
 
-module.exports = withPWA(nextConfig);
+module.exports = nextConfig;
