@@ -76,7 +76,7 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
     }
 
     // Registrar acesso no log
-    logAction('ACCESS', 'CORRECAO_REFEICOES', 'Acesso à página de correção de refeições');
+    logAction('VIEW', 'SISTEMA', 'Acesso à página de correção de refeições');
     
     carregarRefeicoes();
   }, [isAdmin, router]);
@@ -244,7 +244,7 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
       
       // Registrar a ação no log do sistema
       await logAction(
-        'CORRECTION', 
+        'UPDATE', 
         'REFEICOES', 
         `Refeição de ${refeicaoCorrigida.nomeAluno} corrigida por administrador`, 
         { 
