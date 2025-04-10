@@ -1,77 +1,41 @@
-# Arquivos de controle de versão
+# Controle de versão
 .git
-.gitignore
 .github
+.gitignore
 
-# Diretórios de desenvolvimento
+# Diretórios de cache e build
 node_modules
 .next
 .vercel
-.turbo
-.cache
 out
 dist
 
-# Arquivos de ambiente
+# Variáveis de ambiente (exceto .env.example)
 .env
 .env.local
 .env.development
 .env.test
-.env.*
 !.env.example
-!.env.docker
 
 # Logs
-logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
 
-# Scripts de desenvolvimento
+# Scripts e arquivos de desenvolvimento
 *.ps1
-*.sh
-vercel*.js
 fix-*.js
 patch-*.js
 create-*.js
 test-*.js
-deploy*.sh
-!railway-deploy.sh
-!atualizar-github.sh
-
-# Arquivos de cache do Next.js
-.next/cache/
-.next/images/
-.next/server/chunks/
 
 # Arquivos de documentação
 *.md
 !README.md
-DEPLOY*
-RESUMO*
-COMANDOS*
-GUIA*
 
-# Arquivos de configuração de IDE
+# Configurações de IDE e sistema
 .vscode
 .idea
-.project
-*.sublime-workspace
-*.sublime-project
 .DS_Store
 
-# Outros arquivos temporários
-Thumbs.db
-.DS_Store
-tmp/
-__temp__
-.eslintcache
-tsconfig.tsbuildinfo
-
-# Docker específico
-.dockerignore
-Dockerfile
-docker-compose*.yml
-docker-compose*.yaml 
+# Docker
+.dockerignore 
