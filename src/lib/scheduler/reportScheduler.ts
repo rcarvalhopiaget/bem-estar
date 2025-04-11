@@ -160,8 +160,11 @@ export async function executarEnvioRelatorioUnico() {
           return false;
         }
         
-        // Alunos MENSALISTA ou INTEGRAL_5X sempre devem comer em dias úteis
-        if (aluno.tipo === 'MENSALISTA' || aluno.tipo === 'INTEGRAL_5X') {
+        // Alunos MENSALISTA, MENSALISTA_GRATUIDADE ou planos 5X sempre devem comer em dias úteis
+        if (aluno.tipo === 'MENSALISTA' || 
+            aluno.tipo === 'MENSALISTA_GRATUIDADE' || 
+            aluno.tipo === 'INTEGRAL_5X' || 
+            aluno.tipo === 'ESTENDIDO_5X') {
           return diaSemana >= 1 && diaSemana <= 5; // Segunda a sexta
         }
         
@@ -170,10 +173,17 @@ export async function executarEnvioRelatorioUnico() {
           return aluno.diasRefeicaoPermitidos.includes(diaSemana);
         }
         
-        // Para tipos INTEGRAL_4X, INTEGRAL_3X, INTEGRAL_2X, SEMI_INTEGRAL, ESTENDIDO
+        // Para tipos INTEGRAL_4X, INTEGRAL_3X, INTEGRAL_2X, INTEGRAL_1X, SEMI_INTEGRAL, ESTENDIDO,
+        // ESTENDIDO_4X, ESTENDIDO_3X, ESTENDIDO_2X, ESTENDIDO_1X
         // consideramos apenas dias úteis (segunda a sexta)
         if (diaSemana >= 1 && diaSemana <= 5) {
-          if (['INTEGRAL_4X', 'INTEGRAL_3X', 'INTEGRAL_2X', 'SEMI_INTEGRAL', 'ESTENDIDO'].includes(aluno.tipo || '')) {
+          const tiposQueComemNosDiasUteis = [
+            'INTEGRAL_4X', 'INTEGRAL_3X', 'INTEGRAL_2X', 'INTEGRAL_1X',
+            'ESTENDIDO_4X', 'ESTENDIDO_3X', 'ESTENDIDO_2X', 'ESTENDIDO_1X',
+            'SEMI_INTEGRAL', 'ESTENDIDO'
+          ];
+          
+          if (tiposQueComemNosDiasUteis.includes(aluno.tipo || '')) {
             return true;
           }
         }

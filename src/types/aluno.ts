@@ -3,7 +3,7 @@ export interface Aluno {
   nome: string;
   matricula: string;
   email?: string;
-  tipo: 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO';
+  tipo: 'MENSALISTA' | 'MENSALISTA_GRATUIDADE' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'INTEGRAL_1X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO' | 'ESTENDIDO_5X' | 'ESTENDIDO_4X' | 'ESTENDIDO_3X' | 'ESTENDIDO_2X' | 'ESTENDIDO_1X';
   turma: string;
   ativo: boolean;
   diasRefeicaoPermitidos?: number[];
@@ -14,7 +14,7 @@ export interface Aluno {
 export interface AlunoFilter {
   nome?: string;
   matricula?: string;
-  tipo?: 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO';
+  tipo?: 'MENSALISTA' | 'MENSALISTA_GRATUIDADE' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'INTEGRAL_1X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO' | 'ESTENDIDO_5X' | 'ESTENDIDO_4X' | 'ESTENDIDO_3X' | 'ESTENDIDO_2X' | 'ESTENDIDO_1X';
   turma?: string;
   ativo?: boolean;
 }
