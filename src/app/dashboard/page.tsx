@@ -9,13 +9,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useEffect, useState } from 'react';
 import { alunoService } from '@/services/alunoService';
 import { refeicaoService } from '@/services/refeicaoService';
-import { Aluno } from '@/types/aluno';
-import { Refeicao } from '@/types/refeicao';
-import { AlunoTipo } from '@/types/aluno';
+import { Aluno, AlunoTipo } from '@/types/aluno';
+import { Refeicao, TipoRefeicao, TIPOS_REFEICAO } from '@/types/refeicao';
 
 // Definir labels localmente
 const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   AVULSO: 'Avulso',
+  AVULSO_RESTAURANTE: 'Avulso (Restaurante)',
+  AVULSO_SECRETARIA: 'Avulso (Secretaria)',
   INTEGRAL_5X: 'Integral 5x',
   INTEGRAL_4X: 'Integral 4x',
   INTEGRAL_3X: 'Integral 3x',

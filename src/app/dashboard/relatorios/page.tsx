@@ -45,6 +45,8 @@ interface RelatorioFiltro {
 
 const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   AVULSO: 'Avulso',
+  AVULSO_RESTAURANTE: 'Avulso (Restaurante)',
+  AVULSO_SECRETARIA: 'Avulso (Secretaria)',
   INTEGRAL_5X: 'Integral 5x',
   INTEGRAL_4X: 'Integral 4x',
   INTEGRAL_3X: 'Integral 3x',

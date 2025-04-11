@@ -26,6 +26,8 @@ const DIAS_POR_TIPO: Record<string, number | null> = {
   ESTENDIDO_2X: 2,
   ESTENDIDO_1X: 1,
   AVULSO: null,
+  AVULSO_RESTAURANTE: null,
+  AVULSO_SECRETARIA: null,
   SEMI_INTEGRAL: null,
   ESTENDIDO: null
 };
@@ -52,7 +54,9 @@ const alunoSchema = z.object({
     'INTEGRAL_3X', 
     'INTEGRAL_2X', 
     'INTEGRAL_1X', 
-    'AVULSO', 
+    'AVULSO',
+    'AVULSO_RESTAURANTE',
+    'AVULSO_SECRETARIA',
     'SEMI_INTEGRAL', 
     'ESTENDIDO', 
     'ESTENDIDO_5X', 
@@ -91,6 +95,8 @@ const TIPOS_ALUNO = {
   'SEMI_INTEGRAL': 'Semi-Integral',
   'ESTENDIDO': 'Estendido',
   'AVULSO': 'Avulso',
+  'AVULSO_RESTAURANTE': 'Avulso (Restaurante)',
+  'AVULSO_SECRETARIA': 'Avulso (Secretaria)',
 };
 
 interface AlunoFormProps {
@@ -209,7 +215,7 @@ export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
         </p>
       </div>
 
-      {!['AVULSO'].includes(tipoAluno) && (
+      {!['AVULSO', 'AVULSO_RESTAURANTE', 'AVULSO_SECRETARIA'].includes(tipoAluno) && (
         <div>
           <Label className="block text-lg font-medium text-gray-700 mb-2">
             Dias Permitidos 

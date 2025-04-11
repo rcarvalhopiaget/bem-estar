@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Refeicao, TipoRefeicao, TIPOS_REFEICAO } from '@/types/refeicao';
+import { Refeicao, TIPOS_REFEICAO, TipoRefeicao } from '@/types/refeicao';
 import { AlunoTipo } from '@/types/aluno';
 import { useToast } from '@/components/ui/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -32,6 +32,8 @@ import { AlertTriangle } from 'lucide-react';
 // Mapeia os tipos de aluno para rótulos legíveis
 const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   AVULSO: 'Avulso',
+  AVULSO_RESTAURANTE: 'Avulso (Restaurante)',
+  AVULSO_SECRETARIA: 'Avulso (Secretaria)',
   INTEGRAL_5X: 'Integral 5x',
   INTEGRAL_4X: 'Integral 4x',
   INTEGRAL_3X: 'Integral 3x',
