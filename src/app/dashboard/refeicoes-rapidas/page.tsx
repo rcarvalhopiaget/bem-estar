@@ -89,7 +89,6 @@ export default function RefeicoesRapidasPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <EmailVerification />
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Refeições Rápidas</h1>
         <RefeicaoRapida 

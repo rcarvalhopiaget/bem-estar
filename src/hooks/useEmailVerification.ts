@@ -6,45 +6,12 @@ import { auth } from '@/lib/firebase';
 import { sendVerificationEmailWithRetry, refreshUserToken } from '@/services/auth';
 
 export function useEmailVerification() {
-  const [isVerified, setIsVerified] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isVerified, setIsVerified] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-
-    // Função para verificar o status do email
-    const checkEmailVerification = async () => {
-      if (!auth.currentUser) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Força recarregar o usuário e atualizar o token
-        await refreshUserToken();
-        
-        if (mounted) {
-          setIsVerified(auth.currentUser.emailVerified);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar email:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Verifica imediatamente
-    checkEmailVerification();
-
-    // Configura um intervalo para verificar periodicamente
-    const interval = setInterval(checkEmailVerification, 5000); // Reduzido para 5 segundos
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    // Efeito vazio pois estamos ignorando a verificação
+    setLoading(false);
   }, []);
 
   const sendVerificationEmail = async () => {
@@ -58,8 +25,8 @@ export function useEmailVerification() {
   };
 
   return {
-    isVerified,
-    loading,
+    isVerified: true,
+    loading: false,
     sendVerificationEmail
   };
 }

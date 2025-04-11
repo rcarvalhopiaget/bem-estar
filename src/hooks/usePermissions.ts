@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEmailVerification } from '@/hooks/useEmailVerification';
 
 // Tipos de perfil de usuário
 export type PerfilUsuario = 'ADMIN' | 'COORDENADOR' | 'PROFESSOR' | 'OPERADOR';
@@ -14,8 +13,8 @@ export function usePermissions() {
   // Verificação de autenticação
   const isAuthenticated = user !== null;
   
-  // Verificação de email (para compatibilidade com código legado)
-  const isEmailVerified = user?.emailVerified || true; // Default true em produção
+  // Verificação de email (sempre true para evitar a necessidade de verificação)
+  const isEmailVerified = true;
   
   // Log para depuração
   useEffect(() => {
