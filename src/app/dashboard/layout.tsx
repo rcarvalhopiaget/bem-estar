@@ -13,7 +13,8 @@ import {
   X,           // Equivalente a Close
   User,        // Equivalente a Person
   UserCircle,  // Equivalente a AccountCircle
-  CalendarIcon // Equivalente a Event
+  CalendarIcon, // Equivalente a Event
+  FileEdit     // Ícone para correção de refeições
 } from "lucide-react"; // Importa ícones do lucide-react
 import { AuthProvider } from '@/contexts/AuthContext'; // Ajuste o caminho
 import { NotificationBell } from '@/components/notifications/NotificationBell'; // Importa o sino
@@ -73,6 +74,7 @@ export default function DashboardLayout({
 
   // Adiciona a opção de usuários apenas para administradores
   if (isAdmin) {
+    menuItems.push({ href: "/dashboard/correcao-refeicoes", label: "Correção de Refeições", icon: <FileEdit className="h-5 w-5" /> });
     menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <User className="h-5 w-5" /> });
     menuItems.push({ href: "/dashboard/logs", label: "Logs do Sistema", icon: <BarChart3 className="h-5 w-5" /> });
   }
