@@ -150,9 +150,8 @@ export async function _enviarEmailServidor(config: EmailConfigServer): Promise<{
 
 // Função para gerar o conteúdo HTML do relatório (mantida aqui)
 function gerarConteudoHTML(data: RelatorioData): string {
-  // ... (lógica idêntica à anterior)
   let html = `<h1>Relatório Diário - ${data.data}</h1>`;
-  html += `<p>Total de Alunos: ${data.totalAlunos}</p>`;
+  html += `<p>Total de Alunos que Deveriam Comer: ${data.totalAlunos}</p>`;
   html += `<p>Total Comeram: ${data.totalComeram}</p>`;
   html += `<p>Total Não Comeram: ${data.totalNaoComeram}</p>`;
 
@@ -175,7 +174,8 @@ function gerarConteudoHTML(data: RelatorioData): string {
     html += '<p>Nenhum aluno comeu neste dia.</p>';
   }
 
-  html += '<h2>Alunos que Não Comeram</h2>';
+  html += '<h2>Alunos que Deveriam Comer e Não Comeram</h2>';
+  html += '<p><em>Observação: Esta lista inclui apenas os alunos que tinham programação para comer hoje, baseado no seu tipo de plano e dias agendados.</em></p>';
   if (data.alunosNaoComeram.length > 0) {
     html += '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;"><thead><tr><th>Nome</th><th>Turma</th></tr></thead><tbody>';
     data.alunosNaoComeram.forEach(aluno => {
@@ -183,7 +183,7 @@ function gerarConteudoHTML(data: RelatorioData): string {
     });
     html += '</tbody></table>';
   } else {
-    html += '<p>Todos os alunos presentes comeram.</p>';
+    html += '<p>Todos os alunos que deveriam comer hoje, comeram.</p>';
   }
   
   if (data.refeicoes && data.refeicoes.length > 0) {
@@ -204,7 +204,6 @@ function gerarConteudoHTML(data: RelatorioData): string {
 
 // Função para gerar o conteúdo CSV do relatório (mantida aqui)
 function gerarConteudoCSV(data: RelatorioData): string {
-  // ... (lógica idêntica à anterior)
   let csv = '"Tipo","Nome","Turma","Refeição","Hora"\n'; // Cabeçalho
 
   data.alunosComeram.forEach(aluno => {
@@ -212,7 +211,7 @@ function gerarConteudoCSV(data: RelatorioData): string {
   });
 
   data.alunosNaoComeram.forEach(aluno => {
-    csv += `"Não Comeu","${aluno.nome}","${aluno.turma}","-","-"\n`;
+    csv += `"Não Comeu (Deveria)","${aluno.nome}","${aluno.turma}","-","-"\n`;
   });
   
   if (data.refeicoes) {

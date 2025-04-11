@@ -128,7 +128,7 @@ export async function executarEnvioRelatorioUnico() {
       const fimTimestamp = Timestamp.fromDate(fimDiaAnterior);
 
       const alunosSnapshot = await adminDb.collection('alunos').where('ativo', '==', true).get();
-      const alunos = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as { nome?: string, turma?: string }) }));
+      const alunos = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as { nome?: string, turma?: string, tipo?: string, diasRefeicaoPermitidos?: number[] }) }));
 
       const refeicoesSnapshot = await adminDb.collectionGroup('refeicoes')
         .where('data', '>=', inicioTimestamp)
@@ -150,11 +150,50 @@ export async function executarEnvioRelatorioUnico() {
 
       console.log(`[CronTask] Encontrados ${alunos.length} alunos ativos e ${refeicoes.length} refeições para ${dataFormatada}.`);
 
+      // Obtém o dia da semana da data do relatório (0: Domingo, 1: Segunda, ..., 6: Sábado)
+      const diaSemana = inicioDiaAnterior.getDay();
+
+      // Função para verificar se um aluno deve comer no dia específico
+      const alunoDeveComer = (aluno: { tipo?: string, diasRefeicaoPermitidos?: number[], ativo?: boolean }) => {
+        // Primeiro verificamos se o aluno está ativo
+        if (aluno.ativo === false) {
+          return false;
+        }
+        
+        // Alunos MENSALISTA ou INTEGRAL_5X sempre devem comer em dias úteis
+        if (aluno.tipo === 'MENSALISTA' || aluno.tipo === 'INTEGRAL_5X') {
+          return diaSemana >= 1 && diaSemana <= 5; // Segunda a sexta
+        }
+        
+        // Se tem dias específicos permitidos, verifica se o dia atual está na lista
+        if (aluno.diasRefeicaoPermitidos && Array.isArray(aluno.diasRefeicaoPermitidos)) {
+          return aluno.diasRefeicaoPermitidos.includes(diaSemana);
+        }
+        
+        // Para tipos INTEGRAL_4X, INTEGRAL_3X, INTEGRAL_2X, SEMI_INTEGRAL, ESTENDIDO
+        // consideramos apenas dias úteis (segunda a sexta)
+        if (diaSemana >= 1 && diaSemana <= 5) {
+          if (['INTEGRAL_4X', 'INTEGRAL_3X', 'INTEGRAL_2X', 'SEMI_INTEGRAL', 'ESTENDIDO'].includes(aluno.tipo || '')) {
+            return true;
+          }
+        }
+        
+        // AVULSO não tem dias fixos, então não contabilizamos como "deveria comer"
+        return false;
+      };
+
+      // Filtra apenas alunos que deveriam comer neste dia
+      const alunosQueDeveriam = alunos.filter(alunoDeveComer);
+      
       const alunosComeramIds = new Set(refeicoes.map(r => r.alunoId));
-      const alunosComeram = alunos
+      
+      // Alunos que deveriam comer e comeram
+      const alunosComeram = alunosQueDeveriam
         .filter(a => alunosComeramIds.has(a.id))
         .map(a => ({ nome: a.nome || 'Sem nome', turma: a.turma || 'Sem turma' }));
-      const alunosNaoComeram = alunos
+      
+      // Alunos que deveriam comer mas não comeram
+      const alunosNaoComeram = alunosQueDeveriam
         .filter(a => !alunosComeramIds.has(a.id))
         .map(a => ({ nome: a.nome || 'Sem nome', turma: a.turma || 'Sem turma' }));
 
@@ -174,7 +213,7 @@ export async function executarEnvioRelatorioUnico() {
 
       const dadosRelatorio: RelatorioData = {
         data: dataFormatada,
-        totalAlunos: alunos.length,
+        totalAlunos: alunosQueDeveriam.length, // Total de alunos que deveriam comer
         totalComeram: alunosComeram.length,
         totalNaoComeram: alunosNaoComeram.length,
         alunosComeram,
@@ -183,6 +222,7 @@ export async function executarEnvioRelatorioUnico() {
         refeicoes: refeicoesParaRelatorio
       };
 
+      console.log(`[CronTask] Alunos que deveriam comer: ${alunosQueDeveriam.length}, Comeram: ${alunosComeram.length}, Não comeram: ${alunosNaoComeram.length}`);
       await enviarRelatorioDiario(dadosRelatorio, emailsDestino);
       console.log(`[CronTask] Relatório real para ${dataFormatada} enviado para ${emailsDestino.join(', ')}.`);
     }
