@@ -125,22 +125,12 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
   const [refeicoesSemanais, setRefeicoesSemanais] = useState<Record<string, Record<TipoRefeicao, number>>>({});
-  const [isRestauranteUser, setIsRestauranteUser] = useState(false);
   
   // Obter turmas únicas e ordenadas
   const turmasUnicas = useMemo(() => {
     const turmas = new Set(alunos.map(a => a.turma).filter(Boolean));
     return Array.from(turmas).sort((a, b) => a.localeCompare(b));
   }, [alunos]);
-  
-  useEffect(() => {
-    if (user?.email?.includes('restaurante')) {
-      setIsRestauranteUser(true);
-      console.log('RefeicaoRapida: É usuário do restaurante!');
-    } else {
-      setIsRestauranteUser(false);
-    }
-  }, [user]);
   
   // Função para obter os tipos de refeição disponíveis para um aluno específico
   const getTiposRefeicaoParaAluno = (aluno: Aluno | null) => {
