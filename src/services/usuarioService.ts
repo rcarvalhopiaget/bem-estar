@@ -23,6 +23,7 @@ import {
 import { db, auth } from '@/lib/firebase';
 import { Usuario, PerfilUsuario } from '@/types/usuario';
 import { checkUserAuthenticated } from '@/lib/auth';
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 const COLLECTION_NAME = 'usuarios';
 
@@ -74,9 +75,9 @@ export const listarUsuarios = async (filtros?: {
   if (filtros?.busca) {
     const termoBusca = filtros.busca.toLowerCase();
     usuarios = usuarios.filter(usuario => 
-      usuario.nome.toLowerCase().includes(termoBusca) || 
-      usuario.email.toLowerCase().includes(termoBusca) ||
-      (usuario.cargo && usuario.cargo.toLowerCase().includes(termoBusca))
+      containsTextNormalized(usuario.nome, termoBusca) ||
+      containsTextNormalized(usuario.email, termoBusca) ||
+      (usuario.cargo && containsTextNormalized(usuario.cargo, termoBusca))
     );
   }
 

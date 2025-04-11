@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 export default function CorrecaoRefeicoesPaginaAdmin() {
   const { isAdmin, canWrite } = usePermissions();
@@ -138,23 +139,14 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
           console.log("Nenhuma refeição encontrada no backend");
         }
         
-        // DIAGNÓSTICO: Se temos refeições e o filtro de tipo foi especificado,
-        // aplicamos o filtro no cliente para diagnóstico
+        // Filtrar por tipo
         if (tipoParaFiltro && refeicoesData.length > 0) {
           const antesDoFiltro = refeicoesData.length;
           refeicoesData = refeicoesData.filter(r => r.tipo === tipoParaFiltro);
           console.log(`Após filtro de tipo ${tipoParaFiltro}: ${refeicoesData.length} (antes: ${antesDoFiltro})`);
         }
         
-        // Filtrar por nome do aluno se fornecido
-        if (nomeAluno && nomeAluno.trim() !== '') {
-          const termoBusca = nomeAluno.toLowerCase().trim();
-          const antesDoFiltro = refeicoesData.length;
-          refeicoesData = refeicoesData.filter(refeicao => 
-            refeicao.nomeAluno.toLowerCase().includes(termoBusca)
-          );
-          console.log(`Após filtro por nome "${termoBusca}": ${refeicoesData.length} (antes: ${antesDoFiltro})`);
-        }
+        // Não filtrar por nome aqui - será feito via refeicoesFiltradasPorNome
         
         // Ordenar por data (mais recente primeiro)
         refeicoesData.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
@@ -359,6 +351,16 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
     }
   };
 
+  const refeicoesFiltradasPorNome = useMemo(() => {
+    if (!nomeAluno.trim()) {
+      return refeicoes;
+    }
+
+    return refeicoes.filter(refeicao => {
+      return containsTextNormalized(refeicao.nomeAluno, nomeAluno);
+    });
+  }, [refeicoes, nomeAluno]);
+
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -478,7 +480,11 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
         <CardHeader>
           <CardTitle className="text-lg">Refeições Encontradas</CardTitle>
           <CardDescription>
-            {refeicoes.length} refeições encontradas. Clique no botão de edição para corrigir uma refeição.
+            {refeicoesFiltradasPorNome.length} refeições encontradas
+            {nomeAluno.trim() && refeicoes.length > refeicoesFiltradasPorNome.length && 
+              ` (filtrado de um total de ${refeicoes.length})`
+            }. 
+            Clique no botão de edição para corrigir uma refeição.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -487,6 +493,10 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
           ) : refeicoes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               Nenhuma refeição encontrada com os filtros selecionados.
+            </div>
+          ) : refeicoesFiltradasPorNome.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Nenhuma refeição encontrada com o nome "{nomeAluno}".
             </div>
           ) : (
             <div className="border rounded-md overflow-hidden">
@@ -503,7 +513,7 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {refeicoes.map((refeicao) => (
+                  {refeicoesFiltradasPorNome.map((refeicao) => (
                     <TableRow key={refeicao.id}>
                       <TableCell>
                         {format(new Date(refeicao.data), 'dd/MM/yyyy')}

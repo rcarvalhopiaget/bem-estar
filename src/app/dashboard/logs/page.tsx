@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<SystemLog[]>([]);
@@ -180,9 +181,9 @@ export default function LogsPage() {
   // Filtrar logs pelo termo de busca
   const filteredLogs = logs.filter((log: SystemLog) => 
     searchTerm === '' || 
-    log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (log.userName && log.userName.toLowerCase().includes(searchTerm.toLowerCase()))
+    containsTextNormalized(log.description, searchTerm) ||
+    containsTextNormalized(log.userEmail, searchTerm) ||
+    (log.userName && containsTextNormalized(log.userName, searchTerm))
   );
 
   return (

@@ -27,6 +27,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Loader2, X, Plus, Trash2, Send, Settings, MailWarning, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 interface NotificacaoConfig {
   tipo: 'erro' | 'aviso' | 'sucesso';
@@ -186,8 +187,8 @@ export default function RelatoriosPage() {
     if (nomeBusca.length >= 3) {
       const alunosFiltrados = alunos
         .filter(aluno => 
-          aluno.nome.toLowerCase().includes(nomeBusca.toLowerCase()) ||
-          aluno.turma.toLowerCase().includes(nomeBusca.toLowerCase())
+          containsTextNormalized(aluno.nome, nomeBusca) ||
+          containsTextNormalized(aluno.turma, nomeBusca)
         )
         .sort((a, b) => a.nome.localeCompare(b.nome));
       setAlunosFiltrados(alunosFiltrados);

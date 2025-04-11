@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown } from "lucide-react";
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 // Adicionar tipos para ordenação
 type SortKey = keyof Pick<Aluno, 'nome' | 'matricula' | 'email' | 'tipo' | 'turma' | 'ativo'> | '';
@@ -90,13 +91,12 @@ export default function AlunosPage() {
 
     // 2. Filtrar por termo de busca
     if (termoBusca) {
-      const buscaLower = termoBusca.toLowerCase();
       alunosFiltrados = alunosFiltrados.filter(aluno => 
-        aluno.nome.toLowerCase().includes(buscaLower) ||
-        aluno.matricula.toLowerCase().includes(buscaLower) ||
-        (aluno.email && aluno.email.toLowerCase().includes(buscaLower)) ||
-        (aluno.tipo && TIPOS_ALUNO_LABELS[aluno.tipo]?.toLowerCase().includes(buscaLower)) ||
-        aluno.turma.toLowerCase().includes(buscaLower)
+        containsTextNormalized(aluno.nome, termoBusca) ||
+        containsTextNormalized(aluno.matricula, termoBusca) ||
+        (aluno.email && containsTextNormalized(aluno.email, termoBusca)) ||
+        (aluno.tipo && containsTextNormalized(TIPOS_ALUNO_LABELS[aluno.tipo] || '', termoBusca)) ||
+        containsTextNormalized(aluno.turma, termoBusca)
       );
     }
 

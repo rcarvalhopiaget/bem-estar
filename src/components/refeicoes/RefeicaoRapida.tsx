@@ -23,6 +23,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { AlunoTipo } from '@/types/aluno';
+import { containsTextNormalized } from '@/utils/stringUtils';
 
 interface Props {
   alunos: Aluno[];
@@ -246,8 +247,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
 
   const alunosFiltrados = useMemo(() => {
     return alunos.filter(aluno => {
-      const termoBuscaNome = filtroNome.toLowerCase();
-      const matchNome = aluno.nome.toLowerCase().includes(termoBuscaNome);
+      const matchNome = containsTextNormalized(aluno.nome, filtroNome);
       const matchTurma = !turmaFiltro || turmaFiltro === 'all' || aluno.turma === turmaFiltro;
       return matchNome && matchTurma;
     });
