@@ -120,7 +120,7 @@ export function AlunoForm({ aluno, onSubmit, onCancel, turmas = [] }: AlunoFormP
     resolver: zodResolver(alunoSchema),
     defaultValues: aluno ? {
        ...aluno,
-       diasRefeicaoPermitidos: aluno.diasRefeicaoPermitidos || []
+       diasRefeicaoPermitidos: Array.isArray(aluno.diasRefeicaoPermitidos) ? aluno.diasRefeicaoPermitidos : []
     } : {
       ativo: true,
       tipo: 'MENSALISTA',
@@ -133,10 +133,16 @@ export function AlunoForm({ aluno, onSubmit, onCancel, turmas = [] }: AlunoFormP
   const diasExigidos = DIAS_POR_TIPO[tipoAluno];
 
   useEffect(() => {
+    if (aluno && !Array.isArray(watch('diasRefeicaoPermitidos'))) {
+      setValue('diasRefeicaoPermitidos', [], { shouldValidate: true });
+    }
+  }, [aluno, setValue, watch]);
+
+  useEffect(() => {
     if (diasExigidos !== null) {
       trigger('diasRefeicaoPermitidos');
     }
-  }, [tipoAluno, diasExigidos, setValue, trigger]);
+  }, [tipoAluno, diasExigidos, trigger]);
 
   const handleDiaChange = (diaId: number, checked: boolean) => {
     const currentDias = getValues('diasRefeicaoPermitidos') || [];
@@ -217,7 +223,8 @@ export function AlunoForm({ aluno, onSubmit, onCancel, turmas = [] }: AlunoFormP
         </p>
       </div>
 
-      {!['AVULSO', 'AVULSO_RESTAURANTE', 'AVULSO_SECRETARIA'].includes(tipoAluno) && (
+      {/* Seção de Dias Permitidos - Verificamos explicitamente se não é um tipo AVULSO */}
+      {tipoAluno && !['AVULSO', 'AVULSO_RESTAURANTE', 'AVULSO_SECRETARIA'].includes(tipoAluno) && (
         <div>
           <Label className="block text-lg font-medium text-gray-700 mb-2">
             Dias Permitidos 
