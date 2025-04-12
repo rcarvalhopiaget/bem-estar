@@ -252,13 +252,45 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
     console.log('Iniciando filtragem com turmaFiltro:', turmaFiltro, 'e filtroNome:', filtroNome);
     console.log('Total de alunos antes da filtragem:', alunos.length);
     
+    // Descomente para verificar os tipos de alunos recebidos
+    if (alunos.length > 0) {
+      console.log('Amostra de 5 alunos:');
+      alunos.slice(0, 5).forEach((a, i) => {
+        console.log(`Aluno ${i+1}: id=${a.id}, nome=${a.nome}, turma=${a.turma}, ativo=${a.ativo}`);
+      });
+    }
+    
     const filtrados = alunos.filter(aluno => {
-      const matchNome = containsTextNormalized(aluno.nome, filtroNome);
-      const matchTurma = !turmaFiltro || turmaFiltro === 'all' || aluno.turma === turmaFiltro;
-      return matchNome && matchTurma;
+      // Debug turma
+      if (alunos.length > 0 && aluno === alunos[0]) {
+        console.log('Exemplo de match turma para o primeiro aluno:');
+        console.log('- turmaFiltro:', turmaFiltro);
+        console.log('- aluno.turma:', aluno.turma);
+        console.log('- !turmaFiltro =', !turmaFiltro);
+        console.log('- turmaFiltro === "all" =', turmaFiltro === 'all');
+        console.log('- aluno.turma === turmaFiltro =', aluno.turma === turmaFiltro);
+        console.log('- matchTurma final =', !turmaFiltro || turmaFiltro === 'all' || aluno.turma === turmaFiltro);
+      }
+      
+      const matchNome = filtroNome ? containsTextNormalized(aluno.nome, filtroNome) : true;
+      
+      // Simplificando a lógica: se turmaFiltro for 'all', deve retornar true
+      // se não for, compara com turma do aluno
+      let matchTurma = true;
+      if (turmaFiltro && turmaFiltro !== 'all') {
+        matchTurma = aluno.turma === turmaFiltro;
+      }
+      
+      // Verificar se o aluno está ativo
+      const matchAtivo = aluno.ativo === true;
+      
+      return matchNome && matchTurma && matchAtivo;
     });
     
     console.log('Total de alunos após filtragem:', filtrados.length);
+    if (filtrados.length === 0) {
+      console.log('ALERTA: Zero alunos após filtragem!');
+    }
     return filtrados;
   }, [alunos, filtroNome, turmaFiltro]);
 
