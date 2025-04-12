@@ -41,7 +41,15 @@ export default function RefeicoesRapidasPage() {
   const carregarAlunos = async () => {
     try {
       setLoading(true);
+      console.log('Iniciando carregamento de alunos ativos...');
       const alunosData = await alunoService.listarAlunos({ ativo: true });
+      console.log('Alunos carregados com sucesso:', alunosData.length);
+      
+      // Log para inspecionar os primeiros alunos
+      if (alunosData.length > 0) {
+        console.log('Amostra do primeiro aluno:', JSON.stringify(alunosData[0]));
+      }
+      
       setAlunos(alunosData);
       setError(null);
     } catch (error) {

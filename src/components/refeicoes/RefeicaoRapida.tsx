@@ -130,6 +130,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   // Obter turmas únicas e ordenadas
   const turmasUnicas = useMemo(() => {
     const turmas = new Set(alunos.map(a => a.turma).filter(Boolean));
+    console.log('Turmas disponíveis:', Array.from(turmas));
     return Array.from(turmas).sort((a, b) => a.localeCompare(b));
   }, [alunos]);
   
@@ -173,6 +174,8 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
           return;
         }
 
+        console.log('Quantidade de alunos recebidos do parent:', alunos.length);
+        
         // Obter token UMA VEZ
         let idToken = '';
         try {
@@ -246,11 +249,17 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   }, [data, alunos, toast, user]); // Adicionar user às dependências
 
   const alunosFiltrados = useMemo(() => {
-    return alunos.filter(aluno => {
+    console.log('Iniciando filtragem com turmaFiltro:', turmaFiltro, 'e filtroNome:', filtroNome);
+    console.log('Total de alunos antes da filtragem:', alunos.length);
+    
+    const filtrados = alunos.filter(aluno => {
       const matchNome = containsTextNormalized(aluno.nome, filtroNome);
       const matchTurma = !turmaFiltro || turmaFiltro === 'all' || aluno.turma === turmaFiltro;
       return matchNome && matchTurma;
     });
+    
+    console.log('Total de alunos após filtragem:', filtrados.length);
+    return filtrados;
   }, [alunos, filtroNome, turmaFiltro]);
 
   const handleCardClick = (aluno: Aluno) => {
@@ -403,6 +412,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
       <Typography variant="h6" gutterBottom>
         Registro Rápido de Refeições - {dataFormatada}
       </Typography>
+      
+      {/* Diagnóstico */}
+      <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded">
+        <p>Status: Alunos na página: {alunos.length}, Filtrados: {alunosFiltrados.length}, Turma selecionada: {turmaFiltro}</p>
+      </div>
       
       {/* Filtros */} 
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
