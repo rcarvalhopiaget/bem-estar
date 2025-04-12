@@ -11,6 +11,7 @@ import { CheckedState } from '@radix-ui/react-checkbox';
 import { useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const DIAS_POR_TIPO: Record<string, number | null> = {
   MENSALISTA: null,
@@ -103,9 +104,10 @@ interface AlunoFormProps {
   aluno?: Aluno;
   onSubmit: (data: AlunoFormData) => Promise<void>;
   onCancel: () => void;
+  turmas?: string[]; // Lista de turmas disponíveis
 }
 
-export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
+export function AlunoForm({ aluno, onSubmit, onCancel, turmas = [] }: AlunoFormProps) {
   const {
     register,
     handleSubmit,
@@ -245,12 +247,41 @@ export function AlunoForm({ aluno, onSubmit, onCancel }: AlunoFormProps) {
         <Label className="block text-lg font-medium text-gray-700 mb-2">
           Turma
         </Label>
-        <Input
-          type="text"
-          {...register('turma')}
-          className="w-full px-4 py-3 text-lg border rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
-          placeholder="Digite a turma (ex: 1A, 2B)"
-        />
+        {turmas.length > 0 ? (
+          <div>
+            <Select
+              value={watch('turma')}
+              onValueChange={(value) => setValue('turma', value, { shouldValidate: true })}
+            >
+              <SelectTrigger className="w-full px-4 py-3 text-lg border rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary">
+                <SelectValue placeholder="Selecione a turma" />
+              </SelectTrigger>
+              <SelectContent>
+                {turmas.map((turma) => (
+                  <SelectItem key={turma} value={turma}>{turma}</SelectItem>
+                ))}
+                {/* Opção para digitar uma nova turma caso seja necessário */}
+                <SelectItem value="__nova_turma__">+ Nova turma</SelectItem>
+              </SelectContent>
+            </Select>
+            {watch('turma') === '__nova_turma__' && (
+              <Input
+                type="text"
+                className="w-full px-4 py-3 text-lg border rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary mt-2"
+                placeholder="Digite a nova turma"
+                value={getValues('turma') === '__nova_turma__' ? '' : getValues('turma')}
+                onChange={(e) => setValue('turma', e.target.value, { shouldValidate: true })}
+              />
+            )}
+          </div>
+        ) : (
+          <Input
+            type="text"
+            {...register('turma')}
+            className="w-full px-4 py-3 text-lg border rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
+            placeholder="Digite a turma (ex: 1A, 2B)"
+          />
+        )}
         {errors.turma?.message && (
           <p className="mt-2 text-sm text-red-600">{errors.turma.message}</p>
         )}

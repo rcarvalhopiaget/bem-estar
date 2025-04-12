@@ -10,8 +10,10 @@ import { useLogService } from '@/services/logService';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { containsTextNormalized } from '@/utils/stringUtils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 // Adicionar tipos para ordenação
 type SortKey = keyof Pick<Aluno, 'nome' | 'matricula' | 'email' | 'tipo' | 'turma' | 'ativo'> | '';
@@ -50,12 +52,19 @@ export default function AlunosPage() {
   const [error, setError] = useState<string | null>(null);
   const [filtroAtivo, setFiltroAtivo] = useState<boolean | undefined>(true); // Inicialmente mostra apenas ativos
   const [termoBusca, setTermoBusca] = useState(''); // Estado para busca
+  const [turmas, setTurmas] = useState<string[]>([]); // Lista de turmas disponíveis
+  const [turmaSelecionada, setTurmaSelecionada] = useState<string>('all'); // Turma selecionada para filtro
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' }); // Estado para ordenação
+  
+  // Estados para paginação
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(10);
+  
   const { logAction } = useLogService();
   const { toast } = useToast();
   const router = useRouter();
 
-  // Carregar lista de alunos
+  // Carregar lista de alunos e turmas
   const carregarAlunos = async () => {
     try {
       setLoading(true);
@@ -77,9 +86,23 @@ export default function AlunosPage() {
     }
   };
 
+  const carregarTurmas = async () => {
+    try {
+      const turmasData = await alunoService.listarTurmas();
+      setTurmas(turmasData);
+    } catch (error) {
+      console.error('Erro ao carregar turmas:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Não foi possível carregar as turmas', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
   useEffect(() => {
     carregarAlunos();
-    // Remover dependencia do filtroAtivo, pois ele será aplicado no frontend
+    carregarTurmas();
   }, []);
 
   // Lógica de filtragem e ordenação usando useMemo
@@ -91,7 +114,12 @@ export default function AlunosPage() {
       alunosFiltrados = alunosFiltrados.filter(aluno => aluno.ativo === filtroAtivo);
     }
 
-    // 2. Filtrar por termo de busca
+    // 2. Filtrar por turma selecionada
+    if (turmaSelecionada && turmaSelecionada !== 'all') {
+      alunosFiltrados = alunosFiltrados.filter(aluno => aluno.turma === turmaSelecionada);
+    }
+
+    // 3. Filtrar por termo de busca
     if (termoBusca) {
       alunosFiltrados = alunosFiltrados.filter(aluno => 
         containsTextNormalized(aluno.nome, termoBusca) ||
@@ -102,7 +130,7 @@ export default function AlunosPage() {
       );
     }
 
-    // 3. Ordenar
+    // 4. Ordenar
     if (sortConfig.key) {
       alunosFiltrados.sort((a, b) => {
         // Tratamento especial para boolean (ativo)
@@ -137,7 +165,18 @@ export default function AlunosPage() {
     }
 
     return alunosFiltrados;
-  }, [alunos, filtroAtivo, termoBusca, sortConfig]);
+  }, [alunos, filtroAtivo, turmaSelecionada, termoBusca, sortConfig]);
+
+  // Calcular total de páginas e limitar registros para a página atual
+  const totalPaginas = Math.ceil(alunosFiltradosOrdenados.length / itensPorPagina);
+  const indiceInicial = (paginaAtual - 1) * itensPorPagina;
+  const alunosPaginados = alunosFiltradosOrdenados.slice(indiceInicial, indiceInicial + itensPorPagina);
+
+  // Função para navegar entre páginas
+  const irParaPagina = (pagina: number) => {
+    if (pagina < 1 || pagina > totalPaginas) return;
+    setPaginaAtual(pagina);
+  };
 
   // Função para solicitar ordenação
   const requestSort = (key: SortKey) => {
@@ -271,12 +310,37 @@ export default function AlunosPage() {
               </Button>
             </div>
           </div>
+
+          {/* Filtro de Turma */}
+          <div className="w-full md:w-auto md:min-w-[200px]">
+            <Select
+              value={turmaSelecionada}
+              onValueChange={(value) => {
+                setTurmaSelecionada(value);
+                setPaginaAtual(1); // Resetar para primeira página ao mudar o filtro
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filtrar por turma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as turmas</SelectItem>
+                {turmas.map((turma) => (
+                  <SelectItem key={turma} value={turma}>{turma}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Campo de Busca */}
           <div className="w-full md:w-auto md:max-w-xs">
             <Input 
-              placeholder="Buscar por nome, matrícula, email, tipo ou turma..."
+              placeholder="Buscar por nome, matrícula, email..."
               value={termoBusca}
-              onChange={(e) => setTermoBusca(e.target.value)}
+              onChange={(e) => {
+                setTermoBusca(e.target.value);
+                setPaginaAtual(1); // Resetar para primeira página ao mudar o filtro
+              }}
               className="w-full"
             />
           </div>
@@ -284,9 +348,10 @@ export default function AlunosPage() {
 
         <div className="mb-4 text-sm text-gray-500">
           {/* Exibir contagem de resultados */}
-          Exibindo {alunosFiltradosOrdenados.length} de {alunos.length} alunos
+          Exibindo {alunosPaginados.length} de {alunosFiltradosOrdenados.length} alunos
           {filtroAtivo === true && ' (apenas ativos)'}
           {filtroAtivo === false && ' (apenas inativos)'}
+          {turmaSelecionada !== 'all' && ` da turma ${turmaSelecionada}`}
           {termoBusca && ` filtrados por "${termoBusca}"`}
         </div>
 
@@ -303,6 +368,7 @@ export default function AlunosPage() {
                   setMostrarFormulario(false);
                   setAlunoEmEdicao(null);
                 }}
+                turmas={turmas}
               />
             </div>
           </div>
@@ -349,9 +415,9 @@ export default function AlunosPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {/* Mapear sobre a lista filtrada e ordenada */}
-              {alunosFiltradosOrdenados.length > 0 ? (
-                alunosFiltradosOrdenados.map((aluno: Aluno) => (
+              {/* Mapear sobre a lista paginada */}
+              {alunosPaginados.length > 0 ? (
+                alunosPaginados.map((aluno: Aluno) => (
                   <tr key={aluno.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {aluno.nome}
@@ -408,6 +474,74 @@ export default function AlunosPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {alunosFiltradosOrdenados.length > 0 && (
+          <div className="flex flex-col items-center justify-between mt-6">
+            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+              <select 
+                value={itensPorPagina} 
+                onChange={(e) => {
+                  setItensPorPagina(Number(e.target.value));
+                  setPaginaAtual(1);
+                }}
+                className="border border-gray-300 rounded px-2 py-1"
+              >
+                <option value="5">5 por página</option>
+                <option value="10">10 por página</option>
+                <option value="20">20 por página</option>
+                <option value="50">50 por página</option>
+              </select>
+              <span>
+                Página {paginaAtual} de {totalPaginas}
+              </span>
+            </div>
+
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => irParaPagina(paginaAtual - 1)} 
+                    className={paginaAtual <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {/* Gerar itens de paginação */}
+                {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                  // Lógica para mostrar páginas ao redor da página atual
+                  let pageNum;
+                  if (totalPaginas <= 5) {
+                    pageNum = i + 1;
+                  } else if (paginaAtual <= 3) {
+                    pageNum = i + 1;
+                  } else if (paginaAtual >= totalPaginas - 2) {
+                    pageNum = totalPaginas - 4 + i;
+                  } else {
+                    pageNum = paginaAtual - 2 + i;
+                  }
+                  
+                  return pageNum > 0 && pageNum <= totalPaginas ? (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink 
+                        isActive={paginaAtual === pageNum}
+                        onClick={() => irParaPagina(pageNum)}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ) : null;
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => irParaPagina(paginaAtual + 1)} 
+                    className={paginaAtual >= totalPaginas ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
