@@ -445,11 +445,6 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
         Registro Rápido de Refeições - {dataFormatada}
       </Typography>
       
-      {/* Diagnóstico */}
-      <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded">
-        <p>Status: Alunos na página: {alunos.length}, Filtrados: {alunosFiltrados.length}, Turma selecionada: {turmaFiltro}</p>
-      </div>
-      
       {/* Filtros */} 
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <div className="flex-1">
