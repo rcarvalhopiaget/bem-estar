@@ -121,7 +121,7 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
   const { canWrite } = usePermissions();
   const { logAction } = useLogService();
   const [filtroNome, setFiltroNome] = useState('');
-  const [turmaFiltro, setTurmaFiltro] = useState('');
+  const [turmaFiltro, setTurmaFiltro] = useState('all');
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [alunosComeram, setAlunosComeram] = useState<Record<string, Partial<Record<TipoRefeicao, boolean>>>>({});
