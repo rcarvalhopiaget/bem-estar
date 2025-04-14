@@ -33,6 +33,7 @@ const mapPlanoToTipo = (planoCsv: string): AlunoTipo => {
   if (planoNorm.includes('mensalista')) return 'MENSALISTA';
   if (planoNorm.includes('avulso')) return 'AVULSO';
   if (planoNorm.includes('semi')) return 'SEMI_INTEGRAL';
+  if (planoNorm.includes('adesão') || planoNorm.includes('adesao')) return 'ADESAO';
   if (planoNorm.includes('estendido')) {
     // Mapear para o novo tipo ESTENDIDO
     return 'ESTENDIDO'; 

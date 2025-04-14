@@ -30,7 +30,8 @@ const DIAS_POR_TIPO: Record<string, number | null> = {
   AVULSO_RESTAURANTE: null,
   AVULSO_SECRETARIA: null,
   SEMI_INTEGRAL: null,
-  ESTENDIDO: null
+  ESTENDIDO: null,
+  ADESAO: null
 };
 
 const DIAS_SEMANA = [
@@ -64,7 +65,8 @@ const alunoSchema = z.object({
     'ESTENDIDO_4X', 
     'ESTENDIDO_3X', 
     'ESTENDIDO_2X', 
-    'ESTENDIDO_1X'
+    'ESTENDIDO_1X',
+    'ADESAO'
   ]),
   turma: z.string().min(1, 'A turma é obrigatória'),
   ativo: z.boolean(),
@@ -98,6 +100,7 @@ const TIPOS_ALUNO = {
   'AVULSO': 'Avulso',
   'AVULSO_RESTAURANTE': 'Avulso (Restaurante)',
   'AVULSO_SECRETARIA': 'Avulso (Secretaria)',
+  'ADESAO': 'Adesão'
 };
 
 interface AlunoFormProps {

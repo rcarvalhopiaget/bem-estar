@@ -68,6 +68,12 @@ const LIMITE_REFEICOES: Record<string, { LANCHE_MANHA: number; ALMOCO: number; L
     ALMOCO: 999,
     LANCHE_TARDE: 999,
     SOPA: 999
+  },
+  'ADESAO': {
+    LANCHE_MANHA: 999,
+    ALMOCO: 999,
+    LANCHE_TARDE: 999,
+    SOPA: 999
   }
 };
 
@@ -342,6 +348,11 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
          motivoAvulso = 'Limite semanal de refeições atingido.';
       }
     } 
+    // Verificar se tipo é ADESAO e se estamos em fim de semana
+    else if (tipoAlunoOriginal === 'ADESAO' && (diaDaSemanaAtual === 0 || diaDaSemanaAtual === 6)) {
+      tipoEfetivoParaSalvar = 'AVULSO';
+      motivoAvulso = 'Alunos do tipo Adesão só podem comer de segunda a sexta-feira.';
+    }
     // Adicionar lógica para SEMI_INTEGRAL e ESTENDIDO se eles tiverem dias permitidos
     else if ((tipoAlunoOriginal === 'SEMI_INTEGRAL' || tipoAlunoOriginal === 'ESTENDIDO') && diasPermitidos.length > 0) {
         if (diaDaSemanaAtual < 1 || diaDaSemanaAtual > 5 || !diasPermitidos.includes(diaDaSemanaAtual)) {
@@ -491,7 +502,9 @@ export default function RefeicaoRapida({ alunos, data, onRefeicaoMarcada }: Prop
             const ehDiaPermitido = !tipoAluno.startsWith('INTEGRAL') || diasPermitidos.length === 0 || diasPermitidos.includes(diaDaSemanaAtual);
             
             let statusAluno = `Tipo: ${tipoAluno}`;
-            if (tipoAluno.startsWith('INTEGRAL') && diasPermitidos.length > 0) {
+            if (tipoAluno === 'ADESAO') {
+               statusAluno += ' (Seg-Sex)';
+            } else if (tipoAluno.startsWith('INTEGRAL') && diasPermitidos.length > 0) {
                const nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                statusAluno += ` (${diasPermitidos.map(d => nomesDias[d]).join(', ')})`;
             }

@@ -41,7 +41,8 @@ const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   ESTENDIDO_4X: 'Estendido 4x',
   ESTENDIDO_3X: 'Estendido 3x',
   ESTENDIDO_2X: 'Estendido 2x',
-  ESTENDIDO_1X: 'Estendido 1x'
+  ESTENDIDO_1X: 'Estendido 1x',
+  ADESAO: 'Adesão'
 };
 
 export default function AlunosPage() {

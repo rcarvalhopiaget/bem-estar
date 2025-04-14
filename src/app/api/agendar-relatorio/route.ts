@@ -139,7 +139,7 @@ export async function GET(request: Request) {
         id: string, 
         nome?: string, 
         turma?: string, 
-        tipo?: 'MENSALISTA' | 'MENSALISTA_GRATUIDADE' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'INTEGRAL_1X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO' | 'ESTENDIDO_5X' | 'ESTENDIDO_4X' | 'ESTENDIDO_3X' | 'ESTENDIDO_2X' | 'ESTENDIDO_1X',
+        tipo?: 'MENSALISTA' | 'MENSALISTA_GRATUIDADE' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'INTEGRAL_1X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO' | 'ESTENDIDO_5X' | 'ESTENDIDO_4X' | 'ESTENDIDO_3X' | 'ESTENDIDO_2X' | 'ESTENDIDO_1X' | 'ADESAO',
         diasRefeicaoPermitidos?: number[],
         ativo?: boolean
       }>;
@@ -176,11 +176,7 @@ export async function GET(request: Request) {
       const diaSemana = inicioDiaAtualUTC.getDay();
       
       // Função para verificar se um aluno deve comer no dia específico
-      const alunoDeveComer = (aluno: { 
-        tipo?: 'MENSALISTA' | 'MENSALISTA_GRATUIDADE' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'INTEGRAL_1X' | 'AVULSO' | 'SEMI_INTEGRAL' | 'ESTENDIDO' | 'ESTENDIDO_5X' | 'ESTENDIDO_4X' | 'ESTENDIDO_3X' | 'ESTENDIDO_2X' | 'ESTENDIDO_1X', 
-        diasRefeicaoPermitidos?: number[],
-        ativo?: boolean
-      }) => {
+      const alunoDeveComer = (aluno: { tipo?: string, diasRefeicaoPermitidos?: number[], ativo?: boolean }) => {
         // Primeiro verificamos se o aluno está ativo
         if (aluno.ativo === false) {
           return false;
@@ -190,7 +186,8 @@ export async function GET(request: Request) {
         if (aluno.tipo === 'MENSALISTA' || 
             aluno.tipo === 'MENSALISTA_GRATUIDADE' || 
             aluno.tipo === 'INTEGRAL_5X' || 
-            aluno.tipo === 'ESTENDIDO_5X') {
+            aluno.tipo === 'ESTENDIDO_5X' ||
+            aluno.tipo === 'ADESAO') {
           return diaSemana >= 1 && diaSemana <= 5; // Segunda a sexta
         }
         

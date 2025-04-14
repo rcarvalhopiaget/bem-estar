@@ -164,7 +164,8 @@ export async function executarEnvioRelatorioUnico() {
         if (aluno.tipo === 'MENSALISTA' || 
             aluno.tipo === 'MENSALISTA_GRATUIDADE' || 
             aluno.tipo === 'INTEGRAL_5X' || 
-            aluno.tipo === 'ESTENDIDO_5X') {
+            aluno.tipo === 'ESTENDIDO_5X' ||
+            aluno.tipo === 'ADESAO') {
           return diaSemana >= 1 && diaSemana <= 5; // Segunda a sexta
         }
         

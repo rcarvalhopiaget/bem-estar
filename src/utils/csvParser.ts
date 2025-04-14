@@ -1,6 +1,6 @@
 import { AlunoFormData } from "@/types/aluno";
 
-const mapTipoIntegral = (opcao: string): 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' => {
+const mapTipoIntegral = (opcao: string): 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRAL_4X' | 'INTEGRAL_3X' | 'INTEGRAL_2X' | 'ADESAO' => {
   const opcaoUpperCase = opcao.toUpperCase().trim();
   
   // Mapeamento específico para os tipos do formulário
@@ -9,6 +9,7 @@ const mapTipoIntegral = (opcao: string): 'MENSALISTA' | 'INTEGRAL_5X' | 'INTEGRA
   if (opcaoUpperCase.includes('4 X SEMANA')) return 'INTEGRAL_4X';
   if (opcaoUpperCase.includes('3 X SEMANA')) return 'INTEGRAL_3X';
   if (opcaoUpperCase.includes('2 X SEMANA')) return 'INTEGRAL_2X';
+  if (opcaoUpperCase.includes('ADESAO') || opcaoUpperCase.includes('ADESÃO')) return 'ADESAO';
   
   return 'MENSALISTA';
 };
