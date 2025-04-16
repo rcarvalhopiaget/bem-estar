@@ -10,7 +10,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useToast } from '@/components/ui/use-toast';
 import { CorrecaoRefeicaoModal } from '@/components/refeicoes/CorrecaoRefeicaoModal';
 import { useLogService } from '@/services/logService';
-import { Edit2, AlertTriangle, Filter, CalendarIcon, ShieldAlert } from 'lucide-react';
+import { Edit2, AlertTriangle, Filter, CalendarIcon, ShieldAlert, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -292,6 +292,56 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
     }
   };
 
+  // Função para excluir (desmarcar) uma refeição
+  const handleDesmarcarRefeicao = async (refeicao: Refeicao) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permissão Negada",
+        description: "Apenas administradores podem desmarcar refeições.",
+        variant: "destructive"
+      });
+      throw new Error("Apenas administradores podem desmarcar refeições.");
+    }
+
+    try {
+      // Chama o serviço para excluir a refeição
+      await refeicaoService.excluirRefeicao(refeicao.id);
+      
+      // Registrar a ação no log do sistema
+      await logAction(
+        'DELETE', 
+        'REFEICOES', 
+        `Refeição de ${refeicao.nomeAluno} desmarcada por administrador`, 
+        { 
+          refeicaoId: refeicao.id, 
+          alunoId: refeicao.alunoId,
+          detalhes: {
+            data: format(new Date(refeicao.data), 'dd/MM/yyyy'),
+            tipo: refeicao.tipo
+          } 
+        }
+      );
+      
+      // Atualiza a lista após a exclusão
+      carregarRefeicoes();
+      
+      toast({
+        title: "Sucesso",
+        description: "Refeição desmarcada com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao desmarcar refeição:', error);
+      
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao desmarcar refeição",
+        variant: "destructive"
+      });
+      
+      throw error;
+    }
+  };
+
   // Função para verificar diretamente o serviço de refeições
   const verificarServicoRefeicoes = async () => {
     try {
@@ -549,7 +599,11 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
                           {refeicao.presente ? 'Sim' : 'Não'}
                         </span>
                       </TableCell>
-                      <TableCell>{refeicao.tipoConsumo || '-'}</TableCell>
+                      <TableCell>
+                        {refeicao.tipoConsumo 
+                          ? TIPOS_ALUNO_LABELS[refeicao.tipoConsumo as AlunoTipo] 
+                          : '-'}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="ghost" 
@@ -577,6 +631,7 @@ export default function CorrecaoRefeicoesPaginaAdmin() {
           setRefeicaoParaCorrigir(null);
         }}
         onSave={handleSaveCorrecao}
+        onDelete={handleDesmarcarRefeicao}
       />
     </div>
   );

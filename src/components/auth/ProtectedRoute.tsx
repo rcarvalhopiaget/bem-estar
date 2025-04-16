@@ -23,12 +23,16 @@ export function ProtectedRoute({
   const [isRestauranteUser, setIsRestauranteUser] = useState(false);
   const [authorized, setAuthorized] = useState(false);
 
+  // Lista de emails administrativos especiais
+  const adminEmails = [
+    'rodrigo.carvalho@jpiaget.com.br',
+    'adriana.diari@jpiaget.com.br',
+    'admin@bemestar.com',
+    'teste@teste.com'
+  ];
+  
   // Verificar se o usuário é um email administrativo especial
-  const isAdminByEmail = user?.email && [
-    'admin@bemestar.com', 
-    'teste@teste.com', 
-    'rodrigo.carvalho@jpiaget.com.br'
-  ].includes(user.email);
+  const isAdminByEmail = user?.email && adminEmails.includes(user.email);
 
   // Verificar se a rota atual é a página de logs
   const isLogsPage = pathname?.includes('/dashboard/logs');
@@ -59,48 +63,57 @@ export function ProtectedRoute({
   }, [user]);
 
   useEffect(() => {
-    // Se o usuário não estiver autenticado, redirecionar para o login
-    if (!isAuthenticated) {
-      console.log('ProtectedRoute: Usuário não autenticado, redirecionando para login');
-      router.push('/login');
-      return;
-    }
+    // Função para verificar autorização
+    const checkAuthorization = () => {
+      if (!isAuthenticated) {
+        console.log('ProtectedRoute: Usuário não autenticado, redirecionando...');
+        setAuthorized(false);
+        router.push('/login');
+        return;
+      }
 
-    // Se o usuário for do restaurante e a rota bloqueia usuários do restaurante, redirecionar para o dashboard
-    if (isRestauranteUser && blockRestauranteUser) {
-      console.log('ProtectedRoute: Usuário do restaurante bloqueado nesta rota, redirecionando para dashboard');
-      router.push('/dashboard');
-      return;
-    }
+      // Permitir acesso direto para usuários com emails administrativos
+      if (isAdminByEmail) {
+        console.log('ProtectedRoute: Acesso concedido por email administrativo');
+        setAuthorized(true);
+        return;
+      }
 
-    // Verificação especial para a página de logs - permitir acesso para administradores por email
-    if (isLogsPage && isAdminByEmail) {
-      console.log('ProtectedRoute: Acesso à página de logs permitido para admin por email');
-      setAuthorized(true);
-      return;
-    }
+      // Verificar se o perfil do usuário está na lista de perfis permitidos
+      // perfil pode ser uma string ou um array de strings
+      const profileAllowed = 
+        Array.isArray(allowedProfiles) 
+          ? allowedProfiles.includes(perfil as string)
+          : allowedProfiles === perfil;
 
-    // Se o perfil não estiver na lista de perfis permitidos, redirecionar para o dashboard
-    if (perfil && !allowedProfiles.includes(perfil) && !isAdmin) {
-      console.log(`ProtectedRoute: Perfil ${perfil} não permitido, redirecionando para dashboard`);
-      router.push('/dashboard');
-      return;
-    }
+      // Restrição especial para a página de logs - apenas admins
+      if (isLogsPage && !isAdmin) {
+        console.log('ProtectedRoute: Acesso negado à página de logs (não é admin)');
+        setAuthorized(false);
+        router.push('/dashboard');
+        return;
+      }
 
-    // Se chegou até aqui, o usuário está autorizado
-    console.log('ProtectedRoute: Usuário autorizado');
-    setAuthorized(true);
-  }, [isAuthenticated, perfil, isAdmin, router, allowedProfiles, isRestauranteUser, blockRestauranteUser, isLogsPage, isAdminByEmail]);
+      // Bloqueio para usuários do restaurante
+      if (blockRestauranteUser && isRestauranteUser) {
+        console.log('ProtectedRoute: Acesso negado para usuário do restaurante');
+        setAuthorized(false);
+        router.push('/dashboard');
+        return;
+      }
 
-  // Se o usuário não estiver autenticado ou o perfil não for permitido, não renderizar nada
-  if (!isAuthenticated || 
-      (perfil && !allowedProfiles.includes(perfil) && !isAdmin && !(isLogsPage && isAdminByEmail)) || 
-      (isRestauranteUser && blockRestauranteUser)) {
-    console.log('ProtectedRoute: Não renderizando conteúdo protegido');
-    return null;
-  }
+      // Decisão final
+      setAuthorized(!!(profileAllowed || isAdmin));
+      
+      if (!(profileAllowed || isAdmin)) {
+        console.log('ProtectedRoute: Perfil não autorizado, redirecionando...');
+        router.push('/dashboard');
+      }
+    };
 
-  // Caso contrário, renderizar os filhos normalmente
-  console.log('ProtectedRoute: Renderizando conteúdo protegido');
-  return <>{children}</>;
+    // Executar a verificação
+    checkAuthorization();
+  }, [allowedProfiles, perfil, isAdmin, isAuthenticated, isRestauranteUser, isAdminByEmail, blockRestauranteUser, isLogsPage, router]);
+
+  return authorized ? <>{children}</> : null;
 }

@@ -18,7 +18,9 @@ export default function AtualizarUsuarioRestaurantePage() {
 
   useEffect(() => {
     // Verificar se o usuário é administrador
-    if (user?.email === 'rodrigo.carvalho@jpiaget.com.br' || user?.email === 'admin@bemestar.com') {
+    if (user?.email === 'rodrigo.carvalho@jpiaget.com.br' || 
+        user?.email === 'adriana.diari@jpiaget.com.br' || 
+        user?.email === 'admin@bemestar.com') {
       setIsAuthorized(true);
     } else {
       router.push('/dashboard');

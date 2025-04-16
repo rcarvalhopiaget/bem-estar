@@ -27,7 +27,7 @@ import { AlunoTipo } from '@/types/aluno';
 import { useToast } from '@/components/ui/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 // Mapeia os tipos de aluno para rótulos legíveis
 const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
@@ -47,7 +47,8 @@ const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
   ESTENDIDO_4X: 'Estendido 4x',
   ESTENDIDO_3X: 'Estendido 3x',
   ESTENDIDO_2X: 'Estendido 2x',
-  ESTENDIDO_1X: 'Estendido 1x'
+  ESTENDIDO_1X: 'Estendido 1x',
+  ADESAO: 'Adesão'
 };
 
 interface CorrecaoRefeicaoModalProps {
@@ -55,6 +56,7 @@ interface CorrecaoRefeicaoModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (refeicao: Refeicao) => Promise<void>;
+  onDelete?: (refeicao: Refeicao) => Promise<void>;
 }
 
 export function CorrecaoRefeicaoModal({
@@ -62,11 +64,13 @@ export function CorrecaoRefeicaoModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
 }: CorrecaoRefeicaoModalProps) {
   const { toast } = useToast();
   const { isAdmin } = usePermissions();
   const [formData, setFormData] = useState<Refeicao | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDesmarcando, setIsDesmarcando] = useState(false);
 
   // Inicializar o formulário quando a refeição muda
   useEffect(() => {
@@ -113,7 +117,7 @@ export function CorrecaoRefeicaoModal({
 
   const handleFormChange = (
     field: keyof Refeicao,
-    value: string | boolean | Date
+    value: string | boolean | Date | undefined
   ) => {
     setFormData((prev) => ({
       ...prev!,
@@ -150,6 +154,47 @@ export function CorrecaoRefeicaoModal({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDesmarcar = async () => {
+    if (!formData) return;
+    
+    // Verificação de permissão
+    if (!isAdmin) {
+      toast({
+        title: "Permissão Negada",
+        description: "Apenas administradores podem desmarcar refeições.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!onDelete) {
+      toast({
+        title: "Função não disponível",
+        description: "A opção de desmarcar refeição não está disponível.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsDesmarcando(true);
+      await onDelete(formData);
+      toast({
+        title: 'Refeição desmarcada',
+        description: 'A refeição foi desmarcada com sucesso.',
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao desmarcar',
+        description: error.message || 'Ocorreu um erro ao desmarcar a refeição.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDesmarcando(false);
     }
   };
 
@@ -226,16 +271,16 @@ export function CorrecaoRefeicaoModal({
                 Tipo de Consumo
               </Label>
               <Select
-                value={formData.tipoConsumo || ''}
+                value={formData.tipoConsumo || 'NENHUM'}
                 onValueChange={(value: string) =>
-                  handleFormChange('tipoConsumo', value === '' ? undefined : value)
+                  handleFormChange('tipoConsumo', value === 'NENHUM' ? undefined : value as AlunoTipo)
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tipo de consumo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="NENHUM">Nenhum</SelectItem>
                   {Object.entries(TIPOS_ALUNO_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -277,13 +322,26 @@ export function CorrecaoRefeicaoModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-          </Button>
+        <DialogFooter className="flex flex-col sm:flex-row items-center gap-2">
+          {onDelete && (
+            <Button 
+              variant="destructive" 
+              onClick={handleDesmarcar} 
+              disabled={isLoading || isDesmarcando}
+              className="w-full sm:w-auto"
+            >
+              {isDesmarcando ? 'Desmarcando...' : 'Desmarcar Refeição'}
+              <Trash2 className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+          <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={isLoading} className="flex-1">
+              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

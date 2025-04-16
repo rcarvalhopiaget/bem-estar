@@ -25,13 +25,24 @@ export function usePermissions() {
     });
   }, [isAuthenticated, user, userData]);
   
+  // Lista de emails com permissão de administrador
+  const adminEmails = [
+    'rodrigo.carvalho@jpiaget.com.br',
+    'adriana.diari@jpiaget.com.br',
+    'admin@bemestar.com',
+    'teste@teste.com'
+  ];
+  
+  // Verificar se o email é de administrador
+  const isAdminByEmail = user?.email && adminEmails.includes(user.email);
+  
   // Normalizando perfil: converter para maiúsculas e tratar casos especiais
   const perfil = userData?.perfil ? 
                  userData.perfil.toUpperCase() : 
                  'ADMIN'; // Valor padrão para desenvolvimento
   
   // Verificar perfis específicos
-  const isAdmin = perfil === 'ADMIN' || perfil === 'admin';
+  const isAdmin = perfil === 'ADMIN' || perfil === 'admin' || isAdminByEmail;
   const isOperador = perfil === 'OPERADOR' || perfil === 'operador';
   const isProfessor = perfil === 'PROFESSOR' || perfil === 'professor';
   const isCoordenador = perfil === 'COORDENADOR' || perfil === 'coordenador';
