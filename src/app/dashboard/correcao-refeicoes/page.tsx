@@ -37,6 +37,29 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { containsTextNormalized } from '@/utils/stringUtils';
+import { AlunoTipo } from '@/types/aluno';
+
+// Mapeia os tipos de aluno para rótulos legíveis
+const TIPOS_ALUNO_LABELS: Record<AlunoTipo, string> = {
+  AVULSO: 'Avulso',
+  AVULSO_RESTAURANTE: 'Avulso (Restaurante)',
+  AVULSO_SECRETARIA: 'Avulso (Secretaria)',
+  INTEGRAL_5X: 'Integral 5x',
+  INTEGRAL_4X: 'Integral 4x',
+  INTEGRAL_3X: 'Integral 3x',
+  INTEGRAL_2X: 'Integral 2x',
+  INTEGRAL_1X: 'Integral 1x',
+  MENSALISTA: 'Mensalista',
+  MENSALISTA_GRATUIDADE: 'Mensalista (Gratuidade)',
+  SEMI_INTEGRAL: 'Semi Integral',
+  ESTENDIDO: 'Estendido',
+  ESTENDIDO_5X: 'Estendido 5x',
+  ESTENDIDO_4X: 'Estendido 4x',
+  ESTENDIDO_3X: 'Estendido 3x',
+  ESTENDIDO_2X: 'Estendido 2x',
+  ESTENDIDO_1X: 'Estendido 1x',
+  ADESAO: 'Adesão'
+};
 
 export default function CorrecaoRefeicoesPaginaAdmin() {
   const { isAdmin, canWrite } = usePermissions();

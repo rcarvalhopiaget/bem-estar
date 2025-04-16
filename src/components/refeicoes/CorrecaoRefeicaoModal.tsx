@@ -226,15 +226,16 @@ export function CorrecaoRefeicaoModal({
                 Tipo de Consumo
               </Label>
               <Select
-                value={formData.tipoConsumo || 'AVULSO'}
-                onValueChange={(value: AlunoTipo) =>
-                  handleFormChange('tipoConsumo', value)
+                value={formData.tipoConsumo || ''}
+                onValueChange={(value: string) =>
+                  handleFormChange('tipoConsumo', value === '' ? undefined : value)
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tipo de consumo" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
                   {Object.entries(TIPOS_ALUNO_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
