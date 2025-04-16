@@ -74,6 +74,7 @@ export default function DashboardLayout({
 
   // Adiciona a opção de usuários apenas para administradores
   if (isAdmin) {
+    menuItems.push({ href: "/dashboard/refeicoes-por-kilo", label: "Refeições por Quilo", icon: <Utensils className="h-5 w-5" /> });
     menuItems.push({ href: "/dashboard/correcao-refeicoes", label: "Correção de Refeições", icon: <FileEdit className="h-5 w-5" /> });
     menuItems.push({ href: "/dashboard/usuarios", label: "Usuários", icon: <User className="h-5 w-5" /> });
     menuItems.push({ href: "/dashboard/logs", label: "Logs do Sistema", icon: <BarChart3 className="h-5 w-5" /> });
