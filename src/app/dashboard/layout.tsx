@@ -50,7 +50,8 @@ export default function DashboardLayout({
   const isAdmin = user?.email && [
     'admin@bemestar.com', 
     'teste@teste.com', 
-    'rodrigo.carvalho@jpiaget.com.br'
+    'rodrigo.carvalho@jpiaget.com.br',
+    'adriana.diari@jpiaget.com.br'
   ].includes(user.email);
 
   // Verifica se o usuário é operador (restaurante)
