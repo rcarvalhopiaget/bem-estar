@@ -112,6 +112,7 @@ export async function executarEnvioRelatorioUnico() {
           'Almoço': 2,
           'Lanche da Manhã': 1,
         },
+        refeicoesPorKilo: 35,
         refeicoes: [
           { alunoId: 'sim-a', nomeAluno: 'Aluno Simulado A', turma: 'Turma 1', tipo: 'Almoço', data: new Date() },
           { alunoId: 'sim-b', nomeAluno: 'Aluno Simulado B', turma: 'Turma 1', tipo: 'Lanche da Manhã', data: new Date() },
@@ -135,6 +136,17 @@ export async function executarEnvioRelatorioUnico() {
         .where('data', '<=', fimTimestamp)
         .get();
 
+      const refeicoesPorKiloSnapshot = await adminDb.collection('refeicoesPorKilo')
+        .where('data', '>=', inicioTimestamp)
+        .where('data', '<=', fimTimestamp)
+        .get();
+      
+      let quantidadeRefeicoesPorKilo = 0;
+      if (!refeicoesPorKiloSnapshot.empty) {
+        const refeicaoPorKilo = refeicoesPorKiloSnapshot.docs[0].data();
+        quantidadeRefeicoesPorKilo = refeicaoPorKilo.quantidade || 0;
+      }
+
       const refeicoes = refeicoesSnapshot.docs.map(doc => {
          const data = doc.data();
          const refeicaoData = (data.data as admin.firestore.Timestamp)?.toDate() ?? new Date();
@@ -148,7 +160,7 @@ export async function executarEnvioRelatorioUnico() {
          };
       });
 
-      console.log(`[CronTask] Encontrados ${alunos.length} alunos ativos e ${refeicoes.length} refeições para ${dataFormatada}.`);
+      console.log(`[CronTask] Encontrados ${alunos.length} alunos ativos, ${refeicoes.length} refeições e ${quantidadeRefeicoesPorKilo} refeições por quilo para ${dataFormatada}.`);
 
       // Obtém o dia da semana da data do relatório (0: Domingo, 1: Segunda, ..., 6: Sábado)
       const diaSemana = inicioDiaAnterior.getDay();
@@ -230,10 +242,11 @@ export async function executarEnvioRelatorioUnico() {
         alunosComeram,
         alunosNaoComeram,
         refeicoesPorTipo,
+        refeicoesPorKilo: quantidadeRefeicoesPorKilo,
         refeicoes: refeicoesParaRelatorio
       };
 
-      console.log(`[CronTask] Alunos que deveriam comer: ${alunosQueDeveriam.length}, Comeram: ${alunosComeram.length}, Não comeram: ${alunosNaoComeram.length}`);
+      console.log(`[CronTask] Alunos que deveriam comer: ${alunosQueDeveriam.length}, Comeram: ${alunosComeram.length}, Não comeram: ${alunosNaoComeram.length}, Refeições por quilo: ${quantidadeRefeicoesPorKilo}`);
       await enviarRelatorioDiario(dadosRelatorio, emailsDestino);
       console.log(`[CronTask] Relatório real para ${dataFormatada} enviado para ${emailsDestino.join(', ')}.`);
     }

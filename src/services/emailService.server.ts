@@ -26,6 +26,7 @@ export interface RelatorioData {
   alunosComeram: Array<{ nome: string; turma: string }>;
   alunosNaoComeram: Array<{ nome: string; turma: string }>;
   refeicoesPorTipo?: Record<string, number>;
+  refeicoesPorKilo?: number;
   refeicoes?: Array<{
     alunoId: string;
     nomeAluno: string;
@@ -154,6 +155,11 @@ function gerarConteudoHTML(data: RelatorioData): string {
   html += `<p>Total de Alunos que Deveriam Comer: ${data.totalAlunos}</p>`;
   html += `<p>Total Comeram: ${data.totalComeram}</p>`;
   html += `<p>Total Não Comeram: ${data.totalNaoComeram}</p>`;
+  
+  // Adicionar informação de refeições por quilo, se disponível
+  if (data.refeicoesPorKilo !== undefined) {
+    html += `<p>Refeições por Quilo: <strong>${data.refeicoesPorKilo}</strong></p>`;
+  }
 
   if (data.refeicoesPorTipo && Object.keys(data.refeicoesPorTipo).length > 0) {
     html += '<h2>Refeições por Tipo</h2><ul>';
@@ -205,6 +211,25 @@ function gerarConteudoHTML(data: RelatorioData): string {
 // Função para gerar o conteúdo CSV do relatório (mantida aqui)
 function gerarConteudoCSV(data: RelatorioData): string {
   let csv = '"Tipo","Nome","Turma","Refeição","Hora"\n'; // Cabeçalho
+  
+  // Adicionar resumo no início
+  csv += `"Resumo","Total de Alunos","${data.totalAlunos}","",""\n`;
+  csv += `"Resumo","Total Comeram","${data.totalComeram}","",""\n`;
+  csv += `"Resumo","Total Não Comeram","${data.totalNaoComeram}","",""\n`;
+  
+  // Adicionar informação de refeições por quilo
+  if (data.refeicoesPorKilo !== undefined) {
+    csv += `"Resumo","Refeições por Quilo","${data.refeicoesPorKilo}","",""\n`;
+  }
+
+  // Adicionar refeições por tipo
+  if (data.refeicoesPorTipo) {
+    for (const [tipo, count] of Object.entries(data.refeicoesPorTipo)) {
+      csv += `"Resumo por Tipo","${tipo}","${count}","",""\n`;
+    }
+  }
+  
+  csv += `"","","","",""\n`; // Linha em branco para separar
 
   data.alunosComeram.forEach(aluno => {
     csv += `"Comeu","${aluno.nome}","${aluno.turma}","-","-"\n`;

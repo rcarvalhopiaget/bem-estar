@@ -96,6 +96,7 @@ export async function GET(request: Request) {
           'Lanche da Manhã': Math.floor(totalComeram * 0.2),
           'Lanche da Tarde': Math.floor(totalComeram * 0.2)
         },
+        refeicoesPorKilo: 25, // Valor simulado de refeições por quilo
         refeicoes: Array(totalComeram).fill(0).map((_, i) => {
           const tiposRefeicao = ['Almoço', 'Lanche da Manhã', 'Lanche da Tarde'];
           const tipo = tiposRefeicao[Math.floor(Math.random() * tiposRefeicao.length)];
@@ -123,6 +124,7 @@ export async function GET(request: Request) {
           totalAlunos: dadosSimulados.totalAlunos,
           totalComeram: dadosSimulados.totalComeram,
           totalNaoComeram: dadosSimulados.totalNaoComeram,
+          refeicoesPorKilo: dadosSimulados.refeicoesPorKilo, // Incluindo na resposta
           simulado: true
         }
       });
@@ -246,6 +248,19 @@ export async function GET(request: Request) {
       
       console.log(`[API /agendar-relatorio] Alunos que deveriam comer: ${alunosQueDeveriam.length}, Comeram: ${alunosComeram.length}, Não comeram: ${alunosNaoComeram.length}`);
       
+      // Obtendo informações de refeições por quilo do dia
+      const refeicoesPorKiloRef = adminDb.collection('refeicoesPorKilo')
+        .where('data', '>=', dataInicio)
+        .where('data', '<=', dataFim);
+      const refeicoesPorKiloSnapshot = await refeicoesPorKiloRef.get();
+      
+      // Obtendo a quantidade de refeições por quilo (se existir)
+      let quantidadeRefeicoesPorKilo = 0;
+      if (!refeicoesPorKiloSnapshot.empty) {
+        const refeicaoPorKilo = refeicoesPorKiloSnapshot.docs[0].data();
+        quantidadeRefeicoesPorKilo = refeicaoPorKilo.quantidade || 0;
+      }
+      
       const dadosRelatorio = {
         data: dataFormatada, // <-- Usa data do dia atual
         totalAlunos: alunosQueDeveriam.length,
@@ -254,6 +269,7 @@ export async function GET(request: Request) {
         alunosComeram,
         alunosNaoComeram,
         refeicoesPorTipo,
+        refeicoesPorKilo: quantidadeRefeicoesPorKilo, // Adicionando a quantidade de refeições por quilo
         refeicoes: refeicoesFormatadas
       };
       
@@ -266,7 +282,8 @@ export async function GET(request: Request) {
           dataRelatorio: dataFormatada,
           totalAlunos: alunosQueDeveriam.length,
           totalComeram: alunosComeram.length,
-          totalNaoComeram: alunosNaoComeram.length
+          totalNaoComeram: alunosNaoComeram.length,
+          refeicoesPorKilo: quantidadeRefeicoesPorKilo // Incluindo na resposta da API
         }
       });
     } catch (dbError: any) {

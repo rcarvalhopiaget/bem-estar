@@ -70,8 +70,19 @@ async function fetchDailyReportDetails() {
       }
     });
     
+    // Fetch refeições por quilo for today
+    const refeicoesPorKiloSnap = await db.collection('refeicoesPorKilo')
+                                         .where('data', '>=', startOfDayTimestamp)
+                                         .where('data', '<=', endOfDayTimestamp)
+                                         .get();
+    let mealsByKgQuantity = 0;
+    if (!refeicoesPorKiloSnap.empty) {
+      const refeicaoPorKilo = refeicoesPorKiloSnap.docs[0].data();
+      mealsByKgQuantity = refeicaoPorKilo.quantidade || 0;
+    }
+    
     console.log(`[sendDailyReport] Buscando refeições entre ${startOfDay.toISOString()} e ${endOfDay.toISOString()}`);
-    console.log(`[sendDailyReport] Encontradas ${refeicoes.length} refeições.`);
+    console.log(`[sendDailyReport] Encontradas ${refeicoes.length} refeições e ${mealsByKgQuantity} refeições por quilo.`);
 
     // Determine which students have ate, count meals by type, and count avulsos
     const ateStudentIds = new Set();
@@ -133,6 +144,7 @@ async function fetchDailyReportDetails() {
       ateCount,
       notAteCount,
       mealsByType,
+      mealsByKgQuantity,
       ateList,
       notAteList,
       generationDateTime,
@@ -152,6 +164,7 @@ async function fetchDailyReportDetails() {
         'Lanche da Tarde': 0,
         'Sopa': 0
       },
+      mealsByKgQuantity: 0,
       ateList: [],
       notAteList: [],
       generationDateTime: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
@@ -190,7 +203,8 @@ function generateCSVReport(details) {
   const notAtePercentage = details.totalStudents > 0 ? ((details.notAteCount / details.totalStudents) * 100).toFixed(1) : '0.0';
   csv += `Alunos que comeram;${details.ateCount};${atePercentage}%\r\n`;
   csv += `Alunos que não comeram;${details.notAteCount};${notAtePercentage}%\r\n`;
-  csv += `Refeições Avulsas Registradas;${details.avulsoCount}\r\n\r\n`;
+  csv += `Refeições Avulsas Registradas;${details.avulsoCount}\r\n`;
+  csv += `Refeições por Quilo;${details.mealsByKgQuantity}\r\n\r\n`;
   
   csv += 'REFEIÇÕES POR TIPO\r\n';
   csv += `Almoço;${details.mealsByType['Almoço'] || 0}\r\n`; 
@@ -236,6 +250,7 @@ async function sendDailyReportEmail() {
     .ate { color: #27ae60; }
     .not-ate { color: #e74c3c; }
     .avulso { color: #f39c12; }
+    .kg-meals { color: #9b59b6; }
   </style>
 </head>
 <body>
@@ -247,6 +262,7 @@ async function sendDailyReportEmail() {
     <p><strong>Alunos que comeram:</strong> <span class="ate">${details.ateCount} (${atePercentage}%)</span></p>
     <p><strong>Alunos que não comeram:</strong> <span class="not-ate">${details.notAteCount} (${notAtePercentage}%)</span></p>
     <p><strong>Refeições Avulsas Registradas:</strong> <span class="avulso">${details.avulsoCount}</span></p>
+    <p><strong>Refeições por Quilo:</strong> <span class="kg-meals">${details.mealsByKgQuantity}</span></p>
   </div>
   
   <h2>Refeições por tipo</h2>
